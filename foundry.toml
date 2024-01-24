@@ -1,0 +1,17 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+
+gas_reports = ['*']
+
+[rpc_endpoints]
+mainnet = "${RPC_MAINNET}" 
+goerli = "${RPC_GOERLI}"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
+goerli = { key = "${ETHERSCAN_API_KEY}" }
+
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config

@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: Unlicense
+pragma solidity 0.8.19;
+
+import {IMaxApyVaultV2} from "../../src/interfaces/IMaxApyVaultV2.sol";
+import {MaxApyVaultV2, StrategyData} from "../../src/MaxApyVaultV2.sol";
+import {BaseTest, IERC20, console, Vm} from "../base/BaseTest.t.sol";
+import {MaxApyVaultV2Events} from "../helpers/MaxApyVaultV2Events.sol";
+
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+
+contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
+    ////////////////////////////////////////////////////////////////
+    ///                      STRUCTS                             ///
+    ////////////////////////////////////////////////////////////////
+    struct StrategyWithdrawalPreviousData {
+        uint256 balance;
+        uint256 debtRatio;
+        uint256 totalLoss;
+        uint256 totalDebt;
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                      STORAGE                             ///
+    ////////////////////////////////////////////////////////////////
+
+    IMaxApyVaultV2 public vault;
+    address public TREASURY;
+    uint256 public _1_USDC = 1e6;
+
+    function setupVault() public {
+        super.setUp();
+        /// Fork mode activated
+        TREASURY = makeAddr("treasury");
+        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        vault = IMaxApyVaultV2(address(maxApyVault));
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                HELPERS
+    //////////////////////////////////////////////////////////////////////////*/
+    function _deposit(address user, IMaxApyVaultV2 _vault, uint256 amount) internal returns (uint256) {
+        vm.startPrank(user);
+        uint256 expectedShares = _vault.previewDeposit(amount);
+        uint256 vaultBalanceBefore = IERC20(USDC).balanceOf(address(vault));
+        vm.expectEmit();
+        emit Deposit(user, user, amount, expectedShares);
+        uint256 shares = _vault.deposit(amount, user);
+        assertEq(_vault.balanceOf(user), expectedShares);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), vaultBalanceBefore + amount);
+
+        vm.stopPrank();
+        return shares;
+    }
+
+    function _withdraw(address user, IMaxApyVaultV2 _vault, uint256 assets, uint256 expectedLoss)
+        internal
+        returns (uint256)
+    {
+        vm.startPrank(user);
+
+        uint256 userBalanceBefore = IERC20(_vault).balanceOf(user);
+        if (assets == type(uint256).max) assets = _vault.convertToAssets(IERC20(_vault).balanceOf(user));
+
+        uint256 shares = vault.convertToShares(assets);
+
+        vm.expectEmit();
+        emit Withdraw(user, user, user, assets - expectedLoss, shares);
+
+        uint256 _assets = _vault.redeem(shares, user, user);
+
+        assertEq(assets - _assets, expectedLoss);
+
+        assertEq(IERC20(_vault).balanceOf(user), userBalanceBefore - shares);
+        vm.stopPrank();
+
+        return _assets;
+    }
+
+    function _redeem(address user, IMaxApyVaultV2 _vault, uint256 shares, uint256 expectedLoss)
+        internal
+        returns (uint256)
+    {
+        vm.startPrank(user);
+
+        uint256 userBalanceBefore = IERC20(USDC).balanceOf(user);
+        uint256 sharesComputed = shares;
+        if (shares == type(uint256).max) sharesComputed = _vault.balanceOf(user);
+
+        uint256 expectedValue = _vault.convertToAssets(sharesComputed);
+
+        vm.expectEmit();
+        emit Withdraw(user, users.alice, users.alice, expectedValue, shares);
+
+        uint256 valueWithdrawn = _vault.redeem(shares, users.alice, users.alice);
+        assertEq(expectedValue - valueWithdrawn, expectedLoss, "expected loss");
+
+        assertEq(IERC20(USDC).balanceOf(user) - userBalanceBefore, valueWithdrawn, "withdrawn");
+        vm.stopPrank();
+
+        return valueWithdrawn;
+    }
+
+    function _calculateExpectedShares(uint256 amount) internal view returns (uint256 shares) {
+        return vault.previewDeposit(amount);
+    }
+
+    function _calculateExpectedStrategistFees(uint256 computedStrategistFee, uint256 reward, uint256 totalFee)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (computedStrategistFee * reward) / totalFee;
+    }
+
+    function _freeFunds() internal view returns (uint256) {
+        return vault.totalAssets() - _calculateLockedProfit();
+    }
+
+    function _calculateLockedProfit() internal view returns (uint256 calculatedLockedProfit) {
+        uint256 lockedFundsRatio = (block.timestamp - vault.lastReport()) * vault.lockedProfitDegradation();
+        if (lockedFundsRatio < vault.DEGRADATION_COEFFICIENT()) {
+            uint256 vaultLockedProfit = vault.lockedProfit();
+            calculatedLockedProfit =
+                vaultLockedProfit - ((lockedFundsRatio * vaultLockedProfit) / vault.DEGRADATION_COEFFICIENT());
+        }
+    }
+
+    function _calculateMaxExpectedLoss(uint256 maxLoss, uint256 valueToWithdraw, uint256 totalLoss)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (maxLoss * (valueToWithdraw + totalLoss)) / MAX_BPS;
+    }
+
+    function _computeExpectedRatioChange(IMaxApyVaultV2 _vault, address strategy, uint256 loss)
+        internal
+        returns (uint256)
+    {
+        return Math.min((loss * _vault.debtRatio()) / _vault.totalDebt(), _vault.strategies(strategy).strategyDebtRatio);
+    }
+}
