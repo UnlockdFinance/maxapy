@@ -43,6 +43,9 @@ KKOl''',,,,,,,,..  'oOKKKKKKKKKKKKKKKKKKKOl,,ccccccc:'  .c0K
 KKKKOoc:;;;;;;;;:ldOKKKKKKKKKKKKKKKKKKKKKKKkl;'......',cx0KK
 KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK0OOOOOOO0KKK*/
 
+/// @title MaxApy Vault V2 Contract
+/// @notice A ERC4626 vault contract deploying `underlyingAsset` to strategies that earn yield and report gains/losses to the vault
+/// @author ERC2626 adaptation of MaxAPYVault: https://github.com/UnlockdFinance/maxapy/blob/development/src/MaxApyVault.sol
 contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     using SafeTransferLib for address;
     ////////////////////////////////////////////////////////////////
@@ -241,6 +244,15 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Flat rate taken from vault yield over a year
     uint256 public managementFee;
 
+    /// @notice name of the vault shares ERC20 token
+    string private _name;
+    /// @notice symbol of the vault shares ERC20 token
+    string private _symbol;
+    /// @notice the decimals of the underlying ERC20 token
+    uint8 private immutable _decimals;
+    /// @notice the assets in which the vault earns interest
+    address private immutable _underlyingAsset; 
+
     ////////////////////////////////////////////////////////////////
     ///                         MODIFIERS                        ///
     ////////////////////////////////////////////////////////////////
@@ -250,26 +262,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _;
     }
 
-    // doesnt work in assembly
     modifier noEmergencyShutdown() {
         if (emergencyShutdown) {
             revert VaultInEmergencyShutdownMode();
         }
-        /*  assembly ("memory-safe") {
-            // if emergencyShutdown == true
-            if shr(160, sload(emergencyShutdown.slot)) {
-                // throw the `VaultInEmergencyShutdownMode` error
-                mstore(0x00, 0x04aca5db)
-                revert(0x1c, 0x04)
-            }
-        } */
         _;
     }
-
-    string private _name;
-    string private _symbol;
-    address private immutable _underlyingAsset;
-    uint8 private immutable _decimals;
 
     constructor(address underlyingAsset_, string memory name_, string memory symbol_, address _treasury) {
         _initializeOwner(msg.sender);
@@ -692,26 +690,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _mint(to, shares);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                INTERNAL VIEW FUNCTIONS                   ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Calculates the free funds available considering the locked profit
-    /// @return The amount of free funds available
-    function _freeFunds() internal view returns (uint256) {
-        return _totalAssets() - _calculateLockedProfit();
-    }
-
-    /// @dev To be overridden to return the number of decimals of the underlying asset.
-    function _underlyingDecimals() internal view override returns (uint8) {
-        return _decimals;
-    }
-
-    /// @dev Override to return a non-zero value to make the inflation attack even more unfeasible.
-    /// Only used when {_useVirtualShares} returns true.
-    function _decimalsOffset() internal pure override returns (uint8) {
-        return 6;
-    }
 
     /// @dev Private helper to return if either value is zero.
     function _eitherIsZero_(uint256 a, uint256 b) internal pure virtual returns (bool result) {
@@ -726,6 +704,26 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         unchecked {
             return x + 1;
         }
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                INTERNAL VIEW FUNCTIONS                   ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice Calculates the free funds available considering the locked profit
+    /// @return The amount of free funds available
+    function _freeFunds() internal view returns (uint256) {
+        return _totalAssets() - _calculateLockedProfit();
+    }
+
+    /// @notice the number of decimals of the underlying token 
+    function _underlyingDecimals() internal view override returns (uint8) {
+        return _decimals;
+    }
+
+    /// @dev Override to return a non-zero value to make the inflation attack even more unfeasible.
+    function _decimalsOffset() internal pure override returns (uint8) {
+        return 6;
     }
 
     /// @notice Returns the total quantity of all assets under control of this Vault,
@@ -777,65 +775,44 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     ///                EXTERNAL VIEW FUNCTIONS                   ///
     ////////////////////////////////////////////////////////////////
 
-    /// @dev Returns the name of the vault shares token.
+    /// @notice Returns the name of the vault shares token.
     function name() public view override returns (string memory) {
         return _name;
     }
-    /// @dev Returns the symbol of the token.
 
+    /// @notice Returns the symbol of the token.
     function symbol() public view override returns (string memory) {
         return _symbol;
     }
 
-    /// @dev Returns the address of the underlying asset.
+    /// @notice Returns the address of the underlying asset.
     function asset() public view override returns (address) {
         return _underlyingAsset;
     }
-    /// @dev Returns the total amount of the underlying asset managed by the Vault.
-    ///
-    /// - SHOULD include any compounding that occurs from the yield.
-    /// - MUST be inclusive of any fees that are charged against assets in the Vault.
-    /// - MUST NOT revert.
-
+  
+    /// @notice Returns the total amount of the underlying asset managed by the Vault.
     function totalAssets() public view override returns (uint256) {
         return _totalAssets();
     }
 
-    /// @dev Returns the maximum amount of the underlying asset that can be deposited
+    /// @notice Returns the maximum amount of the underlying asset that can be deposited
     /// into the Vault for `to`, via a deposit call.
-    ///
-    /// - MUST return a limited value if `to` is subject to some deposit limit.
-    /// - MUST return `2**256-1` if there is no maximum limit.
-    /// - MUST NOT revert.
-    /// Note: it does not set a max deposit per `deposit`, but the max TVL
-    /// of the vault instead
     function maxDeposit(address /*to*/ ) public view override returns (uint256) {
         return depositLimit - totalAssets();
     }
 
-    /// @dev Returns the maximum amount of the Vault shares that can be minter for `to`,
+    /// @notice Returns the maximum amount of the Vault shares that can be minter for `to`,
     /// via a mint call.
-    ///
-    /// - MUST return a limited value if `to` is subject to some mint limit.
-    /// - MUST return `2**256-1` if there is no maximum limit.
-    /// - MUST NOT revert.
-    /// Note: it does not set a max deposit per `deposit`, but the max shares
-    /// supply of the vault instead
     function maxMint(address /*to*/ ) public view override returns (uint256) {
         return convertToShares(maxDeposit(address(0)));
     }
 
-    /// @dev Returns the amount of shares that the Vault will exchange for the amount of
+    /// @notice Returns the amount of shares that the Vault will exchange for the amount of
     /// assets provided, in an ideal scenario where all conditions are met.
-    ///
-    /// - MUST NOT be inclusive of any fees that are charged against assets in the Vault.
-    /// - MUST NOT show any variations depending on the caller.
-    /// - MUST NOT reflect slippage or other on-chain conditions, during the actual exchange.
-    /// - MUST NOT revert.
-    ///
-    /// Note: This calculation MAY NOT reflect the "per-user" price-per-share, and instead
-    /// should reflect the "average-user's" price-per-share, i.e. what the average user should
-    /// expect to see when exchanging to and from.
+    /// @notice the share price is calculated taking the {_freeFunds} instead of {totalAssets}
+    /// in order to ignore the locked profit
+    /// @dev some the virtual shares and decimal offset checks have been removed for further
+    /// gas optimization
     function convertToShares(uint256 assets) public view override returns (uint256 shares) {
         uint256 o = _decimalsOffset();
         return Math.fullMulDiv(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
@@ -843,34 +820,19 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @dev Returns the amount of assets that the Vault will exchange for the amount of
     /// shares provided, in an ideal scenario where all conditions are met.
-    ///
-    /// - MUST NOT be inclusive of any fees that are charged against assets in the Vault.
-    /// - MUST NOT show any variations depending on the caller.
-    /// - MUST NOT reflect slippage or other on-chain conditions, during the actual exchange.
-    /// - MUST NOT revert.
-    ///
-    /// Note: This calculation MAY NOT reflect the "per-user" price-per-share, and instead
-    /// should reflect the "average-user's" price-per-share, i.e. what the average user should
-    /// expect to see when exchanging to and from.
+    /// @notice the share price is calculated taking the {_freeFunds} instead of {totalAssets}
+    /// in order to ignore the locked profit
+    /// @dev some the virtual shares and decimal offset checks have been removed for further
+    /// gas optimization
     function convertToAssets(uint256 shares) public view override returns (uint256 assets) {
         uint256 o = _decimalsOffset();
         return Math.fullMulDiv(shares, _freeFunds() + 1, totalSupply() + 10 ** o);
     }
+
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal
     /// at the current block, given the current on-chain conditions.
-    ///
-    /// - MUST return as close to and no fewer than the exact amount of Vault shares that
-    ///   will be burned in a withdraw call in the same transaction, i.e. withdraw should
-    ///   return the same or fewer shares as `previewWithdraw` if call in the same transaction.
-    /// - MUST NOT account for withdrawal limits like those returned from `maxWithdraw` and should
-    ///   always act as if the withdrawal will be accepted, regardless of share balance, etc.
-    /// - MUST be inclusive of withdrawal fees. Integrators should be aware of this.
-    /// - MUST not revert.
-    ///
-    /// Note: Any unfavorable discrepancy between `convertToShares` and `previewWithdraw` SHOULD
-    /// be considered slippage in share price or some other type of condition,
-    /// meaning the depositor will lose assets by depositing.
-
+    /// @notice the share price is calculated taking the {_freeFunds} instead of {totalAssets}
+    /// in order to ignore the locked profit
     function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
         if (assets == 0) return 0;
         if (assets == type(uint256).max) assets = convertToAssets(balanceOf(msg.sender));
@@ -878,10 +840,19 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 vaultBalance = totalIdle;
         uint256 o = _decimalsOffset();
 
+        // in case the vault's balance covers the requested `amount`
         if (vaultBalance >= assets) {
+            // convert the assets to shares without any losses
+            // very important: ROUND UP
             return Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
-        } else {
+        } 
+        // in case the vault's balance doesn't cover the requested `assets`
+        else {
+            // shares to be burnt :
+            // the shares needed to withdraw from vault's balance(without losses) + from the strategies(with losses)
+            // very important: ROUND UP
             shares = Math.fullMulDivUp(vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+
             for (uint256 i; i < MAXIMUM_STRATEGIES;) {
                 address strategy = withdrawalQueue[i];
 
@@ -891,12 +862,28 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Check if the vault balance is finally enough to cover the requested withdrawal
                 if (vaultBalance >= assets) break;
 
-                uint256 amountNeeded = assets - vaultBalance;
-                // Computer emaining amount to withdraw considering the current balance of the vault
+                uint256 slotStrategies2;
+                // Compute remaining amount to withdraw considering the current balance of the vault
+                uint256 amountNeeded;
+                assembly ("memory-safe") {
+                    // amountNeeded = assets - vaultBalance;
+                    amountNeeded := sub(assets, vaultBalance)
 
-                uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
+                    // cache slot strategies[strategy].strategyTotalDebt
+                    mstore(0x00, strategy)
+                    mstore(0x20, strategies.slot)
+                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
 
-                amountNeeded = Math.min(amountNeeded, strategyTotalDebt);
+                    // compute strategies[strategy].strategyTotalDebt
+                    let strategyTotalDebt := shr(128, shl(128, sload(slotStrategies2)))
+
+                    // Don't withdraw more than the debt loaned to the strategy so that the strategy can still continue
+                    // to work based on the profits it has.
+
+                    // amountNeeded = Math.min(amountNeeded, strategyTotalDebt)
+                    amountNeeded :=
+                        xor(amountNeeded, mul(xor(amountNeeded, strategyTotalDebt), lt(strategyTotalDebt, amountNeeded)))
+                }
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountNeeded == 0) {
@@ -906,16 +893,23 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     continue;
                 }
 
-                uint256 request = IStrategy(strategy).previewWithdrawRequest(amountNeeded);
+                // calculate the amount to request to the strategy to get `amountNeeded`
+                uint256 requestedAmount = IStrategy(strategy).previewWithdrawRequest(amountNeeded);
 
-                if(request > IStrategy(strategy).estimatedTotalAssets()){
-                    request = amountNeeded;
-                    amountNeeded = IStrategy(strategy).previewWithdraw(request);
+                // if the requested amount is greater than the strategy's total assets 
+                if(requestedAmount > IStrategy(strategy).estimatedTotalAssets()){
+                    // request strategy's debt
+                    requestedAmount = amountNeeded;
+                    // amount needed is the result of requesting the strategy's debt
+                    amountNeeded = IStrategy(strategy).previewWithdraw(requestedAmount);
                 }
 
+                // increase the vault balance by the needed amount
                 vaultBalance += amountNeeded;
-
-                shares += Math.fullMulDivUp(request, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+                
+                // increase the shares by the requested amount converted to shares
+                // very important: ROUND UP
+                shares += Math.fullMulDivUp(requestedAmount, totalSupply() + 10 ** o, _inc_(_freeFunds()));
 
                 unchecked {
                     ++i;
@@ -926,18 +920,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redemption
     /// at the current block, given current on-chain conditions.
-    ///
-    /// - MUST return as close to and no more than the exact amount of assets that
-    ///   will be withdrawn in a redeem call in the same transaction, i.e. redeem should
-    ///   return the same or more assets as `previewRedeem` if called in the same transaction.
-    /// - MUST NOT account for redemption limits like those returned from `maxRedeem` and should
-    ///   always act as if the redemption will be accepted, regardless of approvals, etc.
-    /// - MUST be inclusive of withdrawal fees. Integrators should be aware of this.
-    /// - MUST NOT revert.
-    ///
-    /// Note: Any unfavorable discrepancy between `convertToAssets` and `previewRedeem` SHOULD
-    /// be considered slippage in share price or some other type of condition,
-    /// meaning the depositor will lose assets by depositing.
+    /// @notice the share price is calculated taking the {_freeFunds} instead of {totalAssets}
+    /// in order to ignore the locked profit
     function previewRedeem(uint256 shares) public view override returns (uint256 assets) {
         if (shares == 0) return 0;
         if (shares == type(uint256).max) shares = balanceOf(msg.sender);
@@ -1011,6 +995,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     ///                 DEPOSIT/WITHDRAWAL LOGIC                 ///
     ////////////////////////////////////////////////////////////////
 
+    /// @notice Mints `shares` Vault shares to `to` by depositing exactly `assets`
+    /// of underlying tokens.
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers 
+    /// @dev reverts with custom `VaultDepositLimitExceeded` error instead of Solady's `DepositMoreThanMax`
     function deposit(uint256 assets, address receiver)
         public
         virtual
@@ -1030,6 +1018,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets, shares = previewDeposit(assets));
     }
 
+    /// @notice Mints `shares` Vault shares to `to` by depositing exactly `assets`
+    /// of underlying tokens.
+    /// @notice it allows for gasless approvals on deposits
+    /// @param v, @param r, @param s, @param deadline, @param owner @param assets the components of the {Permit} EIP712 signature
     function depositWithPermit(
         address owner,
         uint256 assets,
@@ -1051,6 +1043,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(owner, receiver, assets, shares = previewDeposit(assets));
     }
 
+    /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
+    /// of underlying tokens.
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
+    /// @dev reverts with custom `VaultDepositLimitExceeded` error instead of Solady's `MinttMoreThanMax`
     function mint(uint256 shares, address receiver)
         public
         virtual
@@ -1070,6 +1066,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets = previewMint(shares), shares);
     }
 
+    /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
+    /// of underlying tokens.
+    /// @notice it allows for gasless approvals on mints
+    /// @param v, @param r, @param s, @param deadline, @param owner assets(calculated from @param shares ) the components of the {Permit} EIP712 signature
     function mintWithPermit(
         address owner,
         uint256 shares,
@@ -1092,6 +1092,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets, shares);
     }
 
+    /// @dev override the Solady's internal function to add extra checks
     function _deposit(address by, address to, uint256 assets, uint256 shares) internal override {
         SafeTransferLib.safeTransferFrom(asset(), by, address(this), assets);
         uint256 totalIdle_;
@@ -1138,7 +1139,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             log3(0x00, 0x40, _DEPOSIT_EVENT_SIGNATURE, and(m, by), and(m, to))
         }
     }
-
+    /// @notice Burns `shares` from `owner` and sends exactly `assets` of underlying tokens to `to`.
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function withdraw(uint256 assets, address to, address owner)
         public
         override
@@ -1162,6 +1164,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _withdrawWithLosses(msg.sender, to, owner, assets, shares = previewWithdraw(assets));
     }
 
+    /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function redeem(uint256 shares, address to, address owner) public override nonReentrant returns (uint256 assets) {
         if (shares > maxRedeem(owner)) {
             assembly ("memory-safe") {

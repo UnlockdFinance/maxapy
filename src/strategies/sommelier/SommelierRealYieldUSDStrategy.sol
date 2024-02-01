@@ -7,9 +7,9 @@ import {ICellar} from "../../interfaces/ICellar.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
-/// @title GenericYVaultStrategy
+/// @title SommelierRealYieldUSDStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/Strategy.sol
-/// @notice `SommelierStrategy` supplies an underlying token into a generic Sommelier Vault,
+/// @notice `SommelierRealYieldUSDStrategy` supplies an underlying token into a generic Sommelier Vault,
 /// earning the Sommelier Vault's yield
 contract SommelierRealYieldUSDStrategy is BaseStrategy {
     using SafeTransferLib for address;

@@ -7,6 +7,10 @@ import {ICellar} from "../../interfaces/ICellar.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
+/// @title SommelierTurboGHOStrategy
+/// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/Strategy.sol
+/// @notice `SommelierTurboGHOStrategy` supplies an underlying token into a generic Sommelier Vault,
+/// earning the Sommelier Vault's yield
 contract SommelierTurboGHOStrategy is BaseStrategy {
     using SafeTransferLib for address;
 
@@ -149,8 +153,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
 
     /// @notice This function is meant to be called from the vault
     /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
-    /// for the vault to be able to provide an accurate amount when calling either
-    ///`previewWithdraw` or `previewRedeem`
+    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
     function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
         uint256 loss;
@@ -169,6 +172,10 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         liquidatedAmount = requestedAmount - loss;
     }
 
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw` 
+    /// @return requestedAmount 
     function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
