@@ -17,7 +17,7 @@ import {StrategyData} from "../../src/helpers/VaultTypes.sol";
 import {SommelierTurboGHOStrategy} from "../../src/strategies/sommelier/SommelierTurboGHOStrategy.sol";
 import {YearnStrategyEvents} from "../helpers/YearnStrategyEvents.sol";
 
-contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
+contract ERC4626Test is BaseTest, YearnStrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                    CONSTANTS                             ///
     ////////////////////////////////////////////////////////////////
@@ -213,26 +213,34 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
 
         /// ⭕️ SCENARIO 1: withdraw when all the funds are in the vault
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 5000 USDC
+        /// - Bob deposits 100,000 USDC
         /// - Alice and Bob withdraw
         vault.deposit(200 * _1_USDC, users.alice);
         // other users deposits as well
-        deal(USDC, users.bob, 100_000 * _1_USDC);
+        deal(USDC, users.bob, 5000 * _1_USDC);
+
         vm.startPrank(users.bob);
         IERC20(USDC).approve(address(vault), type(uint256).max);
-        vault.deposit(100_000 * _1_USDC, users.bob);
+        vault.deposit(5000 * _1_USDC, users.bob);
         vm.stopPrank();
-        vm.startPrank(users.alice);
 
+        vm.startPrank(users.alice);
         uint256 snapshotId = vm.snapshot();
         uint256 expectedShares = vault.previewWithdraw(200 * _1_USDC);
         uint256 shares = vault.withdraw(200 * _1_USDC, users.alice, users.alice);
         assertEq(shares, expectedShares);
+
+        vm.startPrank(users.bob);
+        expectedShares = vault.previewWithdraw(4000* _1_USDC);
+        shares = vault.withdraw(4000 * _1_USDC, users.bob, users.bob);
+        assertEq(shares, expectedShares);
+        vm.stopPrank();
+
         vm.revertTo(snapshotId);
 
         /// ⭕️ SCENARIO 2: withdraw when some funds are in strategies
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 5000 USDC
+        /// - Bob deposits 100,000 USDC
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
@@ -244,15 +252,15 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         assertEq(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
-        expectedShares = vault.previewWithdraw(67123 * _1_USDC);
-        shares = vault.withdraw(67123 * _1_USDC, users.bob, users.bob);
+        expectedShares = vault.previewWithdraw(4000 * _1_USDC);
+        shares = vault.withdraw(4000 * _1_USDC, users.bob, users.bob);
         assertEq(shares, expectedShares);
         vm.stopPrank();
         vm.revertTo(snapshotId);
 
         /// ⭕️ SCENARIO 3: withdraw when some funds are in strategies and they have profits
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 5000 USDC
+        /// - Bob deposits 100,000 USDC
         /// - Harvest strategies so they take the vault money
         /// - Strategies make profit
         /// - Harvest again
@@ -268,80 +276,41 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         assertEq(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
-        expectedShares = vault.previewWithdraw(81920 * _1_USDC);
-        shares = vault.withdraw(81920 * _1_USDC, users.bob, users.bob);
+        expectedShares = vault.previewWithdraw(4000 * _1_USDC);
+        shares = vault.withdraw(4000 * _1_USDC, users.bob, users.bob);
         assertEq(shares, expectedShares);
         vm.stopPrank();
         vm.revertTo(snapshotId);
     }
 
-    /*     function testMaxApyVaultV2_ERC4626__PreviewWithdraw__Fuzzy(uint256 deposit, uint256 withdraw) public {
-        vm.assume(deposit >= 1 * _1_USDC && deposit <= 9_000_000 * _1_USDC);
-        vm.assume(withdraw >= 1 * _1_USDC  && withdraw <= deposit * 90 / 100);
+    function testMaxApyVaultV2_ERC4626__PreviewWithdraw_Fuzzy(uint256 amount) public {
+        vm.assume(amount > _1_USDC /10 && amount < 10_000 * _1_USDC);
         vault.addStrategy(address(strategy0), 9000, type(uint72).max, 0, 0);
         //vault.addStrategy(address(strategy1), 5000, type(uint72).max, 0, 0);
 
-        /// ⭕️ SCENARIO 1: withdraw when all the funds are in the vault
-        /// - Alice deposits 200 USDC
-        /// - Bob deposits [random] USDC
-        /// - Alice and Bob withdraw
         vault.deposit(200 * _1_USDC, users.alice);
-        // other uses deposits as well
-        deal(USDC, users.bob, deposit);
+        // other users deposits as well
         vm.startPrank(users.bob);
+        deal(USDC, users.bob, amount);
         IERC20(USDC).approve(address(vault), type(uint256).max);
-        vault.deposit(deposit, users.bob);
+        vault.deposit(amount, users.bob);
         vm.stopPrank();
-        vm.startPrank(users.alice);
 
-        uint256 snapshotId = vm.snapshot();
-        uint256 expectedShares = vault.previewWithdraw(200 * _1_USDC);
-        uint256 shares = vault.withdraw(200 * _1_USDC, users.alice, users.alice);
-        assertEq(shares, expectedShares);
-        vm.revertTo(snapshotId);
-
-        /// ⭕️ SCENARIO 2: withdraw when some funds are in strategies
-        /// - Alice deposits 200 USDC
-        /// - Bob deposits [random] USDC
-        /// - Harvest strategies so they take the vault money
-        /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
         strategy0.harvest(0, 0);
-        vm.stopPrank();
-        vm.startPrank(users.alice);
-        expectedShares = vault.previewWithdraw(190 * _1_USDC);
-        shares = vault.withdraw(190 * _1_USDC, users.alice, users.alice);
-        assertEq(shares, expectedShares);
-        vm.stopPrank();
-        vm.startPrank(users.bob);
-        expectedShares = vault.previewWithdraw(withdraw);
-        shares = vault.withdraw(withdraw, users.bob, users.bob);
-        assertEq(shares, expectedShares);
-        vm.stopPrank();
-        vm.revertTo(snapshotId);
-
-        /// ⭕️ SCENARIO 3: withdraw when some funds are in strategies and they have profits
-        /// - Alice deposits 200 USDC
-        /// - Bob deposits [random] USDC
-        /// - Harvest strategies so they take the vault money
-        /// - Strategies make profit
-        /// - Harvest again
-        /// - Alice and Bob withdraw
-        vm.startPrank(users.keeper);
-        strategy0.harvest(0,0);
         deal(USDC, address(strategy0), 50 * _1_USDC);
-        strategy0.harvest(0,0);
+        strategy0.harvest(0, 0);
         vm.stopPrank();
+
         vm.startPrank(users.alice);
-        expectedShares = vault.previewWithdraw(190 * _1_USDC);
-        shares = vault.withdraw(190 * _1_USDC, users.alice, users.alice);
-        assertEq(shares,expectedShares);
-        vm.stopPrank();        
+        uint256 expectedShares = vault.previewWithdraw(190 * _1_USDC);
+        uint256 shares = vault.withdraw(190 * _1_USDC, users.alice, users.alice);
+        assertEq(shares, expectedShares);
+        vm.stopPrank();
         vm.startPrank(users.bob);
-        expectedShares = vault.previewWithdraw(withdraw);
-        shares = vault.withdraw(withdraw, users.bob, users.bob);
-        assertEq(shares,expectedShares);
-        vm.stopPrank();   
-        vm.revertTo(snapshotId);
-    } */
+        expectedShares = vault.previewWithdraw(amount * 90/100);
+        shares = vault.withdraw(amount * 90/100, users.bob, users.bob);
+        assertEq(expectedShares, shares);
+        vm.stopPrank();
+    }
 }

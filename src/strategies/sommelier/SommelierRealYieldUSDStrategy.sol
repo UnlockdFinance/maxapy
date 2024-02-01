@@ -183,6 +183,26 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
         liquidatedAmount = requestedAmount - loss;
     }
 
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
+        if (cellar.userShareLockStartTime(address(this)) + cellar.shareLockPeriod() > block.timestamp) {
+            return 0;
+        }
+        uint256 underlyingBalance = _underlyingBalance();
+        // If underlying balance currently held by strategy is not enough to cover
+        // the requested amount, we divest from the Cellar Vault
+        if (underlyingBalance < liquidatedAmount) {
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = liquidatedAmount - underlyingBalance;
+            }
+            uint256 requestedShares = cellar.previewMint(amountToWithdraw); 
+            requestedAmount = _shareValue(requestedShares);
+        }
+        requestedAmount = underlyingBalance + requestedAmount;
+    }
+
+
+
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////

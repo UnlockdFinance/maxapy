@@ -47,4 +47,6 @@ interface IStrategy {
     function ordinalsFromRoles(uint256 roles) external pure returns (uint8[] memory ordinals);
 
     function previewWithdraw(uint256) external view returns (uint256);
+
+    function previewWithdrawRequest(uint256) external view returns (uint256);
 }

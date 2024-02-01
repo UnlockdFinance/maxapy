@@ -875,15 +875,53 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (assets == 0) return 0;
         if (assets == type(uint256).max) assets = convertToAssets(balanceOf(msg.sender));
 
+        uint256 vaultBalance = totalIdle;
         uint256 o = _decimalsOffset();
-        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
-        if (shares == 0) return 0;
-        while (true) {
-            uint256 _assets = previewRedeem(shares);
-            if (_assets == assets) return shares;
-            shares = Math.fullMulDivUp(shares, assets, _assets);
+
+        if (vaultBalance >= assets) {
+            return Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+        } else {
+            shares = Math.fullMulDivUp(vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+            for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+                address strategy = withdrawalQueue[i];
+
+                // Check if we have exhausted the queue
+                if (strategy == address(0)) break;
+
+                // Check if the vault balance is finally enough to cover the requested withdrawal
+                if (vaultBalance >= assets) break;
+
+                uint256 amountNeeded = assets - vaultBalance;
+                // Computer emaining amount to withdraw considering the current balance of the vault
+
+                uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
+
+                amountNeeded = Math.min(amountNeeded, strategyTotalDebt);
+
+                // Try the next strategy if the current strategy has no debt to be withdrawn
+                if (amountNeeded == 0) {
+                    unchecked {
+                        ++i;
+                    }
+                    continue;
+                }
+
+                uint256 request = IStrategy(strategy).previewWithdrawRequest(amountNeeded);
+
+                if(request > IStrategy(strategy).estimatedTotalAssets()){
+                    request = amountNeeded;
+                    amountNeeded = IStrategy(strategy).previewWithdraw(request);
+                }
+
+                vaultBalance += amountNeeded;
+
+                shares += Math.fullMulDivUp(request, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+
+                unchecked {
+                    ++i;
+                }
+            }
         }
-        return shares;
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redemption
