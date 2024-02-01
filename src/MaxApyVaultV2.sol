@@ -251,7 +251,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice the decimals of the underlying ERC20 token
     uint8 private immutable _decimals;
     /// @notice the assets in which the vault earns interest
-    address private immutable _underlyingAsset; 
+    address private immutable _underlyingAsset;
 
     ////////////////////////////////////////////////////////////////
     ///                         MODIFIERS                        ///
@@ -690,7 +690,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _mint(to, shares);
     }
 
-
     /// @dev Private helper to return if either value is zero.
     function _eitherIsZero_(uint256 a, uint256 b) internal pure virtual returns (bool result) {
         /// @solidity memory-safe-assembly
@@ -716,7 +715,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         return _totalAssets() - _calculateLockedProfit();
     }
 
-    /// @notice the number of decimals of the underlying token 
+    /// @notice the number of decimals of the underlying token
     function _underlyingDecimals() internal view override returns (uint8) {
         return _decimals;
     }
@@ -789,7 +788,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     function asset() public view override returns (address) {
         return _underlyingAsset;
     }
-  
+
     /// @notice Returns the total amount of the underlying asset managed by the Vault.
     function totalAssets() public view override returns (uint256) {
         return _totalAssets();
@@ -845,7 +844,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // convert the assets to shares without any losses
             // very important: ROUND UP
             return Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
-        } 
+        }
         // in case the vault's balance doesn't cover the requested `assets`
         else {
             // shares to be burnt :
@@ -896,8 +895,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // calculate the amount to request to the strategy to get `amountNeeded`
                 uint256 requestedAmount = IStrategy(strategy).previewWithdrawRequest(amountNeeded);
 
-                // if the requested amount is greater than the strategy's total assets 
-                if(requestedAmount > IStrategy(strategy).estimatedTotalAssets()){
+                // if the requested amount is greater than the strategy's total assets
+                if (requestedAmount > IStrategy(strategy).estimatedTotalAssets()) {
                     // request strategy's debt
                     requestedAmount = amountNeeded;
                     // amount needed is the result of requesting the strategy's debt
@@ -906,7 +905,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
                 // increase the vault balance by the needed amount
                 vaultBalance += amountNeeded;
-                
+
                 // increase the shares by the requested amount converted to shares
                 // very important: ROUND UP
                 shares += Math.fullMulDivUp(requestedAmount, totalSupply() + 10 ** o, _inc_(_freeFunds()));
@@ -997,7 +996,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Mints `shares` Vault shares to `to` by depositing exactly `assets`
     /// of underlying tokens.
-    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers 
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     /// @dev reverts with custom `VaultDepositLimitExceeded` error instead of Solady's `DepositMoreThanMax`
     function deposit(uint256 assets, address receiver)
         public
@@ -1141,6 +1140,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
     /// @notice Burns `shares` from `owner` and sends exactly `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
+
     function withdraw(uint256 assets, address to, address owner)
         public
         override

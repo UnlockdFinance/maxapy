@@ -195,13 +195,11 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = liquidatedAmount - underlyingBalance;
             }
-            uint256 requestedShares = cellar.previewMint(amountToWithdraw); 
+            uint256 requestedShares = cellar.previewMint(amountToWithdraw);
             requestedAmount = _shareValue(requestedShares);
         }
         requestedAmount = underlyingBalance + requestedAmount;
     }
-
-
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///

@@ -231,7 +231,7 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         assertEq(shares, expectedShares);
 
         vm.startPrank(users.bob);
-        expectedShares = vault.previewWithdraw(4000* _1_USDC);
+        expectedShares = vault.previewWithdraw(4000 * _1_USDC);
         shares = vault.withdraw(4000 * _1_USDC, users.bob, users.bob);
         assertEq(shares, expectedShares);
         vm.stopPrank();

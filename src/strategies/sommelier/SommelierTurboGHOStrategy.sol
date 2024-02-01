@@ -174,8 +174,8 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
 
     /// @notice This function is meant to be called from the vault
     /// @dev calculates the @param requestedAmount the vault has to request to this strategy
-    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw` 
-    /// @return requestedAmount 
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -185,7 +185,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = liquidatedAmount - underlyingBalance;
             }
-            uint256 requestedShares = cellar.previewMint(amountToWithdraw); 
+            uint256 requestedShares = cellar.previewMint(amountToWithdraw);
             requestedAmount = _shareValue(requestedShares);
         }
         requestedAmount = underlyingBalance + requestedAmount;
