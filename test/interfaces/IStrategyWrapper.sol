@@ -8,6 +8,10 @@ interface IStrategyWrapper is IYearnStrategy {
         external
         returns (uint256 profit, uint256 loss, uint256 debtPayment);
 
+    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
+        external
+        returns (uint256 profit, uint256 loss, uint256 debtPayment);
+
     function adjustPosition() external;
 
     function invest(uint256 amount, uint256 minOutput) external returns (uint256);

@@ -13,6 +13,8 @@ interface IStrategy {
 
     function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment) external;
 
+    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedPreofitBPS) external;
+
     function setEmergencyExit(uint256 _emergencyExit) external;
 
     function setStrategist(address _newStrategist) external;

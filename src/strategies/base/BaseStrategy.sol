@@ -26,6 +26,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
     uint256 public constant VAULT_ROLE = _ROLE_2;
     uint256 public constant KEEPER_ROLE = _ROLE_3;
+    uint256 public constant MAX_BPS = 10_000;
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -266,6 +267,131 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
     }
 
+    /// @notice Harvests the Strategy, but in this case a percentage of the profit(if there's any) is reinvested
+    /// In the rare case the Strategy is in emergency shutdown, this will exit
+    /// the Strategy's position.
+    /// @dev When `compound()` is called, the strategy reinvests a percentage of the profit and 
+    /// reports the rest of it to the MaxAPY vault (via`MaxApyVault.report()`), so this function is meant
+    /// to only be called when there are profits.
+    /// @param minExpectedBalance minimum balance amount of `underlyingAsset` expected after performing any
+    /// @param minOutputAfterInvestment minimum expected output after `_invest()`
+    /// strategy unwinding (if applies).
+    /// @param harvestedProfitBPS percentage of the profit to be sent to the vault as net profit
+    function harvest(uint256 minExpectedBalance,uint256 minOutputAfterInvestment, uint256 harvestedProfitBPS) external checkRoles(KEEPER_ROLE) {
+        assembly ("memory-safe") {
+            // if harvestedProfitBPS > MAX_BPS
+            if gt(harvestedProfitBPS, MAX_BPS) {
+                // throw the `InvalidHarvestedProfit` error
+                mstore(0x00, 0x76fbe33c)
+                revert(0x1c, 0x04)
+            }
+        }
+        uint256 profit;
+        uint256 loss;
+        uint256 debtPayment;
+        uint256 debtOutstanding;
+
+        address cachedVault = address(vault); // Cache `vault` address to avoid multiple SLOAD's
+
+        assembly ("memory-safe") {
+            // Store `vault`'s `debtOutstanding()` function selector:
+            // `bytes4(keccak256("debtOutstanding(address)"))`
+            mstore(0x00, 0xbdcf36bb)
+            mstore(0x20, address()) // append the current address as parameter
+
+            // query `vault`'s `debtOutstanding()`
+            if iszero(
+                staticcall(
+                    gas(), // Remaining amount of gas
+                    cachedVault, // Address of `vault`
+                    0x1c, // byte offset in memory where calldata starts
+                    0x24, // size of the calldata to copy
+                    0x00, // byte offset in memory to store the return data
+                    0x20 // size of the return data
+                )
+            ) {
+                // Revert if debt outstanding query fails
+                revert(0x00, 0x04)
+            }
+
+            // Store debt outstanding returned by staticcall into `debtOutstanding`
+            debtOutstanding := mload(0x00)
+        }
+
+        if (emergencyExit == 2) {
+            // Free up as much capital as possible
+            uint256 amountFreed = _liquidateAllPositions();
+            assembly {
+                // avoid writing to storage in case eq(amountFreed, debtOutstanding) == 1
+
+                if lt(amountFreed, debtOutstanding) {
+                    // if (amountFreed < debtOutstanding)
+                    loss := sub(debtOutstanding, amountFreed) // set loss = debtOutstanding - amountFreed
+                }
+                if gt(amountFreed, debtOutstanding) {
+                    // if (amountFreed > debtOutstanding)
+                    profit := sub(amountFreed, debtOutstanding) // set profit = amountFreed - debtOutstanding
+                }
+
+                debtPayment := sub(debtOutstanding, loss) // can not overflow due to `debtOutstanding` being > `loss` in both cases
+            }
+        } else {
+            // Free up returns for vault to pull
+            (profit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance, harvestedProfitBPS);
+        }
+
+         assembly ("memory-safe") {
+            let m := mload(0x40) // Store free memory pointer
+
+            // Store `vault`'s `report()` function selector:
+            // `bytes4(keccak256("report(uint128,uint128,uint128)"))`
+            mstore(0x00, 0x68dbf47f)
+            mstore(0x20, profit) // append the `profit` argument
+            mstore(0x40, loss) // append the `loss` argument
+            mstore(0x60, debtPayment) // append the `debtPayment` argument
+
+            // Report to vault
+            if iszero(
+                call(
+                    gas(), // Remaining amount of gas
+                    cachedVault, // Address of `vault`
+                    0, // `msg.value`
+                    0x1c, // byte offset in memory where calldata starts
+                    0x64, // size of the calldata to copy
+                    0x00, // byte offset in memory to store the return data
+                    0x20 // size of the return data
+                )
+            ) {
+                // If call failed, throw the error thrown in the previous `call`
+                revert(0x00, 0x04)
+            }
+
+            // Store debt outstanding returned by call to `report()` into `debtOutstanding`
+            debtOutstanding := mload(0x00)
+
+            mstore(0x60, 0) // Restore the zero slot
+            mstore(0x40, m) // Restore the free memory pointer
+        }
+
+        // Check if vault transferred underlying and re-invest it
+        _adjustPosition(debtOutstanding, minOutputAfterInvestment);
+
+        assembly ("memory-safe") {
+            let m := mload(0x40) // Store free memory pointer
+
+            mstore(0x00, profit)
+            mstore(0x20, loss)
+            mstore(0x40, debtPayment)
+            mstore(0x60, debtOutstanding)
+
+            log1(0x00, 0x80, _HARVESTED_EVENT_SIGNATURE)
+
+            mstore(0x60, 0) // Restore the zero slot
+            mstore(0x40, m) // Restore the free memory pointer
+        }
+    }
+
+
     ////////////////////////////////////////////////////////////////
     ///                 STRATEGY CONFIGURATION                   ///
     ////////////////////////////////////////////////////////////////
@@ -357,6 +483,13 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         internal
         virtual
         returns (uint256 profit, uint256 loss, uint256 debtPayment);
+
+    /// TODO: doc
+    function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
+        internal
+        virtual
+        returns (uint256 profit, uint256 loss, uint256 debtPayment);
+
 
     /// @notice Returns the current strategy's balance in underlying token
     /// @return the strategy's balance of underlying token

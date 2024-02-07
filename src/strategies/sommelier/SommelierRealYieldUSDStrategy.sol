@@ -320,6 +320,96 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
         }
     }
 
+    /// TODO:doc
+    function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
+        internal
+        override
+        returns (uint256 profit, uint256 loss, uint256 debtPayment)
+    {   
+        /// if we are not realizing any profit we can bypass the withdraw constrains
+        if(harvestedProfitBPS > 0) {
+            _checkIfSharesLocked();
+            if (block.timestamp < lastHarvest + HARVEST_INTERVAL) {
+                revert HarvestTimeNotElapsed();
+            }
+            lastHarvest = block.timestamp;
+        }
+        // Fetch initial strategy state
+        uint256 underlyingBalance = _underlyingBalance();
+        uint256 shares = _shareBalance();
+        uint256 totalAssets = underlyingBalance + _shareValue(shares);
+
+        uint256 debt;
+        assembly {
+            // debt = vault.strategies(address(this)).strategyTotalDebt;
+            mstore(0x00, 0xbdb9f8b3)
+            mstore(0x20, address())
+            if iszero(call(gas(), sload(vault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            debt := mload(0x00)
+        }
+
+        if (totalAssets >= debt) {
+            // Strategy has obtained profit or holds more funds than it should
+            // considering the current debt
+
+            // we will report harvestedProfitBPS % of the profits only so we can compound the rest
+            profit = Math.fullMulDiv(totalAssets - debt, harvestedProfitBPS, MAX_BPS);
+
+
+            uint256 amountToWithdraw = profit + debtOutstanding;
+
+            // Check if underlying funds held in the strategy are enough to cover withdrawal.
+            // If not, divest from Cellar
+            if (amountToWithdraw > underlyingBalance) {
+                uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
+
+                uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
+
+                uint256 withdrawn = _divest(sharesToWithdraw);
+
+                // Account for loss occured on withdrawal from Cellar
+                if (withdrawn < expectedAmountToWithdraw) {
+                    unchecked {
+                        loss = expectedAmountToWithdraw - withdrawn;
+                    }
+                }
+                // Overwrite underlyingBalance with the proper amount after withdrawing
+                underlyingBalance = _underlyingBalance();
+            }
+
+            assembly {
+                // Net off profit and loss
+                switch lt(profit, loss)
+                // if (profit < loss)
+                case true {
+                    loss := sub(loss, profit)
+                    profit := 0
+                }
+                case false {
+                    profit := sub(profit, loss)
+                    loss := 0
+                }
+            }
+            // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
+            if (profit > underlyingBalance) {
+                // Profit is prioritised. In this case, no `debtPayment` will be reported
+                profit = underlyingBalance;
+            } else if (amountToWithdraw > underlyingBalance) {
+                // same as `profit` + `debtOutstanding` > `underlyingBalance`
+                // Extract debt payment from divested amount
+                unchecked {
+                    debtPayment = underlyingBalance - profit;
+                }
+            } else {
+                debtPayment = debtOutstanding;
+            }
+        } else {
+            assembly {
+                loss := sub(debt, totalAssets)
+            }
+        }
+    }
+
     /// @notice Performs any adjustments to the core position(s) of this Strategy given
     /// what change the MaxApy Vault made in the "investable capital" available to the
     /// Strategy.
