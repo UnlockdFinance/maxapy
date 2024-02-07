@@ -299,7 +299,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         strategy.mockReport(0, 0, 0);
 
         (profit, loss, debtPayment) = strategy.prepareReturn(0, 0);
-        assertGt(profit, 59 * _1_USDC);
+        assertEq(profit, 59875138); // 59.87 USDC
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
 
@@ -698,7 +698,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         emit Harvested(9937496, 0, 0, 0);
         /// 9.980 USDC harvested
         strategy.harvest(0, 0);
-        assertGt(IERC20(USDC).balanceOf(address(vault)), 69 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 69937496); // 69.93 USDC
         assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
         /// 10 USDC  increase in regarding before
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - 9937496));
@@ -787,7 +787,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         emit Harvested(49937496, 0, 0, 0);
         /// 49.99 USDC harvested
         strategy.harvest(0, 0);
-        assertGt(IERC20(USDC).balanceOf(address(vault)), 100 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 109937496); // 109.93 USDC
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
@@ -1010,7 +1010,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         emit Harvested(9937496, 0, 0, 0);
         /// 9.980 USDC harvested
         strategy.harvest(0, 0, 10_000);
-        assertGt(IERC20(USDC).balanceOf(address(vault)), 69 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 69937496); // 69.93 USDC
         assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - 9937496));
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
@@ -1169,7 +1169,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         /// 49.99 USDC harvested
         /// no effect since the strategy is in emergency exit
         strategy.harvest(0, 0, 2_000);
-        assertGt(IERC20(USDC).balanceOf(address(vault)), 100 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 109937496); // 109.93 USDC
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
