@@ -299,7 +299,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         strategy.mockReport(0, 0, 0);
 
         (profit, loss, debtPayment) = strategy.prepareReturn(0, 0);
-        assertGt(profit, 59 * _1_USDC);
+        assertEq(profit, 59875138); // 59.87 USDC
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
 
@@ -335,6 +335,129 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
 
         vm.revertTo(snapshotId);
     }
+
+
+     function testSommelierTurboGHO__PrepareReturn_Compound() public {
+        /// ⭕️ SCENARIO 1:
+        /// 1. Initial State:
+        ///     - `underlyingBalance` = 40 * _1_USDC
+        ///     - `totalAssets` = 40 * _1_USDC
+        ///     - `shares` = 0
+        ///     - `debt` = 40 * _1_USDC
+        /// 2. Expected outcome:
+        ///     - 2.1 Strategy has obtained profit, calculate profit.
+        ///     - 2.2 Profit is 0 (not gt `underlyingBalance`) -> skip divesting from sommelier vault
+        /// 3. Expected return values:
+        ///     - `profit` -> 0
+        ///     - `loss` -> 0
+        ///     - `debtPayment` -> 1 * _1_USDC (value passed as `debtOutstanding`)
+        /// Add strategy to vault
+        uint256 snapshotId = vm.snapshot();
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        /// Deposit into vault
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        /// Fake report to increase `strategyTotalDebt`
+        /// The strategy receives 40 USDC
+        strategy.mockReport(0, 0, 0);
+
+        /// there are no profits so setting the harvest to 50% wont have any effect
+        (uint256 profit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDC, 0, 5_000);
+        assertEq(profit, 0);
+        assertEq(loss, 0);
+        assertEq(debtPayment, 1 * _1_USDC);
+
+        vm.revertTo(snapshotId);
+
+        /// ⭕️ SCENARIO 2:
+        /// 1. Initial State:
+        ///     - `underlyingBalance` = 40 * _1_USDC
+        ///     - `totalAssets` = around 99.999 * _1_USDC
+        ///     - `shares` = around 57.69
+        ///     - `debt` = 40 * _1_USDC
+        /// 2. Expected outcome:
+        ///     - 2.1 Strategy has obtained profit, calculate profit.
+        ///     - 2.2 Profit is around 60 USDC (it is greater than `underlyingBalance`)
+        ///            -> divest from sommelier vault to obtain an extra 60 USDC
+        ///     - 2.3 `amountToWithdraw` is 60 USDC, strategy holds 40 USDC already
+        ///            -> `expectedAmountToWithdraw` is 20 USDC
+        ///     - 2.4 Divesting causes 1 wei loss
+        ///     - 2.5 `profit` >= `loss` -> profit -= loss;
+        /// 3. Expected return values:
+        ///     - `profit` -> around 60 USDC
+        ///     - `loss` -> 0
+        ///     - `debtPayment` -> 1 * _1_USDC (value passed as `debtOutstanding`)
+        snapshotId = vm.snapshot();
+
+        deal({token: USDC, to: address(strategy), give: 60 * _1_USDC});
+        /// Perform initial 60 USDC investment in sommelier from the strategy side
+        strategy.investSommelier(60 * _1_USDC);
+        /// Add stategy to vault with 40% cap
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        /// Deposit 10 * _1_USDC into vault
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        /// Fake report to increase `strategyTotalDebt`
+        /// Strategy gets 40 USDC debt
+        strategy.mockReport(0, 0, 0);
+
+        uint256 beforeReturnSnapshotId = vm.snapshot();
+
+        (profit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
+        assertEq(profit, 59875138); // 59.87 USDC
+        assertEq(loss, 0);
+        assertEq(debtPayment, 0);
+        vm.revertTo(beforeReturnSnapshotId);
+
+        (profit, loss, debtPayment) = strategy.prepareReturn(0, 0, 1_000);
+        assertEq(profit, 5990624); // 5.9 USDC
+        assertEq(loss, 0);
+        assertEq(debtPayment, 0);
+        vm.revertTo(beforeReturnSnapshotId);
+
+        (profit, loss, debtPayment) = strategy.prepareReturn(0, 0, 0);
+        assertEq(profit, 0);
+        assertEq(loss, 0);
+        assertEq(debtPayment, 0);
+
+
+        vm.revertTo(snapshotId);
+
+        /// ⭕️ SCENARIO 3:
+        /// 1. Initial State:
+        ///     - `underlyingBalance` = 30 * _1_USDC (10 USDC lost)
+        ///     - `totalAssets` = 30 * _1_USDC
+        ///     - `shares` = 0
+        ///     - `debt` = 40 * _1_USDC
+        /// 2. Expected outcome:
+        ///     - 2.1 Strategy has incurred a loss
+        ///     - 2.2 Calculate loss with `debt - totalAssets` (40 USDC - 30 USDC = 10 USDC)
+        snapshotId = vm.snapshot();
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        /// Deposit into vault
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        /// Fake report to increase `strategyTotalDebt`
+        strategy.mockReport(0, 0, 0);
+
+        /// Fake strategy loss of 10 USDC
+        strategy.triggerLoss(10 * _1_USDC);
+
+        /// no profit was made, setting the harvest to 20% has no effect
+        (profit, loss, debtPayment) = strategy.prepareReturn(0, 0, 2_000);
+
+        assertEq(profit, 0);
+        assertEq(loss, 10 * _1_USDC);
+        assertEq(debtPayment, 0);
+
+        vm.revertTo(snapshotId);
+    }
+
 
     ////////////////////////////////////////////////////////////////
     ///                   TEST _adjustPosition()                 ///
@@ -504,7 +627,6 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         /// 2. Strategy earns 10 USDC. Strategy performs second harvest to request more funds.
         /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 USDC to vault, instead of 10 USDC
 
-        console.log("SCENARIO 1");
         uint256 snapshotId = vm.snapshot();
 
         /// Deposit into vault
@@ -537,7 +659,6 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         vm.startPrank(users.keeper);
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        console.log("FIRST HARVEST");
         // strategy takes 40 USDC
         strategy.harvest(0, 0);
 
@@ -576,9 +697,8 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         vm.expectEmit();
         emit Harvested(9937496, 0, 0, 0);
         /// 9.980 USDC harvested
-        console.log("SECOND HARVEST");
         strategy.harvest(0, 0);
-        assertGt(IERC20(USDC).balanceOf(address(vault)), 69 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 69937496); // 69.93 USDC
         assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
         /// 10 USDC  increase in regarding before
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - 9937496));
@@ -667,7 +787,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         emit Harvested(49937496, 0, 0, 0);
         /// 49.99 USDC harvested
         strategy.harvest(0, 0);
-        assertGt(IERC20(USDC).balanceOf(address(vault)), 100 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 109937496); // 109.93 USDC
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
@@ -677,7 +797,6 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         /// 2. Strategy loses 10 USDC. Strategy performs second harvest and its debt ratio gets reduced
         /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 USDC to vault, instead of 10 USDC
 
-        console.log("SCENARIO 3");
 
         vm.startPrank(users.alice);
 
@@ -711,7 +830,6 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        console.log("FIRST HARVEST");
 
         strategy.harvest(0, 0);
 
@@ -755,7 +873,6 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 10046878, 0, 3003167);
         /// 10 USDC loss
-        console.log("********second HARVEST*******");
         strategy.harvest(0, 0);
 
         StrategyData memory data = vault.strategies(address(strategy));
@@ -766,7 +883,6 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         assertEq(data.strategyTotalDebt, 29953122);
         assertEq(data.strategyTotalLoss, 10046878);
 
-        console.log("********THIRD HARVEST*******");
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
@@ -796,6 +912,391 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         uint256 strategyBalanceBefore = IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2998473);
         strategy.harvest(0, 0);
+
+        data = vault.strategies(address(strategy));
+
+        assertEq(vault.debtRatio(), 2996);
+        assertEq(vault.totalDebt(), 26949955);
+        assertEq(data.strategyDebtRatio, 2996);
+        assertEq(data.strategyTotalDebt, 26949955);
+        assertEq(data.strategyTotalLoss, 10051572);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), vaultBalanceBefore + 2998473);
+        assertLe(
+            IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
+        );
+    }
+
+    function testSommelierTurboGHO__Harvest_Compound() public {
+        /// Try to harvest not being keeper
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        strategy.harvest(0, 0);
+
+        /// ⭕️ SCENARIO 1:
+        /// 1. Strategy performs initial harvest to request vault funds
+        /// 2. Strategy earns 10 USDC. Strategy performs second harvest to request more funds.
+        /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 USDC to vault, instead of 10 USDC
+
+        uint256 snapshotId = vm.snapshot();
+
+        /// Deposit into vault
+        vault.deposit(100 * _1_USDC, users.alice);
+        vm.startPrank(users.alice);
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vm.expectEmit();
+        // esto para cuando haces harvest
+        emit StrategyReported(
+            address(strategy),
+            0,
+            /// vault gain
+            0,
+            /// vault loss
+            0,
+            /// vault debtPayment
+            0,
+            /// strategy gain
+            0,
+            /// strategy loss
+            uint128(40 * _1_USDC),
+            /// strategy total debt
+            uint128(40 * _1_USDC),
+            /// credit 40 * _1_USDC due to transferring funds from vault to strategy
+            4000
+        );
+        vm.stopPrank();
+        /// debtratio not changed
+        vm.startPrank(users.keeper);
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+        // strategy takes 40 USDC
+        strategy.harvest(0, 0);
+
+        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
+        // there are 60 USDC left in the vault
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
+        // strategy has expectedStrategyShareBalance cellar shares
+        assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+
+        /// 2. Strategy takes 10 USDC profit
+        /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
+        // strategy gets 10 USDC more as profit
+        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        uint256 beforeReportSnapshotId = vm.snapshot();
+
+        /// Case #1: We harvest 100% of profit
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy),
+            /// vault gain - 9.99999 USDC
+            9937496,
+            /// vault loss
+            0,
+            /// vault debtPayment
+            0,
+            /// strategy gain - 9.99999 USDC
+            9937496,
+            /// strategy loss
+            0,
+            /// strategy total debt: not changing now
+            uint128(40 * _1_USDC),
+            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
+            0,
+            4000
+        );
+        /// debtratio not changed
+
+        vm.expectEmit();
+        emit Harvested(9937496, 0, 0, 0);
+        /// 9.980 USDC harvested
+        strategy.harvest(0, 0, 10_000);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 69937496); // 69.93 USDC
+        assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - 9937496));
+        assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        vm.revertTo(beforeReportSnapshotId);
+
+        /// Case #2: We harvest 0% of profit
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy),
+            /// vault gain - 0 USDC
+            0,
+            /// vault loss
+            0,
+            /// vault debtPayment
+            0,
+            /// strategy gain - 0 USDC
+            0,
+            /// strategy loss
+            0,
+            /// strategy total debt: not changing now
+            uint128(40 * _1_USDC),
+            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
+            0,
+            4000
+        );
+        /// debtratio not changed
+
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+        /// 0 USDC harvested
+        strategy.harvest(0, 0, 0);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
+        /// 10 USDC  increase in regarding before
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC));
+        assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        vm.revertTo(beforeReportSnapshotId);
+
+
+        /// Case #3: We harvest 72.33% of profit
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy),
+            /// vault gain - 7.18 USDC
+            7187790,
+            /// vault loss
+            0,
+            /// vault debtPayment
+            0,
+            /// strategy gain - 7.18 USDC
+            7187790,
+            /// strategy loss
+            0,
+            /// strategy total debt: not changing now
+            uint128(40 * _1_USDC),
+            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
+            0,
+            4000
+        );
+        /// debtratio not changed
+
+        vm.expectEmit();
+        emit Harvested(7187790, 0, 0, 0);
+        /// 7.18 USDC harvested
+
+        /// harvest 72.33% of the profit
+        strategy.harvest(0, 0, 7_233);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC + 7187790);
+        assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - 7187790));
+        assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        vm.revertTo(beforeReportSnapshotId);
+
+
+        vm.revertTo(snapshotId);
+
+        snapshotId = vm.snapshot();
+
+        /// ⭕️ SCENARIO 2:
+        /// 1. Strategy performs initial harvest to request vault funds
+        /// 2. Emergency exit is activated
+        /// 2. Strategy earns 10 USDC. Strategy performs second harvest to request more funds.
+        /// Due to emergency mode, all funds are returned back to vault
+        vm.startPrank(users.alice);
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        /// Deposit into vault
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        /// Step #1
+        vm.startPrank(users.keeper);
+
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy),
+            0,
+            /// vault gain
+            0,
+            /// vault loss
+            0,
+            /// vault debtPayment
+            0,
+            /// strategy gain
+            0,
+            /// strategy loss
+            uint128(40 * _1_USDC),
+            /// strategy total debt
+            uint128(40 * _1_USDC),
+            /// credit 40 * _1_USDC due to transferring funds from vault to strategy
+            4000
+        );
+        /// debtratio not changed
+
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+        strategy.harvest(0, 0);
+
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+
+        /// Step #2
+        vm.startPrank(users.alice);
+        strategy.setEmergencyExit(2);
+
+        /// Step #3
+        vm.startPrank(users.keeper);
+
+        /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
+        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy),
+            49937496,
+            /// vault gain + all of strategy's funds (40 initial USDC + 9.99 USDC gain)
+            0,
+            /// vault loss
+            0,
+            /// vault debtPayment
+            49937496,
+            /// strategy gain - 9.99 USDC
+            0,
+            /// strategy loss
+            uint128(40 * _1_USDC),
+            /// strategy total debt: not changing now
+            0,
+            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
+            4000
+        );
+        /// debtratio not changed
+
+        vm.expectEmit();
+        emit Harvested(49937496, 0, 0, 0);
+        /// 49.99 USDC harvested
+        /// no effect since the strategy is in emergency exit
+        strategy.harvest(0, 0, 2_000);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 109937496); // 109.93 USDC
+        assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
+
+        vm.revertTo(snapshotId);
+
+        /// ⭕️ SCENARIO 3:
+        /// 1. Strategy performs initial harvest to request vault funds
+        /// 2. Strategy loses 10 USDC. Strategy performs second harvest and its debt ratio gets reduced
+        /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 USDC to vault, instead of 10 USDC
+
+
+        vm.startPrank(users.alice);
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        /// Deposit into vault
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy),
+            0,
+            /// vault gain
+            0,
+            /// vault loss
+            0,
+            /// vault debtPayment
+            0,
+            /// strategy gain
+            0,
+            /// strategy loss
+            uint128(40 * _1_USDC),
+            /// strategy total debt
+            uint128(40 * _1_USDC),
+            /// credit 40 * _1_USDC due to transferring funds from vault to strategy
+            4000
+        );
+        /// debtratio not changed
+
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+
+        strategy.harvest(0, 0);
+
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+
+        /// 2. Strategy loses 10 USDC
+        /// - Expected a 1000 reduction in debt ratio, 30% of total funds should be in the strategy
+        /// - Total funds are now 90 USDC, 30% of which must be in strategy
+        /// - 30% of 90 USDC = 27 USDC, but strategy still has 30 USDC -> there is a debt outstanding of 3 USDC
+
+        /// Fake loss in strategy(shares are sent to a random address)
+        uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
+
+        vm.startPrank(address(strategy));
+        IERC20(CELLAR_USDC_MAINNET).transfer(makeAddr("random"), expectedShares);
+
+        vm.startPrank(users.keeper);
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy),
+            0,
+            /// vault gain
+            10046878,
+            /// vault loss - 10046878
+            0,
+            /// vault debtPayment
+            0,
+            /// strategy gain
+            10046878,
+            /// strategy loss - 10 USDC
+            29953122,
+            /// strategy total debt: 10 USDC less than initial debt
+            0,
+            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
+            2996
+        );
+        /// debtratio reduced
+
+        vm.expectEmit();
+        emit Harvested(0, 10046878, 0, 3003167);
+        /// 10 USDC loss
+        /// only losses, no effect
+        strategy.harvest(0, 0, 1_000);
+
+        StrategyData memory data = vault.strategies(address(strategy));
+
+        assertEq(vault.debtRatio(), 2996);
+        assertEq(vault.totalDebt(), 29953122);
+        assertEq(data.strategyDebtRatio, 2996);
+        assertEq(data.strategyTotalDebt, 29953122);
+        assertEq(data.strategyTotalLoss, 10046878);
+
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy),
+            0,
+            /// vault gain
+            4694,
+            /// vault loss - 0.004694 USDC This is due to the fact that strategy had to withdraw 3 USDC from sommelier (totalDebt should be 27 USDC but was 30 USDC), causing 1 wei loss
+            2998473,
+            /// vault debtPayment (3 USDC -  0.004694 USDC loss)
+            0,
+            /// strategy gain
+            10051572,
+            /// strategy loss - 10 USDC previously lost +  0.004694 USDC loss
+            26949955,
+            /// strategy total debt: 27 USDC, back to regular values
+            0,
+            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
+            2996
+        );
+        /// debtratio: 30% of funds shared with strategy
+
+        vm.expectEmit();
+        emit Harvested(0, 4694, 2998473, 1406);
+
+        /// 10 USDC loss
+        uint256 vaultBalanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 strategyBalanceBefore = IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy));
+        uint256 expectedShareDecrease = strategy.sharesForAmount(2998473);
+
+        /// only losses, no effect
+        strategy.harvest(0, 0, 6_600);
 
         data = vault.strategies(address(strategy));
 
