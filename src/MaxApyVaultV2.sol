@@ -526,7 +526,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (emergencyShutdown) return 0;
 
         // Compute necessary data regarding current state of the vault
-        uint256 vaultTotalAssets = _totalAssets();
+        uint256 vaultTotalAssets = _totalAccountedAssets();
         uint256 vaultDebtLimit = _computeDebtLimit(debtRatio, vaultTotalAssets);
         uint256 vaultTotalDebt = totalDebt;
 
@@ -625,7 +625,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         // If debt ratio configured in vault is zero or emergency shutdown, any amount of debt in the strategy should be returned
         if (debtRatio == 0 || emergencyShutdown) return strategyTotalDebt;
 
-        uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalAssets());
+        uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalAccountedAssets());
 
         // There will not be debt outstanding if strategy total debt is smaller or equal to the current debt limit
         if (strategyDebtLimit >= strategyTotalDebt) {
@@ -725,10 +725,27 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         return 6;
     }
 
+    /// @notice Returns the estimate amount of assets held by the vault and strategy positions,
+    /// including unrealised profit or losses 
+    /// @return totalAssets_ The total assets under control of this Vault
+    function _totalAssets() internal view returns (uint256 totalAssets_) {
+        totalAssets_ = totalIdle;
+        address[MAXIMUM_STRATEGIES] memory _withdrawalQueue = withdrawalQueue;
+        for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+            address strategy = _withdrawalQueue[i];
+            // Check if we have exhausted the queue
+            if (strategy == address(0)) break;
+            totalAssets_ += IStrategy(strategy).estimatedTotalAssets();
+            unchecked {
+                ++i;
+            }
+        }
+    }
+    
     /// @notice Returns the total quantity of all assets under control of this Vault,
     /// whether they're loaned out to a Strategy, or currently held in the Vault
     /// @return totalAssets_ The total assets under control of this Vault
-    function _totalAssets() internal view returns (uint256 totalAssets_) {
+    function _totalAccountedAssets() internal view returns (uint256 totalAssets_) {
         assembly {
             let totalDebt_ := sload(totalDebt.slot)
             totalAssets_ := add(sload(totalIdle.slot), totalDebt_)
@@ -794,6 +811,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         return _totalAssets();
     }
 
+    function totalAccountedAssets() public view returns (uint256) {
+        return _totalAccountedAssets();
+    }
+
     /// @notice Returns the maximum amount of the underlying asset that can be deposited
     /// into the Vault for `to`, via a deposit call.
     function maxDeposit(address /*to*/ ) public view override returns (uint256) {
@@ -804,6 +825,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// via a mint call.
     function maxMint(address /*to*/ ) public view override returns (uint256) {
         return convertToShares(maxDeposit(address(0)));
+    }
+
+    function sharePrice() external view returns(uint256) {
+        return convertToAssets(10 ** (_underlyingDecimals() + _decimalsOffset()));
     }
 
     /// @notice Returns the amount of shares that the Vault will exchange for the amount of

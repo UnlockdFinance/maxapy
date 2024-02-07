@@ -213,7 +213,7 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
 
         /// ⭕️ SCENARIO 1: withdraw when all the funds are in the vault
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 100,000 USDC
+        /// - Bob deposits 5,000 USDC
         /// - Alice and Bob withdraw
         vault.deposit(200 * _1_USDC, users.alice);
         // other users deposits as well
@@ -240,15 +240,15 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
 
         /// ⭕️ SCENARIO 2: withdraw when some funds are in strategies
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 100,000 USDC
+        /// - Bob deposits 5,000 USDC
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
         strategy0.harvest(0, 0);
         vm.stopPrank();
         vm.startPrank(users.alice);
-        expectedShares = vault.previewWithdraw(200 * _1_USDC);
-        shares = vault.withdraw(200 * _1_USDC, users.alice, users.alice);
+        expectedShares = vault.previewWithdraw(180 * _1_USDC);
+        shares = vault.withdraw(180 * _1_USDC, users.alice, users.alice);
         assertEq(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -260,7 +260,7 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
 
         /// ⭕️ SCENARIO 3: withdraw when some funds are in strategies and they have profits
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 100,000 USDC
+        /// - Bob deposits 5,000 USDC
         /// - Harvest strategies so they take the vault money
         /// - Strategies make profit
         /// - Harvest again

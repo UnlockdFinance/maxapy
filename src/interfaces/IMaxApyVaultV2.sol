@@ -138,9 +138,13 @@ interface IMaxApyVaultV2 is IERC4626 {
 
     function totalAssets() external view returns (uint256);
 
+    function totalAccountedAssets() external view returns (uint256);
+
     function lastReport() external view returns (uint256);
 
     function lockedProfit() external view returns (uint256);
 
     function treasury() external view returns (address);
+
+    function sharePrice() external view returns (uint256);
 }
