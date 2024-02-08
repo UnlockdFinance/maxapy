@@ -1421,13 +1421,13 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         uint256 aliceBalanceBefore = IERC20(USDC).balanceOf(address(users.alice));
 
         /// Withdraw 10 USDC
-        uint256 valueWithdrawn = _withdraw(users.alice, vault, 10 * _1_USDC, 0);
+        uint256 valueWithdrawn = _withdraw(users.alice, vault, 10 * _1_USDC);
 
         /// Withdraw 400 USDC
-        valueWithdrawn += _withdraw(users.alice, vault, 400 * _1_USDC, 0);
+        valueWithdrawn += _withdraw(users.alice, vault, 400 * _1_USDC);
 
         /// Withdraw 90 USDC
-        valueWithdrawn += _withdraw(users.alice, vault, 90 * _1_USDC, 0);
+        valueWithdrawn += _withdraw(users.alice, vault, 90 * _1_USDC);
 
         assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
         assertEq(IERC20(USDC).balanceOf(address(users.alice)), aliceBalanceBefore + valueWithdrawn);
@@ -1469,6 +1469,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// Initially report from lossy strategy so that they have a positive `strategyTotalDebt`
         lossyStrategy.mockReport(0, 0, 0);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), 10 * _1_USDC);
+        lossyStrategy.setEstimatedTotalAssets(10 * _1_USDC);
 
         aliceBalanceBefore = IERC20(USDC).balanceOf(users.alice);
         StrategyWithdrawalPreviousData memory previousStrategyData;
@@ -1484,12 +1485,13 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
 
         uint256 expectedRatioChange = _computeExpectedRatioChange(vault, address(lossyStrategy), 1 * _1_USDC);
 
-        valueWithdrawn = _withdraw(users.alice, vault, 20 * _1_USDC, 1 * _1_USDC);
+        // we can only withdraw 19 USDC since the lossy strategy lost 1 USDC
+        valueWithdrawn = _withdraw(users.alice, vault, 20 * _1_USDC -  _1_USDC);
 
         /// Assert balances
         assertEq(valueWithdrawn, 19 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(users.alice), aliceBalanceBefore + 19 * _1_USDC);
-        assertEq(vault.balanceOf(users.alice), 0);
+        assertEq(vault.balanceOf(users.alice), 0, "user balance");
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), previousStrategyData.balance - 9 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
 
@@ -1553,6 +1555,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// Initially report from lossy strategy funded so that they have a positive `strategyTotalDebt`
         lossyStrategyFunded.mockReport(0, 0, 0);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategyFunded)), 25 * _1_USDC);
+        lossyStrategyFunded.setEstimatedTotalAssets(25 * _1_USDC);
 
         /// Compute previous values
         aliceBalanceBefore = IERC20(USDC).balanceOf(users.alice);
@@ -1565,7 +1568,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         previousStrategyData.totalDebt = vault.strategies(address(lossyStrategyFunded)).strategyTotalDebt;
         expectedRatioChange = _computeExpectedRatioChange(vault, address(lossyStrategyFunded), 1 * _1_USDC);
 
-        valueWithdrawn = _withdraw(users.alice, vault, type(uint256).max, 1 * _1_USDC);
+        valueWithdrawn = _withdraw(users.alice, vault, 50 * _1_USDC - _1_USDC);
 
         /// Assert balances
         assertEq(valueWithdrawn, 49 * _1_USDC);
@@ -1656,6 +1659,11 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         lossyStrategy3.mockReport(0, 0, 0);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy3)), 25 * _1_USDC);
 
+        /// Set the estimated total assets of the strategies
+        lossyStrategy.setEstimatedTotalAssets(50 * _1_USDC);
+        lossyStrategy2.setEstimatedTotalAssets(25 * _1_USDC);
+        lossyStrategy3.setEstimatedTotalAssets(25 * _1_USDC);
+
         /// Compute previous values
         aliceBalanceBefore = IERC20(USDC).balanceOf(users.alice);
 
@@ -1691,9 +1699,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         valueWithdrawn = _withdraw(
             users.alice,
             vault,
-            65 * _1_USDC,
-            //10_000,
-            2 * _1_USDC // 2 * _1_USDC loss expected due to withdrawal
+            65 * _1_USDC - 2 * _1_USDC // 2 USDC loss expected due to withdrawal
         );
 
         /// Assert balances
@@ -1752,7 +1758,8 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// 100 ETH - 50 ETH - 15 ETH
 
         assertEq(vault.totalIdle(), 0);
-    }
+   
+    } 
 
     ////////////////////////////////////////////////////////////////
     ///                 TEST report() NEGATIVES                  ///

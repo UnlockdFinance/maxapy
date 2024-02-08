@@ -827,6 +827,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         return convertToShares(maxDeposit(address(0)));
     }
 
+    /// @notice Returns the estimate price of 1 vault share
     function sharePrice() external view returns(uint256) {
         return convertToAssets(10 ** (_underlyingDecimals() + _decimalsOffset()));
     }
@@ -938,6 +939,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 unchecked {
                     ++i;
                 }
+            }
+
+            // if there are more assets to cover(when requesting more assets then total)
+            // we add the extra shares needed, even though it would revert if someone tries
+            // to withdraw that much since they wouln't have the  needed shares
+            if(vaultBalance < assets){
+                shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
             }
         }
     }
@@ -1172,12 +1180,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         nonReentrant
         returns (uint256 shares)
     {
-        if (assets > maxWithdraw(owner)) {
-            assembly ("memory-safe") {
-                mstore(0x00, 0x936941fc) // `WithdrawMoreThanMax()`.
-                revert(0x1c, 0x04)
-            }
-        }
         assembly ("memory-safe") {
             if eq(shares, not(0)) {
                 // compute `balanceOf(msg.sender)` and store it in `shares`
@@ -1186,7 +1188,14 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 shares := sload(keccak256(0x0c, 0x20))
             }
         }
-        _withdrawWithLosses(msg.sender, to, owner, assets, shares = previewWithdraw(assets));
+        shares = previewWithdraw(assets);
+        if (shares > maxRedeem(owner)) {
+            assembly ("memory-safe") {
+                mstore(0x00, 0x936941fc) // `WithdrawMoreThanMax()`.
+                revert(0x1c, 0x04)
+            }
+        }
+        _withdrawWithLosses(msg.sender, to, owner, convertToAssets(shares), shares);
     }
 
     /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.

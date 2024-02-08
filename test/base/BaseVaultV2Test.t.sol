@@ -52,28 +52,27 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         return shares;
     }
 
-    function _withdraw(address user, IMaxApyVaultV2 _vault, uint256 assets, uint256 expectedLoss)
+    function _withdraw(address user, IMaxApyVaultV2 _vault, uint256 assets)
         internal
         returns (uint256)
     {
         vm.startPrank(user);
 
         uint256 userBalanceBefore = IERC20(_vault).balanceOf(user);
+        
         if (assets == type(uint256).max) assets = _vault.convertToAssets(IERC20(_vault).balanceOf(user));
 
-        uint256 shares = vault.convertToShares(assets);
-
+        uint256 shares = vault.previewWithdraw(assets);
+        
         vm.expectEmit();
-        emit Withdraw(user, user, user, assets - expectedLoss, shares);
+        emit Withdraw(user, user, user, assets, shares);
 
-        uint256 _assets = _vault.redeem(shares, user, user);
-
-        assertEq(assets - _assets, expectedLoss);
+        _vault.withdraw(assets, user, user);
 
         assertEq(IERC20(_vault).balanceOf(user), userBalanceBefore - shares);
         vm.stopPrank();
 
-        return _assets;
+        return assets;
     }
 
     function _redeem(address user, IMaxApyVaultV2 _vault, uint256 shares, uint256 expectedLoss)

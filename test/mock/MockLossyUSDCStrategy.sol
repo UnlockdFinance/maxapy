@@ -32,6 +32,14 @@ contract MockLossyUSDCStrategy {
         return 10 ** 6;
     }
 
+    function previewWithdrawRequest(uint256 amount) external pure returns(uint256){
+        return amount + 10 ** 6;
+    }
+
+    function previewWithdraw(uint256 amount) external pure returns(uint256) {
+        return amount - 10 ** 6;
+    }
+
     function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {
         IMaxApyVaultV2(vault).report(gain, loss, debtPayment);
     }
