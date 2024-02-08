@@ -88,12 +88,12 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         uint256 expectedValue = _vault.convertToAssets(sharesComputed);
 
         vm.expectEmit();
-        emit Withdraw(user, users.alice, users.alice, expectedValue, shares);
+        emit Withdraw(user, users.alice, users.alice, expectedValue - expectedLoss, shares);
 
         uint256 valueWithdrawn = _vault.redeem(shares, users.alice, users.alice);
-        assertEq(expectedValue - valueWithdrawn, expectedLoss, "expected loss");
+        assertEq(expectedValue - valueWithdrawn, expectedLoss);
 
-        assertEq(IERC20(USDC).balanceOf(user) - userBalanceBefore, valueWithdrawn, "withdrawn");
+        assertEq(IERC20(USDC).balanceOf(user) - userBalanceBefore, valueWithdrawn);
         vm.stopPrank();
 
         return valueWithdrawn;

@@ -313,4 +313,47 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         assertEq(expectedShares, shares);
         vm.stopPrank();
     } */
+
+    function testMaxApyVaultV2_ERC4626__totalAssets() external {
+        vault.addStrategy(address(strategy0), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy1), 5000, type(uint72).max, 0, 0);
+        vault.deposit(200 * _1_USDC, users.alice);
+        assertEq(vault.totalAssets(), 200 * _1_USDC);
+        deal(USDC, address(vault), 5000 * _1_USDC);
+        // sending assets directly to the vault doesnt work
+        assertEq(vault.totalAssets(), 200 * _1_USDC);
+        // if a strategy makes profit {totalAssets} increases
+        deal(USDC, address(strategy0),50 * _1_USDC);
+        assertEq(vault.totalAssets(), 250 * _1_USDC);
+
+        // harvest to take the funds
+        vm.startPrank(users.keeper);
+        strategy0.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0);
+        // totalAssets should change because now tokens are invested in external protocol and 
+        // the position value can be slightly different from the initial invested
+        assertApproxEq(vault.totalAssets(), 250 * _1_USDC, _1_USDC);
+    }
+    
+
+    function testMaxApyVaultV2_ERC4626__sharePrice() external {
+        vault.addStrategy(address(strategy0), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy1), 5000, type(uint72).max, 0, 0);
+        vault.deposit(200 * _1_USDC, users.alice);
+        assertEq(vault.sharePrice(), _1_USDC);
+        deal(USDC, address(vault), 5000 * _1_USDC);
+        // sending assets directly to the vault doesnt work
+        assertEq(vault.sharePrice(), _1_USDC);
+        // if a strategy makes profit {sharePrice} increases
+        deal(USDC, address(strategy0),50 * _1_USDC);
+        // profit is 50 out of 200 = 25% so share price is 1.25 USDC
+        assertEq(vault.sharePrice(), 125 * _1_USDC / 100 - 1);// round down
+        // harvest to take the funds
+        vm.startPrank(users.keeper);
+        strategy0.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0);
+        // sharePrice should change because now tokens are invested in external protocol and 
+        // the position value can be slightly different from the initial invested
+        assertApproxEq(vault.sharePrice(), 125 * _1_USDC / 100, _1_USDC / 100);
+    }
 }
