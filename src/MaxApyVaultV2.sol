@@ -394,86 +394,18 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Issues new shares to cover performance, management and strategist fees
     /// @param strategy The strategy reporting the gain
-    /// @param gain The amount of gain to extract fees from
     /// @return the total fees (performance + management + strategist) extracted from the gain
-    function _assessFees(address strategy, uint256 gain) internal returns (uint256) {
-        bool success;
-        uint256 slot0Content;
-        assembly ("memory-safe") {
-            // Get strategies[strategy] slot
-            mstore(0x00, strategy)
-            mstore(0x20, strategies.slot)
-            // Get strategies[strategy] data
-            slot0Content := sload(keccak256(0x00, 0x40))
+    function _assessFees(address strategy) internal returns (uint256) {
+        StrategyData memory strategyData = strategies[strategy];
+        uint256 duration = block.timestamp - strategyData.strategyLastReport;
 
-            // If strategy was just added or no gains were reported, return 0 as fees
-            // if (strategyData.strategyActivation == block.timestamp || gain == 0)
-            if or(eq(shr(208, shl(176, slot0Content)), timestamp()), eq(gain, 0)) { success := 1 }
-        }
-        if (success) {
-            return 0;
-        }
+        uint256 _totalAssets = _totalAssets();
 
-        // Stack variables to cache
-        uint256 duration;
-        uint256 strategyPerformanceFee;
-        uint256 computedManagementFee;
-        uint256 computedStrategistFee;
-        uint256 computedPerformanceFee;
-        uint256 totalFee;
+        uint256 computedManagementFee = Math.fullMulDiv(_totalAssets, managementFee * duration , SECS_PER_YEAR); 
 
-        assembly ("memory-safe") {
-            // duration = block.timestamp - strategyData.strategyLastReport;
-            duration := sub(timestamp(), shr(208, shl(128, slot0Content)))
-
-            // if duration == 0
-            if iszero(duration) {
-                // throw the `FeesAlreadyAssesed` error
-                mstore(0x00, 0x17de0c6e)
-                revert(0x1c, 0x04)
-            }
-
-            // Cache strategy performance fee
-            strategyPerformanceFee := shr(240, shl(224, slot0Content))
-
-            // Load vault fees
-            let managementFee_ := sload(managementFee.slot)
-            let performanceFee_ := sload(performanceFee.slot)
-
-            // Overflow check equivalent to require(managementFee_ == 0 || gain <= type(uint256).max / managementFee_)
-            if iszero(iszero(mul(managementFee_, gt(gain, div(not(0), managementFee_))))) { revert(0, 0) }
-
-            // Compute vault management fee
-            // computedManagementFee = (gain * managementFee) / MAX_BPS
-            computedManagementFee := div(mul(gain, managementFee_), MAX_BPS)
-
-            // Overflow check equivalent to require(strategyPerformanceFee == 0 || gain <= type(uint256).max / strategyPerformanceFee)
-            if iszero(iszero(mul(strategyPerformanceFee, gt(gain, div(not(0), strategyPerformanceFee))))) {
-                revert(0, 0)
-            }
-
-            // Compute strategist fee
-            // computedStrategistFee = (gain * strategyData.strategyPerformanceFee) / MAX_BPS;
-            computedStrategistFee := div(mul(gain, strategyPerformanceFee), MAX_BPS)
-
-            // Overflow check equivalent to require(performanceFee_ == 0 || gain <= type(uint256).max / performanceFee_)
-            if iszero(iszero(mul(performanceFee_, gt(gain, div(not(0), performanceFee_))))) { revert(0, 0) }
-
-            // Compute vault performance fee
-            // computedPerformanceFee = (gain * performanceFee) / MAX_BPS;
-            computedPerformanceFee := div(mul(gain, performanceFee_), MAX_BPS)
-
-            // totalFee = computedManagementFee + computedStrategistFee + computedPerformanceFee
-            totalFee := add(add(computedManagementFee, computedStrategistFee), computedPerformanceFee)
-
-            // Ensure total fee is not greater than the gain, set total fee to become the actual gain otherwise
-            // if totalFee > gain
-            if gt(totalFee, gain) {
-                // totalFee = gain
-                totalFee := gain
-            }
-        }
-
+        uint256 totalFee = computedManagementFee;
+        uint256 computedStrategistFee= 0;
+        uint256 computedPerformanceFee = 0;
         // Only transfer shares if there are actual shares to transfer
         if (totalFee != 0) {
             // Compute corresponding shares and mint rewards to vault
@@ -870,7 +802,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (vaultBalance >= assets) {
             // convert the assets to shares without any losses
             // very important: ROUND UP
-            return Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+            shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
         }
         // in case the vault's balance doesn't cover the requested `assets`
         else {
@@ -948,7 +880,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             if(vaultBalance < assets){
                 shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
             }
+
         }
+        // reverse add fees
+        shares = Math.fullMulDivUp(shares ,MAX_BPS - performanceFee,MAX_BPS);
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redemption
@@ -958,11 +893,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     function previewRedeem(uint256 shares) public view override returns (uint256 assets) {
         if (shares == 0) return 0;
         if (shares == type(uint256).max) shares = balanceOf(msg.sender);
+
         assets = convertToAssets(shares);
         uint256 vaultBalance = totalIdle;
 
         if (vaultBalance >= assets) {
-            return assets;
+            return assets - Math.mulDiv(assets, performanceFee, MAX_BPS);
         } else {
             // Iterate over strategies
             for (uint256 i; i < MAXIMUM_STRATEGIES;) {
@@ -1021,6 +957,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     ++i;
                 }
             }
+
+            assets -= Math.mulDiv(assets, performanceFee, MAX_BPS);
         }
     }
 
@@ -1127,7 +1065,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @dev override the Solady's internal function to add extra checks
     function _deposit(address by, address to, uint256 assets, uint256 shares) internal override {
-        SafeTransferLib.safeTransferFrom(asset(), by, address(this), assets);
+        asset().safeTransferFrom(by, address(this), assets);
         uint256 totalIdle_;
         assembly ("memory-safe") {
             // if to == address(0)
@@ -1355,6 +1293,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
         // Reduce value withdrawn from vault total idle
         totalIdle -= assets;
+        
+        // apply exit fee
+        uint256 exitFeeAssets = Math.mulDiv(assets, performanceFee, MAX_BPS);
+        assets -= exitFeeAssets;
+        // send them to treasury
+        asset().safeTransfer(treasury, exitFeeAssets);
 
         // Transfer underlying to `recipient`
         SafeTransferLib.safeTransfer(underlying, to, assets);
@@ -1418,7 +1362,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
 
         // Assess both management fee and performance fee, and issue both as shares of the vault
-        uint256 totalFees = _assessFees(msg.sender, gain);
+        uint256 totalFees = _assessFees(msg.sender);
 
         // Set gain returns as realized gains for the vault
         strategies[msg.sender].strategyTotalGain += gain;
@@ -1456,7 +1400,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             } else if (totalReportedAmount > credit) {
                 // Amount reported by the strategy is greater than the credit, take funds **from** strategy
                 totalIdle += (totalReportedAmount - credit);
-                SafeTransferLib.safeTransferFrom(underlying, msg.sender, address(this), totalReportedAmount - credit);
+                asset().safeTransferFrom(msg.sender, address(this), totalReportedAmount - credit);
             }
 
             // else don't do anything (credit and reported amounts are balanced, hence no transfers need to be executed)

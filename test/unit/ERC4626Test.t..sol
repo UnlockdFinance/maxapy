@@ -322,9 +322,9 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         deal(USDC, address(vault), 5000 * _1_USDC);
         // sending assets directly to the vault doesnt work
         assertEq(vault.totalAssets(), 200 * _1_USDC);
-        // if a strategy makes profit {totalAssets} increases
+        // if a strategy makes profit {totalAssets} doesnt increase
         deal(USDC, address(strategy0),50 * _1_USDC);
-        assertEq(vault.totalAssets(), 250 * _1_USDC);
+        assertEq(vault.totalAssets(), 200 * _1_USDC);
 
         // harvest to take the funds
         vm.startPrank(users.keeper);

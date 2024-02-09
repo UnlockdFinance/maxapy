@@ -177,17 +177,23 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
     ///                     TEST isActive()                      ///
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboGHO__IsActive() public {
+        vault.addStrategy(address(strategy), 10_000, 0,0,0);
         assertEq(strategy.isActive(), false);
 
         deal(USDC, address(strategy), 1);
-        assertEq(strategy.isActive(), true);
+        assertEq(strategy.isActive(), false);
 
         vm.startPrank(address(strategy));
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        
+        assertEq(strategy.isActive(), true);
         IERC20(USDC).transfer(makeAddr("random"), IERC20(USDC).balanceOf(address(strategy)));
         assertEq(strategy.isActive(), false);
 
         deal(USDC, address(strategy), 1 * _1_USDC);
-        strategy.invest(1 * _1_USDC, 0);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
         assertEq(strategy.isActive(), true);
     }
 
