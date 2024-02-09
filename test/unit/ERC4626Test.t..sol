@@ -341,19 +341,45 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         vault.addStrategy(address(strategy1), 5000, type(uint72).max, 0, 0);
         vault.deposit(200 * _1_USDC, users.alice);
         assertEq(vault.sharePrice(), _1_USDC);
+        assertEq(strategy0.estimatedTotalAssets() , 0);
+        assertEq(strategy1.estimatedTotalAssets() , 0);
+        assertEq(strategy0.lastEstimatedTotalAssets() , 0);
+        assertEq(strategy1.lastEstimatedTotalAssets() , 0);
         deal(USDC, address(vault), 5000 * _1_USDC);
         // sending assets directly to the vault doesnt work
         assertEq(vault.sharePrice(), _1_USDC);
-        // if a strategy makes profit {sharePrice} increases
+        // if someone sends tokens to the strategy when it hasnt harvested yet
+        // the amount is not accounted as estimated strategy assets
         deal(USDC, address(strategy0),50 * _1_USDC);
+        assertEq(strategy0.estimatedTotalAssets() , 0);
+        assertEq(strategy1.lastEstimatedTotalAssets() , 0);
         // profit is 50 out of 200 = 25% so share price is 1.25 USDC
-        assertEq(vault.sharePrice(), 125 * _1_USDC / 100 - 1);// round down
+        assertEq(vault.sharePrice(),_1_USDC);// round down
         // harvest to take the funds
         vm.startPrank(users.keeper);
         strategy0.harvest(0, 0, 0);
         strategy1.harvest(0, 0, 0);
-        // sharePrice should change because now tokens are invested in external protocol and 
-        // the position value can be slightly different from the initial invested
-        assertApproxEq(vault.sharePrice(), 125 * _1_USDC / 100, _1_USDC / 100);
+        // after the first harvest the {lastEstimatedTotalAssets} should be set initialized
+        assertGt(strategy0.lastEstimatedTotalAssets() , 0);
+        assertGt(strategy1.lastEstimatedTotalAssets() , 0);
+        // sharePrice increases because the 50 USDC sent before are included now
+        uint256 sharePrice = vault.sharePrice();
+        assertApproxEq(sharePrice, 125 * _1_USDC / 100, _1_USDC / 100);
+        // if one strategy makes more profit  the share price should not change until we harvest 
+        deal(USDC, address(strategy1), 50 * _1_USDC);
+        assertEq(vault.sharePrice(), sharePrice);
+        // if one strategy's totalAssets are reduced share price decreses
+        uint256 estimatedTotalAssetsBefore = strategy0.estimatedTotalAssets();
+        (uint256 liquidated, ) = strategy0.liquidatePosition(50 * _1_USDC);
+        vm.startPrank(address(strategy0));
+        IERC20(USDC).transfer(makeAddr("random"), liquidated);
+        vm.stopPrank();
+        assertApproxEq(vault.sharePrice(), _1_USDC, _1_USDC / 100);
+        uint256 estimatedTotalAssetsAfter = strategy0.estimatedTotalAssets();
+        assertLt(estimatedTotalAssetsAfter, estimatedTotalAssetsBefore);
+        // if we harvest again the 50 USDC sent to one strategy will make share price increase again
+        vm.startPrank(users.keeper);
+        strategy1.harvest(0,0,0);
+        assertApproxEq(sharePrice, 125 * _1_USDC / 100, _1_USDC / 100);
     }
 }

@@ -67,6 +67,8 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     bytes32 public strategyName;
     /// @notice Strategist's address
     address public strategist;
+    /// @notice Strategy's last recorded estimated total assets
+    uint256 public lastEstimatedTotalAssets;
     /// @notice Gap for upgradeability
     uint256[20] private __gap;
 
@@ -251,7 +253,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
 
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, minOutputAfterInvestment);
-
+        lastEstimatedTotalAssets = _estimatedTotalAssets();
         assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
 
@@ -375,6 +377,8 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
 
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, minOutputAfterInvestment);
+        // snapshot of the estimated total assets
+        lastEstimatedTotalAssets = _estimatedTotalAssets();
 
         assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
@@ -496,4 +500,10 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     function _underlyingBalance() internal view returns (uint256) {
         return underlyingAsset.balanceOf(address(this));
     }
+    
+    /// @notice Returns the real time estimation of the value in assets held by the strategy
+    /// @return the strategy's total assets(idle + investment positions)
+    function _estimatedTotalAssets() internal virtual view returns (uint256);
 }
+
+

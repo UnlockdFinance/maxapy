@@ -146,7 +146,9 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     /// mechanisms).
     /// @return The estimated total assets in this Strategy.
     function estimatedTotalAssets() public view returns (uint256) {
-        return _underlyingBalance() + _shareValue(_shareBalance());
+        // always try to use the value from the last harvest so share price dont fluctuate too much
+        // always be pessimistic, take the lowest between the last harvest assets and assets in that moment
+        return Math.min(lastEstimatedTotalAssets,_estimatedTotalAssets());
     }
 
     /// @notice Provides an indication of whether this strategy is currently "active"
@@ -534,5 +536,11 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     /// @return _balance balance the strategy's balance of Cellar vault shares
     function _shareBalance() internal view returns (uint256 _balance) {
         return cellar.balanceOf(address(this));
+    }
+
+    /// @notice Returns the real time estimation of the value in assets held by the strategy
+    /// @return the strategy's total assets(idle + investment positions)
+    function _estimatedTotalAssets() internal override view returns (uint256) {
+        return _underlyingBalance() + _shareValue(_shareBalance());
     }
 }

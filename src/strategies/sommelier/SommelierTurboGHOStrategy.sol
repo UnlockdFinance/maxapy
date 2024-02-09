@@ -137,7 +137,9 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// mechanisms).
     /// @return The estimated total assets in this Strategy.
     function estimatedTotalAssets() public view returns (uint256) {
-        return _underlyingBalance() + _shareValue(_shareBalance());
+        // always try to use the value from the last harvest so share price is not updated before the harvest
+        // always be pessimistic, take the lowest between the last harvest assets and assets in that moment
+        return Math.min(lastEstimatedTotalAssets,_estimatedTotalAssets());
     }
 
     /**
@@ -511,5 +513,11 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
             if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _balance := mload(0x00)
         }
+    }
+
+    /// @notice Returns the real time estimation of the value in assets held by the strategy
+    /// @return the strategy's total assets(idle + investment positions)
+    function _estimatedTotalAssets() internal override view returns (uint256) {
+        return _underlyingBalance() + _shareValue(_shareBalance());
     }
 }

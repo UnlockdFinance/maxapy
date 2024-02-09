@@ -77,4 +77,8 @@ interface IStrategyWrapper is IYearnStrategy {
     function previewWithdraw(uint256) external view returns (uint256);
 
     function lastHarvest() external view returns (uint256);
+
+    function estimatedTotalAssets() external view returns(uint256);
+
+    function lastEstimatedTotalAssets() external view returns(uint256);
 }

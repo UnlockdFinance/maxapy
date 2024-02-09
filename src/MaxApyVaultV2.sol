@@ -729,6 +729,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// including unrealised profit or losses 
     /// @return totalAssets_ The total assets under control of this Vault
     function _totalAssets() internal view returns (uint256 totalAssets_) {
+        // use accounted assets for the vault balance, prevents inflation attacks or similar
         totalAssets_ = totalIdle;
         address[MAXIMUM_STRATEGIES] memory _withdrawalQueue = withdrawalQueue;
         for (uint256 i; i < MAXIMUM_STRATEGIES;) {
