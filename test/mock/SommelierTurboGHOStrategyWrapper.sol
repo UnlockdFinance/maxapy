@@ -18,21 +18,14 @@ contract SommelierTurboGHOStrategyWrapper is SommelierTurboGHOStrategy {
     }
 
     function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {
-        vault.report(gain, loss, debtPayment);
-    }
-
-    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance)
-        external
-        returns (uint256 profit, uint256 loss, uint256 debtPayment)
-    {
-        (profit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
+        vault.report(gain,gain, loss, debtPayment);
     }
 
     function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)
         external
-        returns (uint256 profit, uint256 loss, uint256 debtPayment)
+        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        (profit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance,harvestedProvitBPS);
+        (realizedProfit, unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance,harvestedProvitBPS);
     }
 
     function adjustPosition() external {
