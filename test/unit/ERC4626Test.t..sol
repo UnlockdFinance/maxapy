@@ -14,9 +14,9 @@ import {SommelierTurboGHOStrategyWrapper} from "../mock/SommelierTurboGHOStrateg
 import {MaxApyVaultV2} from "../../src/MaxApyVaultV2.sol";
 import {StrategyData} from "../../src/helpers/VaultTypes.sol";
 import {SommelierTurboGHOStrategy} from "../../src/strategies/sommelier/SommelierTurboGHOStrategy.sol";
-import {YearnStrategyEvents} from "../helpers/YearnStrategyEvents.sol";
+import {StrategyEvents} from "../helpers/StrategyEvents.sol";
 
-contract ERC4626Test is BaseTest, YearnStrategyEvents {
+contract ERC4626Test is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                    CONSTANTS                             ///
     ////////////////////////////////////////////////////////////////

@@ -537,7 +537,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(strategyData.strategyLastReport, block.timestamp);
         assertEq(strategyData.strategyActivation, block.timestamp);
         assertEq(strategyData.strategyTotalDebt, 0);
-        assertEq(strategyData.strategyTotalGain, 0);
+        assertEq(strategyData.strategyTotalRealizedGain, 0);
         assertEq(strategyData.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 6000);
@@ -571,7 +571,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(strategyData.strategyLastReport, block.timestamp);
         assertEq(strategyData.strategyActivation, block.timestamp);
         assertEq(strategyData.strategyTotalDebt, 0);
-        assertEq(strategyData.strategyTotalGain, 0);
+        assertEq(strategyData.strategyTotalRealizedGain, 0);
         assertEq(strategyData.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 6020);
@@ -605,7 +605,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(strategyData.strategyLastReport, block.timestamp);
         assertEq(strategyData.strategyActivation, block.timestamp);
         assertEq(strategyData.strategyTotalDebt, 0);
-        assertEq(strategyData.strategyTotalGain, 0);
+        assertEq(strategyData.strategyTotalRealizedGain, 0);
         assertEq(strategyData.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 10_000);
@@ -803,7 +803,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(mockStrategyData.strategyLastReport, mockStrategyDataBefore.strategyLastReport);
         assertEq(mockStrategyData.strategyActivation, mockStrategyDataBefore.strategyActivation);
         assertEq(mockStrategyData.strategyTotalDebt, 0);
-        assertEq(mockStrategyData.strategyTotalGain, 0);
+        assertEq(mockStrategyData.strategyTotalRealizedGain, 0);
         assertEq(mockStrategyData.strategyTotalLoss, 0);
 
         assertEq(
@@ -822,7 +822,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(mockStrategyData2.strategyLastReport, mockStrategy2DataBefore.strategyLastReport);
         assertEq(mockStrategyData2.strategyActivation, mockStrategy2DataBefore.strategyActivation);
         assertEq(mockStrategyData2.strategyTotalDebt, 0);
-        assertEq(mockStrategyData2.strategyTotalGain, 0);
+        assertEq(mockStrategyData2.strategyTotalRealizedGain, 0);
         assertEq(mockStrategyData2.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 5000 + 100 + mockStrategy3DataBefore.strategyDebtRatio);
@@ -838,7 +838,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(mockStrategyData3.strategyLastReport, mockStrategy3DataBefore.strategyLastReport);
         assertEq(mockStrategyData3.strategyActivation, mockStrategy3DataBefore.strategyActivation);
         assertEq(mockStrategyData3.strategyTotalDebt, 0);
-        assertEq(mockStrategyData3.strategyTotalGain, 0);
+        assertEq(mockStrategyData3.strategyTotalRealizedGain, 0);
         assertEq(mockStrategyData3.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 5000 + 100 + 4786);
@@ -1492,7 +1492,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// Assert balances
         assertEq(valueWithdrawn, 19 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(users.alice), aliceBalanceBefore + 19 * _1_USDC);
-        assertEq(vault.balanceOf(users.alice), 0, "user balance");
+        assertEq(vault.balanceOf(users.alice), 0);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), previousStrategyData.balance - 9 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
 
@@ -2309,7 +2309,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// - Report 0 `gain`, 0 `loss`, 0 `debtPayment`
         /// - Assert 0 loss is reported
         /// - Assert 0 fees are assessed due to `gain == 0`
-        /// - Assert strategy's `strategyTotalGain` is 0
+        /// - Assert strategy's `strategyTotalRealizedGain` is 0
         /// - Assert strategy's `strategyTotalDebt` increases by expected `credit`
         /// - Assert `credit` > `totalReportedAmount`:
         ///     - totalIdle increase by difference between `credit` and `totalReportedAmount`
@@ -2320,13 +2320,15 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         emit StrategyReported(
             address(lossyStrategy),
             0,
-            /// gain
+            /// realizedgain
+            0,
+            /// unrealized gain
             0,
             /// loss
             0,
             /// debtPayment
             0,
-            /// strategyTotalGain
+            /// strategyTotalRealizedGain
             0,
             /// strategyTotalLoss
             uint128(40 * _1_USDC),
@@ -2355,8 +2357,8 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), 40 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(address(TREASURY)), 0 * _1_USDC);
 
-        /// Assert strategy's `strategyTotalGain` is 0
-        assertEq(strategyData.strategyTotalGain, 0);
+        /// Assert strategy's `strategyTotalRealizedGain` is 0
+        assertEq(strategyData.strategyTotalRealizedGain, 0);
 
         /// - Assert strategy's `strategyTotalDebt` increases by expected `credit`
         /// already checked before
@@ -2382,7 +2384,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// - Assert `strategyTotalLoss` increases by loss reported
         /// - Assert `strategyTotalDebt` decreases by loss reported
         /// - Assert `totalDebt` decreases by loss reported
-        /// - Assert `strategyTotalGain` keeps at 0
+        /// - Assert `strategyTotalRealizedGain` keeps at 0
         /// - Assert `debt` is gt 0
         ///     - Loss reported modifies `_totalAssets()`, hence changing `_computeDebtLimit()` in `_debtOutstanding()`
         ///       calculation and making strategy owe a small amount to the vault
@@ -2417,8 +2419,8 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(strategyData.strategyTotalDebt, previousStrategyData.strategyTotalDebt - 1 * _1_USDC);
         /// - Assert `totalDebt` decreases by loss reported
         assertEq(vault.totalDebt(), previousVaultTotalDebt - 1 * _1_USDC);
-        /// - Assert `strategyTotalGain` keeps at 0
-        assertEq(strategyData.strategyTotalGain, 0);
+        /// - Assert `strategyTotalRealizedGain` keeps at 0
+        assertEq(strategyData.strategyTotalRealizedGain, 0);
         /// - Assert `debt` is gt 0
         assertGt(debt, 0);
         /// - Assert `debtPayment` is 0 due to fetching `Math.min(debtPayment, debt)`

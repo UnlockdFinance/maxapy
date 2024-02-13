@@ -152,10 +152,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
-        uint256 gain,
+        uint256 realizedGain,
+        uint256 unrealizedGain,
         uint256 loss,
         uint256 debtPayment,
-        uint128 strategyTotalGain,
+        uint128 strategyTotalRealizedGain,
         uint128 strategyTotalLoss,
         uint128 strategyTotalDebt,
         uint256 credit,
@@ -203,7 +204,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         0x25bf703141a84375d04ea08a0c4a21c7406f300f133e12aef555607b4f3ff238;
 
     uint256 internal constant _STRATEGY_REPORTED_EVENT_SIGNATURE =
-        0xc2d7e1173e37528dce423c72b129fa1ad2c5d51e50974c64fe13f1928eb27f89;
+        0x76d4dbb6b8a8587ce9257d3c01366679401bb6abfa332fe63a1b4d52ae275f02;
 
     uint256 private constant _DEPOSIT_EVENT_SIGNATURE =
         0xdcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7;
@@ -1429,7 +1430,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 totalFees = _assessFees(msg.sender, uint256(unrealizedGain));
 
         // Set gain returns as realized gains for the vault
-        strategies[msg.sender].strategyTotalGain += realizedGain;
+        strategies[msg.sender].strategyTotalRealizedGain += realizedGain;
 
         // Compute the line of credit the Vault is able to offer the Strategy (if any)
         uint256 credit = _creditAvailable(msg.sender);
@@ -1485,10 +1486,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
         emit StrategyReported(
             msg.sender,
+            realizedGain,
             unrealizedGain,
             loss,
             debtPayment,
-            strategies[msg.sender].strategyTotalGain,
+            strategies[msg.sender].strategyTotalRealizedGain,
             strategies[msg.sender].strategyTotalLoss,
             strategies[msg.sender].strategyTotalDebt,
             credit,
@@ -1618,7 +1620,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             //     strategyMaxDebtPerHarvest: uint128(strategyMaxDebtPerHarvest),
             //     strategyMinDebtPerHarvest: uint128(strategyMinDebtPerHarvest),
             //     strategyTotalDebt: 0,
-            //     strategyTotalGain: 0,
+            //     strategyTotalRealizedGain: 0,
             //     strategyTotalLoss: 0
             // });
 
@@ -1830,7 +1832,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 add(slot, 1),
                 or(
                     // Obtain old values in slot
-                    shl(128, shr(128, sload(add(slot, 1)))), // Extract previously stored `strategyTotalGain`
+                    shl(128, shr(128, sload(add(slot, 1)))), // Extract previously stored `strategyTotalRealizedGain`
                     // Build new values to store
                     shr(128, shl(128, newMinDebtPerHarvest))
                 )

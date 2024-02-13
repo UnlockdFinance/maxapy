@@ -60,10 +60,11 @@ contract MaxApyVaultV2Events {
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
-        uint256 gain,
+        uint256 realizedGain,
+        uint256 unrealizedGain,
         uint256 loss,
         uint256 debtPayment,
-        uint128 strategyTotalGain,
+        uint128 strategyTotalRealizedGain,
         uint128 strategyTotalLoss,
         uint128 strategyTotalDebt,
         uint256 credit,

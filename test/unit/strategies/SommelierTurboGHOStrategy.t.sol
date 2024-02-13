@@ -15,9 +15,9 @@ import {SommelierTurboGHOStrategyWrapper} from "../../mock/SommelierTurboGHOStra
 import {MaxApyVaultV2} from "../../../src/MaxApyVaultV2.sol";
 import {StrategyData} from "../../../src/helpers/VaultTypes.sol";
 import {SommelierTurboGHOStrategy} from "../../../src/strategies/sommelier/SommelierTurboGHOStrategy.sol";
-import {YearnStrategyEvents} from "../../helpers/YearnStrategyEvents.sol";
+import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
 
-contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
+contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                    CONSTANTS                             ///
     ////////////////////////////////////////////////////////////////
@@ -554,13 +554,15 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         emit StrategyReported(
             address(strategy),
             0,
-            /// vault gain
+            /// vault realized gain
+            0,
+            /// vault unrealized gain
             0,
             /// vault loss
             0,
             /// vault debtPayment
             0,
-            /// strategy gain
+            /// strategy realized gain
             0,
             /// strategy loss
             uint128(40 * _1_USDC),
@@ -568,6 +570,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
             uint128(40 * _1_USDC),
             /// credit 40 * _1_USDC due to transferring funds from vault to strategy
             4000
+            /// debtratio not changed
         );
         vm.stopPrank();
         /// debtratio not changed
@@ -593,29 +596,31 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            /// vault gain - 9.99999 USDC
             10 * _1_USDC,
+            /// vault realized gain - 10 USDC
+            10 * _1_USDC,
+            /// vault unrealized gain - 10 USDC
+            0,
             /// vault loss
             0,
             /// vault debtPayment
-            0,
-            /// strategy gain - 9.99999 USDC
             uint128(10 * _1_USDC),
+            /// realized strategy gain - 10 USDC
+            0,
             /// strategy loss
-            0,
-            /// strategy total debt: not changing now
             uint128(40 * _1_USDC),
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
+            /// strategy total debt: not changing now
             0,
+            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
             4000
+            /// debtratio not changed
         );
-        /// debtratio not changed
 
         vm.expectEmit();
         emit Harvested(10 * _1_USDC, 0, 0, 0);
-        /// 9.980 USDC harvested
+        /// 10 USDC harvested
         strategy.harvest(0, 0, 10_000);
-        assertEq(IERC20(USDC).balanceOf(address(vault)), 70 * _1_USDC); // 69.93 USDC
+        assertEq(IERC20(USDC).balanceOf(address(vault)), 70 * _1_USDC); // 70 USDC
         assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
@@ -625,13 +630,15 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            /// vault gain - 0 USDC
+            /// vault realized gain - 0 USDC
+            0,
+            /// vault unrealized gain - 10 USDC
             10 * _1_USDC,
             /// vault loss
             0,
             /// vault debtPayment
             0,
-            /// strategy gain - 0 USDC
+            /// realized strategy gain - 0 USDC
             0,
             /// strategy loss
             0,
@@ -658,27 +665,29 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            /// vault gain - 7.18 USDC
+            uint128(10 * _1_USDC * 7_233 / 10000),
+            /// vault gain - 7.23 USDC
             10 * _1_USDC,
+            /// vault unrealized gain - 10 USDC
+            0,
             /// vault loss
             0,
             /// vault debtPayment
-            0,
-            /// strategy gain - 7.18 USDC
             uint128(10 * _1_USDC * 7_233 / 10000),
+            /// realized strategy gain - 7.23 USDC
+            0,
             /// strategy loss
-            0,
-            /// strategy total debt: not changing now
             uint128(40 * _1_USDC),
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
+            /// strategy total debt: not changing now
             0,
+            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
             4000
+            /// debtratio not changed
         );
-        /// debtratio not changed
 
         vm.expectEmit();
         emit Harvested((10 * _1_USDC * 7_233 / 10000), 0, 0, 0);
-        /// 7.18 USDC harvested
+        /// 7.23 USDC harvested
 
         /// harvest 72.33% of the profit
         strategy.harvest(0, 0, 7_233);
@@ -712,22 +721,24 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         emit StrategyReported(
             address(strategy),
             0,
-            /// vault gain
+            /// realized vault gain
+            0,
+            /// unrealized vault gain
             0,
             /// vault loss
             0,
             /// vault debtPayment
             0,
-            /// strategy gain
+            /// realized strategy gain
             0,
             /// strategy loss
             uint128(40 * _1_USDC),
             /// strategy total debt
             uint128(40 * _1_USDC),
-            /// credit 40 * _1_USDC due to transferring funds from vault to strategy
+            /// credit 40 * USDC due to transferring funds from vault to strategy
             4000
+            /// debtratio not changed
         );
-        /// debtratio not changed
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
@@ -750,14 +761,16 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
+            49937496,
+            /// realized vault gain
             0,
-            /// vault gain + all of strategy's funds (40 initial USDC + 9.99 USDC gain)
+            /// unrealized vault gain
             0,
             /// vault loss
             0,
             /// vault debtPayment
             49937496,
-            /// strategy gain - 9.99 USDC
+            /// realized strategy gain - 9.99 USDC
             0,
             /// strategy loss
             uint128(40 * _1_USDC),
@@ -796,13 +809,15 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         emit StrategyReported(
             address(strategy),
             0,
-            /// vault gain
+            /// realized vault gain
+            0,
+            /// unrealized vault gain
             0,
             /// vault loss
             0,
             /// vault debtPayment
             0,
-            /// strategy gain
+            /// realized strategy gain
             0,
             /// strategy loss
             uint128(40 * _1_USDC),
@@ -838,13 +853,15 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         emit StrategyReported(
             address(strategy),
             0,
-            /// vault gain
+            /// realized vault gain
+            0,
+            /// unrealized vault gain
             9984374,
             /// vault loss - 9.984374 USDC
             0,
             /// vault debtPayment
             0,
-            /// strategy gain
+            /// realized strategy gain
             9984374,
             /// strategy loss - 9.984374 USDC
             30015626,
