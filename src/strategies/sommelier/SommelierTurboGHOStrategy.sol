@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "../base/BaseStrategy.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 import {ICellar} from "../../interfaces/ICellar.sol";
-
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 /// @title SommelierTurboGHOStrategy
@@ -137,7 +136,9 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// mechanisms).
     /// @return The estimated total assets in this Strategy.
     function estimatedTotalAssets() public view returns (uint256) {
-        return _underlyingBalance() + _shareValue(_shareBalance());
+        // always try to use the value from the last harvest so share price is not updated before the harvest
+        // always be pessimistic, take the lowest between the last harvest assets and assets in that moment
+        return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
     }
 
     /**
@@ -217,12 +218,20 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
         internal
         override
-        returns (uint256 profit, uint256 loss, uint256 debtPayment)
+        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
-        uint256 shares = _shareBalance();
-        uint256 totalAssets = underlyingBalance + _shareValue(shares);
+        uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
+        uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
+
+        assembly {
+            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
+            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
+            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
+            // else
+            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
+        }
 
         uint256 debt;
         assembly {
@@ -233,94 +242,14 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
             debt := mload(0x00)
         }
 
-        if (totalAssets >= debt) {
+        if (unrealizedProfit > 0) {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 
             // we will report harvestedProfitBPS % of the profits only so we can compound the rest
-            profit = Math.fullMulDiv(totalAssets - debt, harvestedProfitBPS, MAX_BPS);
+            realizedProfit = Math.fullMulDiv(unrealizedProfit, harvestedProfitBPS, MAX_BPS);
 
-            uint256 amountToWithdraw = profit + debtOutstanding;
-
-            // Check if underlying funds held in the strategy are enough to cover withdrawal.
-            // If not, divest from Cellar
-            if (amountToWithdraw > underlyingBalance) {
-                uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
-
-                uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
-
-                uint256 withdrawn = _divest(sharesToWithdraw);
-
-                // Account for loss occured on withdrawal from Cellar
-                if (withdrawn < expectedAmountToWithdraw) {
-                    unchecked {
-                        loss = expectedAmountToWithdraw - withdrawn;
-                    }
-                }
-                // Overwrite underlyingBalance with the proper amount after withdrawing
-                underlyingBalance = _underlyingBalance();
-            }
-
-            assembly {
-                // Net off profit and loss
-                switch lt(profit, loss)
-                // if (profit < loss)
-                case true {
-                    loss := sub(loss, profit)
-                    profit := 0
-                }
-                case false {
-                    profit := sub(profit, loss)
-                    loss := 0
-                }
-            }
-
-            // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
-            if (profit > underlyingBalance) {
-                // Profit is prioritised. In this case, no `debtPayment` will be reported
-                profit = underlyingBalance;
-            } else if (amountToWithdraw > underlyingBalance) {
-                // same as `profit` + `debtOutstanding` > `underlyingBalance`
-                // Extract debt payment from divested amount
-                unchecked {
-                    debtPayment = underlyingBalance - profit;
-                }
-            } else {
-                debtPayment = debtOutstanding;
-            }
-        } else {
-            assembly {
-                loss := sub(debt, totalAssets)
-            }
-        }
-    }
-
-    function _prepareReturn(uint256 debtOutstanding, uint256)
-        internal
-        override
-        returns (uint256 profit, uint256 loss, uint256 debtPayment)
-    {
-        // Fetch initial strategy state
-        uint256 underlyingBalance = _underlyingBalance();
-        uint256 shares = _shareBalance();
-        uint256 totalAssets = underlyingBalance + _shareValue(shares);
-
-        uint256 debt;
-        assembly {
-            // debt = vault.strategies(address(this)).strategyTotalDebt;
-            mstore(0x00, 0xbdb9f8b3)
-            mstore(0x20, address())
-            if iszero(call(gas(), sload(vault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
-            debt := mload(0x00)
-        }
-
-        if (totalAssets >= debt) {
-            // Strategy has obtained profit or holds more funds than it should
-            // considering the current debt
-
-            profit = totalAssets - debt;
-
-            uint256 amountToWithdraw = profit + debtOutstanding;
+            uint256 amountToWithdraw = realizedProfit + debtOutstanding;
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Cellar
@@ -342,35 +271,39 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
             }
 
             assembly {
-                // Net off profit and loss
-                switch lt(profit, loss)
-                // if (profit < loss)
+                // Net off realized profit and loss
+                switch lt(realizedProfit, loss)
+                // if (realizedProfit < loss)
                 case true {
-                    loss := sub(loss, profit)
-                    profit := 0
+                    loss := sub(loss, realizedProfit)
+                    realizedProfit := 0
                 }
                 case false {
-                    profit := sub(profit, loss)
+                    realizedProfit := sub(realizedProfit, loss)
+                    loss := 0
+                }
+
+                // Net off unrealized profit and loss
+                switch lt(unrealizedProfit, loss)
+                // if (unrealizedProfit < loss)
+                case true { realizedProfit := 0 }
+                case false {
+                    unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
                 }
             }
-
             // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
-            if (profit > underlyingBalance) {
+            if (realizedProfit > underlyingBalance) {
                 // Profit is prioritised. In this case, no `debtPayment` will be reported
-                profit = underlyingBalance;
+                realizedProfit = underlyingBalance;
             } else if (amountToWithdraw > underlyingBalance) {
                 // same as `profit` + `debtOutstanding` > `underlyingBalance`
                 // Extract debt payment from divested amount
                 unchecked {
-                    debtPayment = underlyingBalance - profit;
+                    debtPayment = underlyingBalance - realizedProfit;
                 }
             } else {
                 debtPayment = debtOutstanding;
-            }
-        } else {
-            assembly {
-                loss := sub(debt, totalAssets)
             }
         }
     }
@@ -511,5 +444,11 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
             if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _balance := mload(0x00)
         }
+    }
+
+    /// @notice Returns the real time estimation of the value in assets held by the strategy
+    /// @return the strategy's total assets(idle + investment positions)
+    function _estimatedTotalAssets() internal view override returns (uint256) {
+        return _underlyingBalance() + _shareValue(_shareBalance());
     }
 }

@@ -25,7 +25,7 @@ struct StrategyData {
     uint128 strategyMinDebtPerHarvest;
     /// @notice Total returns that Strategy has realized for Vault
     /// @dev max strategy total gain of 79,228,162,514,264,337,593,543,950,335
-    uint128 strategyTotalGain;
+    uint128 strategyTotalRealizedGain;
     /// Slot 2
     /// @notice Total outstanding debt that Strategy has
     /// @dev max total debt of 79,228,162,514,264,337,593,543,950,335

@@ -11,18 +11,16 @@ import {BaseTest, IERC20, Vm, console} from "../base/BaseTest.t.sol";
 import {IStrategyWrapper} from "../interfaces/IStrategyWrapper.sol";
 import {IMaxApyVaultV2} from "../../src/interfaces/IMaxApyVaultV2.sol";
 import {SommelierTurboGHOStrategyWrapper} from "../mock/SommelierTurboGHOStrategyWrapper.sol";
-import {SommelierRealYieldStrategyWrapper} from "../mock/SommelierRealYieldStrategyWrapper.sol";
 import {MaxApyVaultV2} from "../../src/MaxApyVaultV2.sol";
 import {StrategyData} from "../../src/helpers/VaultTypes.sol";
 import {SommelierTurboGHOStrategy} from "../../src/strategies/sommelier/SommelierTurboGHOStrategy.sol";
-import {YearnStrategyEvents} from "../helpers/YearnStrategyEvents.sol";
+import {StrategyEvents} from "../helpers/StrategyEvents.sol";
 
-contract ERC4626Test is BaseTest, YearnStrategyEvents {
+contract ERC4626Test is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                    CONSTANTS                             ///
     ////////////////////////////////////////////////////////////////
     address public constant TURBO_GHO_CELLAR = 0x0C190DEd9Be5f512Bd72827bdaD4003e9Cc7975C;
-    address public constant REAL_YIELD_USD_CELLAR = 0x97e6E0a40a3D02F12d1cEC30ebfbAE04e37C119E;
     address public TREASURY;
     uint256 public _1_USDC = 1e6;
 
@@ -30,14 +28,11 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
     ///                      STORAGE                             ///
     ////////////////////////////////////////////////////////////////
 
-    IStrategyWrapper public strategy0;
-    IStrategyWrapper public strategy1;
-    SommelierTurboGHOStrategyWrapper public implementation0;
-    SommelierRealYieldStrategyWrapper public implementation1;
+    IStrategyWrapper public strategy;
+    SommelierTurboGHOStrategyWrapper public implementation;
     MaxApyVaultV2 public vaultDeployment;
     IMaxApyVaultV2 public vault;
-    ITransparentUpgradeableProxy public proxy0;
-    ITransparentUpgradeableProxy public proxy1;
+    ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
 
     ////////////////////////////////////////////////////////////////
@@ -56,13 +51,13 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation
-        implementation0 = new SommelierTurboGHOStrategyWrapper();
+        implementation = new SommelierTurboGHOStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
         /// Deploy transparent upgradeable proxy
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
-            address(implementation0),
+            address(implementation),
             address(proxyAdmin),
             abi.encodeWithSignature(
                 "initialize(address,address[],bytes32,address,address)",
@@ -74,33 +69,11 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
             )
         );
         vm.label(TURBO_GHO_CELLAR, "SommelierTurboGHOStrategy Cellar");
-        proxy0 = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy0), "SommelierTurboGHOStrategy");
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "SommelierTurboGHOStrategy");
         vm.label(address(USDC), "USDC");
 
-        strategy0 = IStrategyWrapper(address(_proxy));
-
-        /// Deploy strategy implementation
-        implementation1 = new SommelierRealYieldStrategyWrapper();
-
-        /// Deploy transparent upgradeable proxy
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation1),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Real USD Strategy")),
-                users.alice,
-                REAL_YIELD_USD_CELLAR
-            )
-        );
-        vm.label(REAL_YIELD_USD_CELLAR, "SommelierRealYieldUSDStrategy Cellar");
-        proxy1 = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy1), "SommelierRealYieldUSDStrategy");
-
-        strategy1 = IStrategyWrapper(address(_proxy));
+        strategy = IStrategyWrapper(address(_proxy));
 
         /// Alice approves vault for deposits
         IERC20(USDC).approve(address(vault), 0);
@@ -142,8 +115,7 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
     }
 
     function testMaxApyVaultV2_ERC4626__PreviewRedeem() public {
-        vault.addStrategy(address(strategy0), 4000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy1), 5000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
 
         /// ⭕️ SCENARIO 1: Redeem when all the funds are in the vault
         /// - Alice deposits 200 USDC
@@ -168,7 +140,7 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
-        strategy0.harvest(0, 0);
+        strategy.harvest(0, 0, 10_000);
         vm.stopPrank();
         vm.startPrank(users.alice);
         uint256 expectedAssets = vault.previewRedeem(sharesAlice);
@@ -190,9 +162,9 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         /// - Harvest again
         /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
-        strategy0.harvest(0, 0);
-        deal(USDC, address(strategy0), 50 * _1_USDC);
-        strategy0.harvest(0, 0);
+        strategy.harvest(0, 0, 10_000);
+        deal(USDC, address(strategy), 50 * _1_USDC);
+        strategy.harvest(0, 0, 10_000);
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedAssets = vault.previewRedeem(sharesAlice);
@@ -208,12 +180,11 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
     }
 
     function testMaxApyVaultV2_ERC4626__PreviewWithdraw() public {
-        vault.addStrategy(address(strategy0), 4000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy1), 5000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
 
         /// ⭕️ SCENARIO 1: withdraw when all the funds are in the vault
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 100,000 USDC
+        /// - Bob deposits 5,000 USDC
         /// - Alice and Bob withdraw
         vault.deposit(200 * _1_USDC, users.alice);
         // other users deposits as well
@@ -240,15 +211,15 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
 
         /// ⭕️ SCENARIO 2: withdraw when some funds are in strategies
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 100,000 USDC
+        /// - Bob deposits 5,000 USDC
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
-        strategy0.harvest(0, 0);
+        strategy.harvest(0, 0, 10_000);
         vm.stopPrank();
         vm.startPrank(users.alice);
-        expectedShares = vault.previewWithdraw(200 * _1_USDC);
-        shares = vault.withdraw(200 * _1_USDC, users.alice, users.alice);
+        expectedShares = vault.previewWithdraw(180 * _1_USDC);
+        shares = vault.withdraw(180 * _1_USDC, users.alice, users.alice);
         assertEq(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -260,15 +231,15 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
 
         /// ⭕️ SCENARIO 3: withdraw when some funds are in strategies and they have profits
         /// - Alice deposits 200 USDC
-        /// - Bob deposits 100,000 USDC
+        /// - Bob deposits 5,000 USDC
         /// - Harvest strategies so they take the vault money
         /// - Strategies make profit
         /// - Harvest again
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
-        strategy0.harvest(0, 0);
-        deal(USDC, address(strategy0), 50 * _1_USDC);
-        strategy0.harvest(0, 0);
+        strategy.harvest(0, 0, 10_000);
+        deal(USDC, address(strategy), 50 * _1_USDC);
+        strategy.harvest(0, 0, 10_000);
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(190 * _1_USDC);
@@ -285,8 +256,7 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
 
     /* function testMaxApyVaultV2_ERC4626__PreviewWithdraw_Fuzzy(uint256 amount) public {
         vm.assume(amount > _1_USDC /10 && amount < 10_000 * _1_USDC);
-        vault.addStrategy(address(strategy0), 4000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy1), 5000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
 
         vault.deposit(200 * _1_USDC, users.alice);
         // other users deposits as well
@@ -297,9 +267,9 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         vm.stopPrank();
 
         vm.startPrank(users.keeper);
-        strategy0.harvest(0, 0);
-        deal(USDC, address(strategy0), 50 * _1_USDC);
-        strategy0.harvest(0, 0);
+        strategy.harvest(0, 0, 10_000);
+        deal(USDC, address(strategy), 50 * _1_USDC);
+        strategy.harvest(0, 0, 10_000);
         vm.stopPrank();
 
         vm.startPrank(users.alice);
@@ -313,4 +283,51 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         assertEq(expectedShares, shares);
         vm.stopPrank();
     } */
+
+    function testMaxApyVaultV2_ERC4626__sharePrice() external {
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(200 * _1_USDC, users.alice);
+        assertEq(vault.sharePrice(), _1_USDC);
+        assertEq(strategy.estimatedTotalAssets(), 0);
+        assertEq(strategy.lastEstimatedTotalAssets(), 0);
+
+        // sending assets directly to the vault won't work
+        deal(USDC, address(vault), 5000 * _1_USDC);
+        assertEq(vault.sharePrice(), _1_USDC);
+        assertEq(strategy.estimatedTotalAssets(), 0);
+        assertEq(strategy.lastEstimatedTotalAssets(), 0);
+
+        // share price might slightly decrease after investing
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, 0);
+        assertApproxEq(vault.sharePrice(), _1_USDC, 10000);
+        assertApproxEq(strategy.estimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
+        assertApproxEq(strategy.lastEstimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
+
+        // sending assets directly to the strategy won't work
+        deal(USDC, address(strategy), 50 * _1_USDC);
+        assertApproxEq(vault.sharePrice(), _1_USDC, 10000);
+        assertApproxEq(strategy.estimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
+        assertApproxEq(strategy.lastEstimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
+        strategy.harvest(0, 0, 0);
+        // after harvesting and taking the project the price will progresively increase
+        // because of the locked profit degradation
+        assertApproxEq(vault.sharePrice(), _1_USDC, 10000);
+        assertApproxEq(strategy.estimatedTotalAssets(), 230 * _1_USDC, _1_USDC);
+        assertApproxEq(strategy.lastEstimatedTotalAssets(), 230 * _1_USDC, _1_USDC);
+        // progresively unlock the profit
+        skip(20000);
+        assertApproxEq(vault.sharePrice(), _1_USDC * 112 / 100, _1_USDC);
+        skip(20000);
+        assertApproxEq(vault.sharePrice(), _1_USDC * 125 / 100, _1_USDC);
+
+        // if the strategy has losses it should instantly be reflected in the share price
+        vm.stopPrank();
+        vm.startPrank(address(strategy));
+        // transfer shares to a random addresss
+        IERC20(TURBO_GHO_CELLAR).transfer(makeAddr("random"), 50 * _1_USDC);
+        assertApproxEq(vault.sharePrice(), _1_USDC, 10000);
+        assertApproxEq(strategy.estimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
+        assertApproxEq(strategy.lastEstimatedTotalAssets(), 230 * _1_USDC, _1_USDC);
+    }
 }

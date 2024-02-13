@@ -11,9 +11,8 @@ interface IStrategy {
 
     function renounceRoles(uint256 roles) external payable;
 
-    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment) external;
-
-    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedPreofitBPS) external;
+    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedPreofitBPS)
+        external;
 
     function setEmergencyExit(uint256 _emergencyExit) external;
 
@@ -30,6 +29,8 @@ interface IStrategy {
     function delegatedAssets() external view returns (uint256);
 
     function estimatedTotalAssets() external view returns (uint256);
+
+    function lastEstimatedTotalAssets() external view returns (uint256);
 
     function strategist() external view returns (address);
 
