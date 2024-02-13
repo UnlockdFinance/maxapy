@@ -288,46 +288,46 @@ contract ERC4626Test is BaseTest, YearnStrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(200 * _1_USDC, users.alice);
         assertEq(vault.sharePrice(), _1_USDC);
-        assertEq(strategy.estimatedTotalAssets() , 0);
-        assertEq(strategy.lastEstimatedTotalAssets() , 0);
+        assertEq(strategy.estimatedTotalAssets(), 0);
+        assertEq(strategy.lastEstimatedTotalAssets(), 0);
 
         // sending assets directly to the vault won't work
         deal(USDC, address(vault), 5000 * _1_USDC);
         assertEq(vault.sharePrice(), _1_USDC);
-        assertEq(strategy.estimatedTotalAssets() , 0);
-        assertEq(strategy.lastEstimatedTotalAssets() , 0);
+        assertEq(strategy.estimatedTotalAssets(), 0);
+        assertEq(strategy.lastEstimatedTotalAssets(), 0);
 
         // share price might slightly decrease after investing
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0);
-        assertApproxEq(vault.sharePrice(),_1_USDC, 10000);
-        assertApproxEq(strategy.estimatedTotalAssets() , 180 * _1_USDC, _1_USDC);
-        assertApproxEq(strategy.lastEstimatedTotalAssets() , 180 * _1_USDC, _1_USDC);
-        
+        assertApproxEq(vault.sharePrice(), _1_USDC, 10000);
+        assertApproxEq(strategy.estimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
+        assertApproxEq(strategy.lastEstimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
+
         // sending assets directly to the strategy won't work
         deal(USDC, address(strategy), 50 * _1_USDC);
-        assertApproxEq(vault.sharePrice(),_1_USDC, 10000);
+        assertApproxEq(vault.sharePrice(), _1_USDC, 10000);
         assertApproxEq(strategy.estimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
         assertApproxEq(strategy.lastEstimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
         strategy.harvest(0, 0, 0);
-        // after harvesting and taking the project the price will progresively increase 
+        // after harvesting and taking the project the price will progresively increase
         // because of the locked profit degradation
-        assertApproxEq(vault.sharePrice(),_1_USDC , 10000);
-        assertApproxEq(strategy.estimatedTotalAssets(), 230 * _1_USDC, _1_USDC); 
+        assertApproxEq(vault.sharePrice(), _1_USDC, 10000);
+        assertApproxEq(strategy.estimatedTotalAssets(), 230 * _1_USDC, _1_USDC);
         assertApproxEq(strategy.lastEstimatedTotalAssets(), 230 * _1_USDC, _1_USDC);
         // progresively unlock the profit
         skip(20000);
-        assertApproxEq(vault.sharePrice(),_1_USDC * 112 / 100, _1_USDC);
+        assertApproxEq(vault.sharePrice(), _1_USDC * 112 / 100, _1_USDC);
         skip(20000);
-        assertApproxEq(vault.sharePrice(),_1_USDC * 125 / 100, _1_USDC);
+        assertApproxEq(vault.sharePrice(), _1_USDC * 125 / 100, _1_USDC);
 
         // if the strategy has losses it should instantly be reflected in the share price
         vm.stopPrank();
         vm.startPrank(address(strategy));
         // transfer shares to a random addresss
         IERC20(TURBO_GHO_CELLAR).transfer(makeAddr("random"), 50 * _1_USDC);
-        assertApproxEq(vault.sharePrice(),_1_USDC , 10000);
-        assertApproxEq(strategy.estimatedTotalAssets(), 180 * _1_USDC, _1_USDC); 
+        assertApproxEq(vault.sharePrice(), _1_USDC, 10000);
+        assertApproxEq(strategy.estimatedTotalAssets(), 180 * _1_USDC, _1_USDC);
         assertApproxEq(strategy.lastEstimatedTotalAssets(), 230 * _1_USDC, _1_USDC);
     }
 }

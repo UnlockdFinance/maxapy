@@ -178,14 +178,14 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
     ///                     TEST isActive()                      ///
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboGHO__IsActive() public {
-        vault.addStrategy(address(strategy), 10_000, 0,0,0);
+        vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
         deal(USDC, address(strategy), 1 * _1_USDC);
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
+        strategy.harvest(0, 0, 0);
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
@@ -196,7 +196,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
 
         deal(USDC, address(strategy), 1 * _1_USDC);
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
+        strategy.harvest(0, 0, 0);
         assertEq(strategy.isActive(), true);
     }
 
@@ -241,7 +241,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST _prepareReturn()                  ///
     ////////////////////////////////////////////////////////////////
-        
+
     function testSommelierTurboGHO__PrepareReturn() public {
         /// ⭕️ SCENARIO 1:
         /// 1. Initial State:
@@ -269,7 +269,8 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         strategy.mockReport(0, 0, 0);
 
         /// there are no profits so setting the harvest to 50% wont have any effect
-        (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDC, 0, 5_000);
+        (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) =
+            strategy.prepareReturn(1 * _1_USDC, 0, 5_000);
         assertEq(realizedProfit, 20 * _1_USDC);
         assertEq(unrealizedProfit, 40 * _1_USDC);
         assertEq(loss, 0);
@@ -331,11 +332,10 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         vm.revertTo(beforeReturnSnapshotId);
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 0);
-        assertEq(realizedProfit, 0); // 0 
-        assertEq(unrealizedProfit, 59906244);// 59.81 USDC
+        assertEq(realizedProfit, 0); // 0
+        assertEq(unrealizedProfit, 59906244); // 59.81 USDC
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
-
 
         vm.revertTo(snapshotId);
 
@@ -364,7 +364,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         IERC20(CELLAR_USDC_MAINNET).transfer(makeAddr("random"), strategy.sharesForAmount(10 * _1_USDC));
 
         /// no realizedProfit was made, setting the harvest to 20% has no effect
-        (realizedProfit,unrealizedProfit,loss, debtPayment) = strategy.prepareReturn(0, 0, 2_000);
+        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 2_000);
 
         assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
@@ -684,10 +684,10 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         strategy.harvest(0, 0, 7_233);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC + (10 * _1_USDC * 7_233 / 10000));
         assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - (10 * _1_USDC * 7_233 / 10000)));
+        expectedStrategyShareBalance =
+            strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - (10 * _1_USDC * 7_233 / 10000)));
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
         vm.revertTo(beforeReportSnapshotId);
-
 
         vm.revertTo(snapshotId);
 
@@ -782,7 +782,6 @@ contract SommelierTurboGHOStrategyTest is BaseTest, YearnStrategyEvents {
         /// 1. Strategy performs initial harvest to request vault funds
         /// 2. Strategy loses 10 USDC. Strategy performs second harvest and its debt ratio gets reduced
         /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 USDC to vault, instead of 10 USDC
-
 
         vm.startPrank(users.alice);
 

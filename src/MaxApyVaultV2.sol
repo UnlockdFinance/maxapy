@@ -725,7 +725,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
 
     /// @notice Returns the estimate amount of assets held by the vault and strategy positions,
-    /// including unrealised profit or losses 
+    /// including unrealised profit or losses
     /// @return totalAssets_ The total assets under control of this Vault
     function _totalAssets() internal view returns (uint256 totalAssets_) {
         // use accounted assets for the vault balance, prevents inflation attacks or similar
@@ -741,7 +741,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
     }
-    
+
     /// @notice Returns the total quantity of all assets under control of this Vault,
     /// whether they're loaned out to a Strategy, or currently held in the Vault
     /// @return totalAssets_ The total assets under control of this Vault
@@ -811,6 +811,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         return _totalAssets();
     }
     /// @notice Returns the total amount of accoutned idle and strategy debt assets
+
     function totalAccountedAssets() public view returns (uint256) {
         return _totalAccountedAssets();
     }
@@ -828,7 +829,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
 
     /// @notice Returns the estimate price of 1 vault share
-    function sharePrice() external view returns(uint256) {
+    function sharePrice() external view returns (uint256) {
         return convertToAssets(10 ** (_underlyingDecimals() + _decimalsOffset()));
     }
 
@@ -853,7 +854,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 o = _decimalsOffset();
         return Math.fullMulDiv(shares, _freeFunds() + 1, totalSupply() + 10 ** o);
     }
-
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their mint
     /// at the current block, given current on-chain conditions.
@@ -952,10 +952,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // if there are more assets to cover(when requesting more assets then total)
             // we add the extra shares needed, even though it would revert if someone tries
             // to withdraw that much since they wouln't have the  needed shares
-            if(vaultBalance < assets){
+            if (vaultBalance < assets) {
                 shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
             }
-
         }
     }
 
@@ -1426,7 +1425,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (loss > 0) {
             _reportLoss(msg.sender, loss);
         }
-        
+
         uint256 totalFees = _assessFees(msg.sender, uint256(unrealizedGain));
 
         // Set gain returns as realized gains for the vault

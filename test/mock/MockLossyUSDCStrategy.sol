@@ -32,11 +32,11 @@ contract MockLossyUSDCStrategy {
         return 10 ** 6;
     }
 
-    function previewWithdrawRequest(uint256 amount) external pure returns(uint256){
+    function previewWithdrawRequest(uint256 amount) external pure returns (uint256) {
         return amount + 10 ** 6;
     }
 
-    function previewWithdraw(uint256 amount) external pure returns(uint256) {
+    function previewWithdraw(uint256 amount) external pure returns (uint256) {
         return amount - 10 ** 6;
     }
 

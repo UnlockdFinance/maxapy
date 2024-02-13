@@ -29,7 +29,9 @@ interface IMaxApyVaultV2 is IERC4626 {
         address receiver
     ) external returns (uint256 assets);
 
-    function report(uint128 realizedGain, uint128 unrealizedGain, uint128 loss, uint128 debtPayment) external returns (uint256);
+    function report(uint128 realizedGain, uint128 unrealizedGain, uint128 loss, uint128 debtPayment)
+        external
+        returns (uint256);
 
     /// Ownership
     function transferOwnership(address newOwner) external payable;

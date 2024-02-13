@@ -153,14 +153,17 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @notice Harvests the Strategy, but in this case a percentage of the profit(if there's any) is reinvested
     /// In the rare case the Strategy is in emergency shutdown, this will exit
     /// the Strategy's position.
-    /// @dev When `harvest()` is called, the strategy reinvests a percentage of the profit and 
+    /// @dev When `harvest()` is called, the strategy reinvests a percentage of the profit and
     /// reports the rest of it to the MaxAPY vault (via`MaxApyVault.report()`), so this function is meant
     /// to  be called when there are profits or there is new credit available for the strategy
     /// @param minExpectedBalance minimum balance amount of `underlyingAsset` expected after performing any
     /// @param minOutputAfterInvestment minimum expected output after `_invest()`
     /// strategy unwinding (if applies).
     /// @param harvestedProfitBPS percentage of the profit to be sent to the vault as net profit
-    function harvest(uint256 minExpectedBalance,uint256 minOutputAfterInvestment, uint256 harvestedProfitBPS) external checkRoles(KEEPER_ROLE) {
+    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedProfitBPS)
+        external
+        checkRoles(KEEPER_ROLE)
+    {
         assembly ("memory-safe") {
             // if harvestedProfitBPS > MAX_BPS
             if gt(harvestedProfitBPS, MAX_BPS) {
@@ -222,10 +225,11 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             }
         } else {
             // Free up returns for vault to pull
-            (realizedProfit, unrealizedProfit , loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance, harvestedProfitBPS);
+            (realizedProfit, unrealizedProfit, loss, debtPayment) =
+                _prepareReturn(debtOutstanding, minExpectedBalance, harvestedProfitBPS);
         }
 
-         assembly ("memory-safe") {
+        assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
 
             // Store `vault`'s `report()` function selector:
@@ -278,7 +282,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             mstore(0x40, m) // Restore the free memory pointer
         }
     }
-
 
     ////////////////////////////////////////////////////////////////
     ///                 STRATEGY CONFIGURATION                   ///
@@ -370,18 +373,15 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
         internal
         virtual
-        returns (uint256 realizedProfit , uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
-
+        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
 
     /// @notice Returns the current strategy's balance in underlying token
     /// @return the strategy's balance of underlying token
     function _underlyingBalance() internal view returns (uint256) {
         return underlyingAsset.balanceOf(address(this));
     }
-    
+
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
-    function _estimatedTotalAssets() internal virtual view returns (uint256);
+    function _estimatedTotalAssets() internal view virtual returns (uint256);
 }
-
-

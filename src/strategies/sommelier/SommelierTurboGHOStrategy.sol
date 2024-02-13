@@ -138,7 +138,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     function estimatedTotalAssets() public view returns (uint256) {
         // always try to use the value from the last harvest so share price is not updated before the harvest
         // always be pessimistic, take the lowest between the last harvest assets and assets in that moment
-        return Math.min(lastEstimatedTotalAssets,_estimatedTotalAssets());
+        return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
     }
 
     /**
@@ -219,7 +219,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
-    {   
+    {
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
@@ -228,13 +228,9 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         assembly {
             switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
             // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
-            case true {
-                loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_)
-            }
+            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
             // else
-            case false {
-                unrealizedProfit := sub(_estimatedTotalAssets_ ,_lastEstimatedTotalAssets)
-            }
+            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
         }
 
         uint256 debt;
@@ -252,7 +248,6 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
 
             // we will report harvestedProfitBPS % of the profits only so we can compound the rest
             realizedProfit = Math.fullMulDiv(unrealizedProfit, harvestedProfitBPS, MAX_BPS);
-
 
             uint256 amountToWithdraw = realizedProfit + debtOutstanding;
 
@@ -291,9 +286,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true {
-                    realizedProfit := 0
-                }
+                case true { realizedProfit := 0 }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
@@ -315,7 +308,6 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         }
     }
 
-
     /// @notice Performs any adjustments to the core position(s) of this Strategy given
     /// what change the MaxApy Vault made in the "investable capital" available to the
     /// Strategy.
@@ -333,7 +325,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal returns (uint256 depositedAmount) {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
-        
+
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
@@ -456,7 +448,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
-    function _estimatedTotalAssets() internal override view returns (uint256) {
+    function _estimatedTotalAssets() internal view override returns (uint256) {
         return _underlyingBalance() + _shareValue(_shareBalance());
     }
 }
