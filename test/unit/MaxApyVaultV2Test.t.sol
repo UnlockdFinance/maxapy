@@ -3,8 +3,8 @@ pragma solidity ^0.8.19;
 
 import {BaseTest, IERC20, Vm, console} from "../base/BaseTest.t.sol";
 import {BaseVaultV2Test} from "../base/BaseVaultV2Test.t.sol";
-import {MaxApyVaultV2, StrategyData} from "../../src/MaxApyVaultV2.sol";
-import {IMaxApyVaultV2} from "../../src/interfaces/IMaxApyVaultV2.sol";
+import {MaxApyVaultV2, StrategyData} from "src/MaxApyVaultV2.sol";
+import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
 
 import {MockStrategy} from "../mock/MockStrategy.sol";
 import {MockLossyUSDCStrategy} from "../mock/MockLossyUSDCStrategy.sol";

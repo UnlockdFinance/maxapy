@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {StrategyData} from "./helpers/VaultTypes.sol";
+import {StrategyData} from "src/helpers/VaultTypes.sol";
 import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
-import {IStrategy} from "./interfaces/IStrategy.sol";
+import {IStrategy} from "src/interfaces/IStrategy.sol";
 import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";

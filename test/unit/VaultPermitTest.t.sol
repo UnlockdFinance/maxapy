@@ -4,8 +4,8 @@ pragma solidity ^0.8.19;
 import {BaseTest, IERC20, Vm, console} from "../base/BaseTest.t.sol";
 import {IERC20Permit} from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 import {BaseVaultV2Test} from "../base/BaseVaultV2Test.t.sol";
-import {MaxApyVaultV2, StrategyData} from "../../src/MaxApyVaultV2.sol";
-import {IMaxApyVaultV2} from "../../src/interfaces/IMaxApyVaultV2.sol";
+import {MaxApyVaultV2, StrategyData} from "src/MaxApyVaultV2.sol";
+import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
 import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import {SigUtils} from "../utils/SigUtils.sol";
 

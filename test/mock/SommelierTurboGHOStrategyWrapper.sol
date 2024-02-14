@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {
     SommelierTurboGHOStrategy, SafeTransferLib
-} from "../../src/strategies/sommelier/SommelierTurboGHOStrategy.sol";
+} from "src/strategies/USDC/sommelier/SommelierTurboGHOStrategy.sol";
 
 contract SommelierTurboGHOStrategyWrapper is SommelierTurboGHOStrategy {
     using SafeTransferLib for address;

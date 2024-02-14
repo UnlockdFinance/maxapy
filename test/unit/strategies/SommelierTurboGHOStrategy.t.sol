@@ -9,12 +9,12 @@ import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import {BaseTest, IERC20, Vm, console} from "../../base/BaseTest.t.sol";
 import {IStrategyWrapper} from "../../interfaces/IStrategyWrapper.sol";
-import {IMaxApyVaultV2} from "../../../src/interfaces/IMaxApyVaultV2.sol";
-import {ICellar} from "../../../src/interfaces/ICellar.sol";
+import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
+import {ICellar} from "src/interfaces/ICellar.sol";
 import {SommelierTurboGHOStrategyWrapper} from "../../mock/SommelierTurboGHOStrategyWrapper.sol";
-import {MaxApyVaultV2} from "../../../src/MaxApyVaultV2.sol";
-import {StrategyData} from "../../../src/helpers/VaultTypes.sol";
-import {SommelierTurboGHOStrategy} from "../../../src/strategies/sommelier/SommelierTurboGHOStrategy.sol";
+import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
+import {StrategyData} from "src/helpers/VaultTypes.sol";
+import {SommelierTurboGHOStrategy} from "src/strategies/USDC/sommelier/SommelierTurboGHOStrategy.sol";
 import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
 
 contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
