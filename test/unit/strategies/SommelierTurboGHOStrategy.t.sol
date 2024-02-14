@@ -270,7 +270,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
 
         /// there are no profits so setting the harvest to 50% wont have any effect
         (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) =
-            strategy.prepareReturn(1 * _1_USDC, 0, 5_000);
+        strategy.prepareReturn(1 * _1_USDC, 0, 5_000);
         assertEq(realizedProfit, 20 * _1_USDC);
         assertEq(unrealizedProfit, 40 * _1_USDC);
         assertEq(loss, 0);
@@ -468,7 +468,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// Liquidate position where underlying balance can't cover liquidation
         /// Scenario 1
         deal({token: USDC, to: address(strategy), give: 5 * _1_USDC});
-        // invertiros
+        // 
         strategy.invest(5 * _1_USDC, 0);
         deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
 
