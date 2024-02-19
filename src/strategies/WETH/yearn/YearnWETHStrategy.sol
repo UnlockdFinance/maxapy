@@ -250,7 +250,7 @@ contract YearnWETHStrategy is BaseStrategy {
             // considering the current debt
 
             // we will report harvestedProfitBPS % of the profits only so we can compound the rest
-            realizedProfit = Math.fullMulDiv(unrealizedProfit, harvestedProfitBPS, MAX_BPS);
+            realizedProfit = unrealizedProfit * harvestedProfitBPS / MAX_BPS;
 
             uint256 amountToWithdraw = realizedProfit + debtOutstanding;
 

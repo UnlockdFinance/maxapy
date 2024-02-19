@@ -317,7 +317,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         // Cache reward pool
         IConvexRewards rewardPool = convexRewardPool;
 
-       // _unwindRewards(rewardPool);
+        _unwindRewards(rewardPool);
 
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
@@ -358,7 +358,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
             // considering the current debt
 
             // we will report harvestedProfitBPS % of the profits only so we can compound the rest
-            realizedProfit = Math.fullMulDiv(unrealizedProfit, harvestedProfitBPS, MAX_BPS);
+            realizedProfit = unrealizedProfit * harvestedProfitBPS / MAX_BPS;
 
             uint256 amountToWithdraw = realizedProfit + debtOutstanding;
 

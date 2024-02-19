@@ -393,9 +393,12 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         deal({token: address(crv), to: address(strategy), give: 10 ether});
         deal({token: address(cvx), to: address(strategy), give: 10 ether});
 
+         // Apply 1% difference
+        uint256 minimumExpectedEthAmount = (expectedAmountCrv[1] + expectedAmountCvx) * 9999 / 10_000;
+
         // Expect revert if output amount is gt amount obtained
         vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-        strategy.harvest(0, type(uint256).max, 0);
+        strategy.harvest(minimumExpectedEthAmount, type(uint256).max, 0);
     }
     ////////////////////////////////////////////////////////////////
     ///                   TEST _prepareReturn()                  ///
@@ -540,8 +543,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         /// Fake report to increase `strategyTotalDebt`
         strategy.mockReport(0, 0, 0);
 
-        /// no realizedProfit was made, setting the harvest to 20% has no effect
-        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 2_000);
+        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
 
         /// Assert realizedProfit is set to the underlying balance of the strategy
         /// (which is the 40 ETH debt from the vault + the 1000 wei withdrawn (considering
@@ -774,7 +776,19 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
 
-    function testConvexdETHFrxETH__Harvest_Compound() public {
+    function testSommelierTurboStEth__Harvest_Negatives() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        /// Deposit into vault
+        vault.deposit(100 ether, users.alice);
+        
+        // it should revert if profit harvest percentage is > 100 %
+        vm.startPrank(users.keeper);
+        vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
+        strategy.harvest(0, 0, 10_001);
+    }
+
+    function testConvexdETHFrxETH__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, 0);
@@ -835,13 +849,13 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         /// Case #1: Harvest 100% of the profit
         strategy.harvest(0, 0, 10_000);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 70 ether);
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 70.054691538051257490 ether);
 
         vm.revertTo(beforeReportSnapshotId);
 
         /// Case #2: Harvest 50% of the profit
         strategy.harvest(0, 0, 5_000);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 65 ether);
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 65.027345769025628745 ether);
 
         vm.revertTo(beforeReportSnapshotId);
         /// Case #3: Harvest 0% of the profit

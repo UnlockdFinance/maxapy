@@ -446,10 +446,10 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
 
         snapshotId = vm.snapshot();
 
-        _dealStEth(address(strategy), 80 ether);
+        deal({token: WETH, to: address(strategy), give: 80 ether});
 
         // Perform initial investment in sommelier from the strategy side
-        strategy.investSommelier(20 ether);
+        strategy.adjustPosition();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
@@ -467,7 +467,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         /// Assert realizedProfit is set to the underlying balance of the strategy
         /// (which is the 40 ETH debt from the vault + the 999 wei withdrawn (considering
         /// we tried to withdrew 1000 wei due to the `maxSingleTrade`))
-        assertEq(unrealizedProfit, 15.986100021992616457 ether);
+        assertEq(realizedProfit, 40 ether + 999);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
     }
