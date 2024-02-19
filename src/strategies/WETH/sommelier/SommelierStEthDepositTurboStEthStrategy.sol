@@ -193,7 +193,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
-            uint256 shares = cellar.convertToShares(requestedAmount);
+            uint256 shares = cellar.convertToShares(amountToWithdraw);
             uint256 withdrawn = cellar.previewRedeem(shares);
             withdrawn = pool.get_dy(1, 0, withdrawn);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;

@@ -280,6 +280,47 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         return estimatedTotalAssets() != 0;
     }
 
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
+    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
+    /// @return liquidatedAmount output in assets
+    function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
+        uint256 loss;
+        uint256 underlyingBalance = _underlyingBalance();
+        // If underlying balance currently held by strategy is not enough to cover
+        // the requested amount, we divest from the Curve liquidity pool
+        if (underlyingBalance < requestedAmount) {
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = requestedAmount - underlyingBalance;
+            }
+            uint256 value = _lpForAmount(amountToWithdraw);
+            uint256 withdrawn = curveDEthFrxEthPool.calc_token_amount([0, value], false);
+            withdrawn =  curveEthFrxEthPool.get_dy(1, 0, withdrawn);
+            if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
+        }
+        liquidatedAmount = requestedAmount - loss;
+    }
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
+     /*    uint256 underlyingBalance = _underlyingBalance();
+        // If underlying balance currently held by strategy is not enough to cover
+        // the requested amount, we divest from the Cellar Vault
+        if (underlyingBalance < liquidatedAmount) {
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = liquidatedAmount - underlyingBalance;
+            }
+            uint256 requestedShares = cellar.previewMint(amountToWithdraw);
+            requestedAmount = _shareValue(requestedShares);
+        }
+        requestedAmount = underlyingBalance + requestedAmount; */
+    }
+
     /// @notice Returns the amount of Curve LP tokens staked in Convex
     /// @return the amount of staked LP tokens
     function stakedBalance() external view returns (uint256) {

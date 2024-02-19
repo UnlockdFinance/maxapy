@@ -175,21 +175,20 @@ contract YearnWETHStrategy is BaseStrategy {
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
-        uint256 loss;
-        uint256 underlyingBalance = _underlyingBalance();
+       /*  uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the yVault Vault
+        // the requested amount, we divest from the Yearn Vault
         if (underlyingBalance < liquidatedAmount) {
-            uint256 amountToWithdraw;
+            uint256 withdrawn;
             unchecked {
-                amountToWithdraw = liquidatedAmount - underlyingBalance;
+                withdrawn = liquidatedAmount - underlyingBalance;
             }
 
             uint256 vaultTotalSupply = yVault.totalSupply();
-            amountToWithdraw = liquidatedAmount * (vaultTotalSupply / _freeFunds()) - vaultTotalSupply;
-            requestedAmount = amountToWithdraw + underlyingBalance; 
+            requestedAmount = vaultTotalSupply * (withdrawn - withd)
+            requestedAmount = requestedAmount + underlyingBalance; 
         }
-        else return liquidatedAmount;
+        else return liquidatedAmount; */
     }
    
     ////////////////////////////////////////////////////////////////
