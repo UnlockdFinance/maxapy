@@ -5,7 +5,7 @@ import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strateg
 import {IYVault} from "src/interfaces/IYVault.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-
+import "forge-std/console.sol";
 /// @title YearnWETHStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `YearnWETHStrategy` supplies an underlying token into a generic Yearn Vault,
@@ -225,14 +225,6 @@ contract YearnWETHStrategy is BaseStrategy {
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
         uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
 
-        assembly {
-            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
-            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
-            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
-            // else
-            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
-        }
-
         uint256 debt;
         assembly {
             // debt = vault.strategies(address(this)).strategyTotalDebt;
@@ -242,7 +234,18 @@ contract YearnWETHStrategy is BaseStrategy {
             debt := mload(0x00)
         }
 
-        if (unrealizedProfit > 0) {
+        // initialize the lastEstimatedTotalAssets in case it is not
+        if(_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
+
+        assembly {
+            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
+            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
+            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
+            // else
+            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
+        }
+
+        if (_estimatedTotalAssets_ >= _lastEstimatedTotalAssets) {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 

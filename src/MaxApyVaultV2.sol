@@ -1199,6 +1199,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
         shares = previewWithdraw(assets);
+        if(assets == type(uint256).max) shares = balanceOf(owner);
         if (shares > maxRedeem(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x936941fc) // `WithdrawMoreThanMax()`.
@@ -1211,6 +1212,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function redeem(uint256 shares, address to, address owner) public override nonReentrant returns (uint256 assets) {
+        if(shares == type(uint256).max) shares = balanceOf(owner);
         if (shares > maxRedeem(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x4656425a) // `RedeemMoreThanMax()`.

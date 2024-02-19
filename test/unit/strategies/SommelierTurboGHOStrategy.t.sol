@@ -265,14 +265,12 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.deposit(100 * _1_USDC, users.alice);
 
         /// Fake report to increase `strategyTotalDebt`
-        /// The strategy receives 40 USDC
         strategy.mockReport(0, 0, 0);
 
         /// there are no profits so setting the harvest to 50% wont have any effect
-        (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) =
-        strategy.prepareReturn(1 * _1_USDC, 0, 5_000);
-        assertEq(realizedProfit, 20 * _1_USDC);
-        assertEq(unrealizedProfit, 40 * _1_USDC);
+        (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDC, 0, 5_000);
+        assertEq(realizedProfit, 0);
+        assertEq(unrealizedProfit, 0);
         assertEq(loss, 0);
         assertEq(debtPayment, _1_USDC);
 
@@ -298,34 +296,31 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         ///     - `debtPayment` -> 1 * _1_USDC (value passed as `debtOutstanding`)
         snapshotId = vm.snapshot();
 
+        deal({token: USDC, to: address(strategy), give: 60 * _1_USDC});
+        /// Perform initial 60 USDC investment in sommelier from the strategy side
+        strategy.investSommelier(60 * _1_USDC);
+
         /// Add stategy to vault with 40% cap
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
         /// Deposit 10 * _1_USDC into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
-        /// Harvest to increase `strategyTotalDebt`
-        /// Strategy gets 40 USDC debt
-        vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
-        vm.stopPrank();
-
-        deal({token: USDC, to: address(strategy), give: 60 * _1_USDC});
-        /// Perform initial 60 USDC investment in sommelier from the strategy side
-        strategy.investSommelier(60 * _1_USDC);
+        /// Fake report to increase `strategyTotalDebt`
+        strategy.mockReport(0, 0, 0);
 
         uint256 beforeReturnSnapshotId = vm.snapshot();
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
         // 60 USDC - losses from the previous 10 USDC investment
-        assertEq(realizedProfit, 59812634); // 59.81 USDC
+        assertEq(realizedProfit, 59875138); // 59.81 USDC
         assertEq(unrealizedProfit, 59906244); // 59.81 USDC
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 1_000);
-        assertEq(realizedProfit, 5981262); // 5.9 USDC
+        assertEq(realizedProfit, 5990624); // 5.9 USDC
         assertEq(unrealizedProfit, 59906244); // 59.81 USDC
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
@@ -355,20 +350,18 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// Deposit into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
-        /// Harvest to increase `strategyTotalDebt`
-        vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        /// Fake report to increase `strategyTotalDebt`
+        strategy.mockReport(0, 0, 0);
 
-        /// Fake strategy loss of 10 USDC
-        vm.startPrank(address(strategy));
-        IERC20(CELLAR_USDC_MAINNET).transfer(makeAddr("random"), strategy.sharesForAmount(10 * _1_USDC));
+        /// Fake strategy loss of 10 ETH
+        strategy.triggerLoss(10 * _1_USDC);
 
         /// no realizedProfit was made, setting the harvest to 20% has no effect
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 2_000);
 
         assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
-        assertEq(loss, 9984374);
+        assertEq(loss, 10 * _1_USDC);
         assertEq(debtPayment, 0);
 
         vm.revertTo(snapshotId);

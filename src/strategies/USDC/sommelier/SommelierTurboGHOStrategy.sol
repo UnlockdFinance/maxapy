@@ -220,18 +220,10 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        // Fetch initial strategy state
+       // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
         uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
-
-        assembly {
-            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
-            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
-            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
-            // else
-            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
-        }
 
         uint256 debt;
         assembly {
@@ -242,7 +234,18 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
             debt := mload(0x00)
         }
 
-        if (unrealizedProfit > 0) {
+        // initialize the lastEstimatedTotalAssets in case it is not
+        if(_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
+
+        assembly {
+            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
+            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
+            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
+            // else
+            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
+        }
+
+        if (_estimatedTotalAssets_ >= _lastEstimatedTotalAssets) {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 

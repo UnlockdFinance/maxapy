@@ -45,6 +45,9 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     error InvalidZeroAddress();
     error CurveWithdrawAdminFeesFailed();
     error InvalidHarvestedProfit();
+    error MinOutputAmountNotReached();
+    error InvalidZeroAmount();
+    error MinExpectedBalanceAfterSwapNotReached();
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -314,9 +317,11 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         // Cache reward pool
         IConvexRewards rewardPool = convexRewardPool;
 
-        _unwindRewards(rewardPool);
+       // _unwindRewards(rewardPool);
 
         uint256 underlyingBalance = _underlyingBalance();
+        uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
+        uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
 
         assembly {
             // If current underlying balance after swapping does not match swap output expectations, revert
@@ -327,16 +332,6 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
             }
         }
 
-        uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
-        uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
-
-        assembly {
-            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
-            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
-            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
-            // else
-            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
-        }
 
         uint256 debt;
         assembly {
@@ -347,7 +342,18 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
             debt := mload(0x00)
         }
 
-        if (unrealizedProfit > 0) {
+        // initialize the lastEstimatedTotalAssets in case it is not
+        if(_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
+
+        assembly {
+            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
+            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
+            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
+            // else
+            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
+        }
+
+        if (_estimatedTotalAssets_ >= _lastEstimatedTotalAssets) {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 
