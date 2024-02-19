@@ -83,7 +83,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor() /* initializer */ {}
 
     /// @notice Initialize a new Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -94,7 +94,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist
-    ) internal virtual onlyInitializing {
+    ) internal virtual /* onlyInitializing */ {
         assembly ("memory-safe") {
             // Ensure `_strategist` address is != from address(0)
             if eq(_strategist, 0) {

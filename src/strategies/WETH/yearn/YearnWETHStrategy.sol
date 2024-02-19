@@ -63,7 +63,7 @@ contract YearnWETHStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor()/*  initializer  */{}
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -76,7 +76,7 @@ contract YearnWETHStrategy is BaseStrategy {
         bytes32 _strategyName,
         address _strategist,
         IYVault _yVault
-    ) public initializer {
+    ) public /* initializer */ {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
