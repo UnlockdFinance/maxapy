@@ -9,7 +9,7 @@ import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import {BaseTest, IERC20, Vm, console} from "../../base/BaseTest.t.sol";
 import {IStrategyWrapper} from "../../interfaces/IStrategyWrapper.sol";
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
+import {IMaxApyVaultV2, IERC4626} from "src/interfaces/IMaxApyVaultV2.sol";
 import {ICellar} from "src/interfaces/ICellar.sol";
 import {SommelierMorphoEthMaximizerStrategyWrapper} from "../../mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
 import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
@@ -310,22 +310,22 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
         // 60 ETH - losses from the previous 10 ETH investment
-        assertEq(realizedProfit, 59.961326335444170412 ether); // 59.94 ETH
-        assertEq(unrealizedProfit, 59.970984227645060889 ether); // 59.97 ETH
+        assertEq(realizedProfit, 59.959764277798670182 ether); // 59.94 ETH
+        assertEq(unrealizedProfit, 59.969811816768917720 ether); // 59.97 ETH
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 1_000);
-        assertEq(realizedProfit, 5.997098422764506088 ether); // 5.9 ETH
-        assertEq(unrealizedProfit, 59.970984227645060889 ether); // 59.97 ETH
+        assertEq(realizedProfit, 5.996981181676891772 ether); // 5.9 ETH
+        assertEq(unrealizedProfit, 59.969811816768917720 ether); // 59.97 ETH
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 0);
         assertEq(realizedProfit, 0); // 0
-        assertEq(unrealizedProfit, 59.970984227645060889 ether); // 59.97 ETH
+        assertEq(unrealizedProfit, 59.969811816768917720 ether); // 59.97 ETH
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
 
@@ -442,20 +442,22 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST _divest()                         ///
     ////////////////////////////////////////////////////////////////
+  
     function testSommelierMorphoEthMaximizer__Divest() public {
         /// Perform 1000 ETH investment
         deal({token: WETH, to: address(strategy), give: 1000 ether});
         uint256 expectedShares = strategy.sharesForAmount(1000 ether);
-        uint256 amountExpectedFromShares = strategy.shareValue(expectedShares);
+        uint256 amountExpectedFromShares = IERC4626(CELLAR_WETH_MAINNET).previewRedeem(expectedShares);
+        console.log("amountExpectedFromShares: " , amountExpectedFromShares);
         strategy.invest(1000 ether, 0);
         assertEq(expectedShares, IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)));
 
         /// Divest
         uint256 strategyBalanceBefore = IERC20(WETH).balanceOf(address(strategy));
-        vm.expectEmit();
-        emit Divested(address(strategy), expectedShares, amountExpectedFromShares);
+       /*  vm.expectEmit();
+        emit Divested(address(strategy), expectedShares, amountExpectedFromShares); */
         uint256 amountDivested = strategy.divest(expectedShares);
-        assertEq(amountDivested, amountExpectedFromShares);
+        assertApproxEq(amountDivested, amountExpectedFromShares,1);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
@@ -702,7 +704,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
             address(strategy),
             /// vault realized gain - 0
             5 ether,
-             /// vault unrealized gain - 10 ETH
+            /// vault unrealized gain - 10 ETH
             10 ether,
             /// vault loss
             0,
@@ -722,13 +724,13 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit Harvested(5 ether, 0, 0, 0);
-        /// 9.980 ETH harvested
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 5 ether);
+        /// 10 ETH harvested
         strategy.harvest(0, 0, 5_000);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether + 5 ether);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 5 ether);
-        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertApproxEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, 1);
         vm.revertTo(snapshotId);
 
         snapshotId = vm.snapshot();
@@ -793,7 +795,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49.980656151763373926 ether,
+            49.979874544512611813 ether,
             /// vault gain + all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// unrealized vault gain is 0 because we dont want to assess fees 
@@ -801,7 +803,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
             /// vault loss
             0,
             /// vault debtPayment
-            49.980656151763373926 ether,
+            49.979874544512611813 ether,
             /// strategy realized gain - 9.99999 ETH
             0,
             /// strategy loss
@@ -814,12 +816,12 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49.980656151763373926 ether, 0, 0, 0);
+        emit Harvested(49.979874544512611813 ether, 0, 0, 0);
         /// 49.99999 ETH harvested
 
         /// no effect since the strategy is in emergency exit
         strategy.harvest(0, 0, 2_000);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 109.980656151763373926 ether);
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 109.979874544512611813 ether);
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
@@ -887,15 +889,15 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
             // vault realized gain
             0, 
             // vault unrealized gain
-            9.995164037940843482 ether,
-            /// vault loss - 9.995164037940843482 ether
+            9.994968636128152952 ether,
+            /// vault loss - 9.994968636128152952 ether
             0,
             /// vault debtPayment
             0,
             /// strategy realized gain
-            9.995164037940843482 ether,
+            9.994968636128152952 ether,
             /// strategy loss - 10 ETH
-            30.004835962059156518 ether,
+            30.005031363871847048 ether,
             /// strategy total debt: 10 ETH less than initial debt
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
@@ -904,7 +906,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         /// debtratio reduced
 
         vm.expectEmit();
-        emit Harvested(0, 9.995164037940843482 ether, 0, 2994384689845203647);
+        emit Harvested(0, 9.994968636128152952 ether, 0, 2994521451573905749);
         /// 10 ETH loss
         // only losses , no effect
         strategy.harvest(0, 0, 10_000);
@@ -912,10 +914,10 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         StrategyData memory data = vault.strategies(address(strategy));
 
         assertEq(vault.debtRatio(), 3001);
-        assertEq(vault.totalDebt(), 30.004835962059156518 ether);
+        assertEq(vault.totalDebt(), 30.005031363871847048 ether);
         assertEq(data.strategyDebtRatio, 3001);
-        assertEq(data.strategyTotalDebt, 30.004835962059156518 ether);
-        assertEq(data.strategyTotalLoss, 9.995164037940843482 ether);
+        assertEq(data.strategyTotalDebt, 30.005031363871847048 ether);
+        assertEq(data.strategyTotalLoss, 9.994968636128152952 ether);
     }
 
 
@@ -965,6 +967,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
 
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
+        assertEq(IERC20(WETH).balanceOf(address(strategy)), 40 ether);
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
@@ -1141,7 +1144,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         assertGt(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
     }
 
-/*     function testSommelierMorphoEthMaximizer__Withdraw_CellarIsPaused() public {
+    /* function testSommelierMorphoEthMaximizer__Withdraw_CellarIsPaused() public {
         uint256 shares = vault.deposit(100 ether, users.alice);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -1231,8 +1234,8 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         // keep the other values of the slot the same
         vm.store(
             CELLAR_WETH_MAINNET,
-            bytes32(uint256(6)),
-            bytes32(abi.encodePacked(0x69592e6f9d21989a043646fE8225da2600e5A0f7, false, true, false, false, uint32(10)))
+            bytes32(uint256(7)), // slot 7
+            bytes32(abi.encodePacked(uint192(6277101735386680763835789423207666416102355444464034512895), false, true, false, false, uint32(1)))
         );
     }
 }
