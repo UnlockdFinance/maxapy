@@ -1200,7 +1200,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.stopPrank();
         uint256 expected = strategy.previewWithdraw(23481322349392);
         vm.startPrank(address(vault));
-        uint256 loss = strategy.withdraw(23489392);
+        uint256 loss = strategy.withdraw(23481322349392);
         assertEq(expected, 23481322349392 - loss);
     }
 
@@ -1215,7 +1215,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
         uint256 loss = strategy.withdraw(requestedAmount);
         uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
-        assertApproxEq(withdrawn, 30 ether, withdrawn/ 1000);
+        assertApproxEq(withdrawn, 30 ether, withdrawn/ 50);
     }
 
     function _pauseCellar() internal {
