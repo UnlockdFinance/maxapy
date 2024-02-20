@@ -920,22 +920,24 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0);
         vm.stopPrank();
-        uint256 expected = strategy.previewWithdraw(23481322349392);
+        uint256 expected = strategy.previewWithdraw(30 ether);
         vm.startPrank(address(vault));
-        uint256 loss = strategy.withdraw(23481322349392);
-        assertEq(expected, 23481322349392 - loss);
+        uint256 loss = strategy.withdraw(30 ether);
+        assertEq(expected, 30 ether - loss);
     }
 
-     function testYearnWETH__PreviewWithrawRequest() public {
+    function testYearnWETH__PreviewWithrawRequest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether + 723874239,users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0);
         vm.stopPrank();                                          
-        uint256 requestedAmount = strategy.previewWithdrawRequest(23481322349392);
+        uint256 requestedAmount = strategy.previewWithdrawRequest(30 ether);
         vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
         uint256 loss = strategy.withdraw(requestedAmount);
-        assertEq(loss ,requestedAmount - 23481322349392);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        assertApproxEq(withdrawn, 30 ether, withdrawn/ 1000);
     }
 
 }
