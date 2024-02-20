@@ -448,7 +448,7 @@ contract YearnWETHStrategy is BaseStrategy {
     /// @notice Calculates the yearn vault free funds considering the locked profit
     /// @return returns the computed yearn vault free funds
     function _freeFunds() internal view returns (uint256) {
-        return yVault.totalAssets() - _calculateLockedProfit();
+        return yVault.totalAssets() /* - _calculateLockedProfit() */;
     }
 
     /// @notice Calculates the yearn vault locked profit i.e. how much profit is locked and cant be withdrawn

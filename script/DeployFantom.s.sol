@@ -9,13 +9,16 @@ import {ERC4626} from "openzeppelin/token/ERC20/extensions/ERC4626.sol";
 import {YearnWETHStrategy, IYVault} from "src/strategies/WETH/yearn/YearnWETHStrategy.sol";
 import {SommelierTurboStEthStrategy, ICellar} from "src/strategies/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
+
 /**
-  Mock WETH deployed at address: 0xA120f171b87B1eE460B63505D17FCd2E16957498
-  MaxApy Vault deployed at address: 0xf38C95f83882eb4336368508C77F5dFeEe716a8F
-  Mock yVault deployed at address: 0xbbD25099fC4132dC1810F053276b4CF6cC35aDfa
-  Yearn WETH Strategy Deployed at address:  0x9ec38b2f6Bd6D3ad7721737E52F641cf6699430A
-  Fake Sommelier Cellar deployed at address: 0xA37aeE19477C2CaBcF3946A51196E732671af368
-  Sommelier TurboStEth Strategy Deployed at address:  0x8f799dbd94f6E660dF022070308a10a3a556C1CD
+  Mock WETH deployed at address: 0x5E8Ab96a3f4d04e13540A4D59cbf9fae363a0A48
+  MaxApy Vault deployed at address: 0xb5b34A401eD83308173133160aF167A92BC3DFD9
+  Mock yVault deployed at address: 0xC4E34914009eceD65e86085eb7Bbe3E169d61bdC
+  Yearn WETH Strategy Deployed at address:  0xf49571488DF92996192aca393603fFBcd7650416
+  Fake Sommelier Cellar deployed at address: 0xD63ba36Ba785E7acD90fa74a131f806cf00c16A6
+  Sommelier TurboStEth Strategy Deployed at address:  0x13b14403c2f57E36F2FFaCAa81263D40bD88cE5B
+
  */
 
 contract MockERC20 is ERC20 {
@@ -68,12 +71,24 @@ contract MockYearnVault is ERC20 {
     }
 
     function lastReport() external view returns (uint256) {
-        return block.timestamp - 1 days;
+        return block.timestamp - 10000 days;
     }
 
 }
 
 contract MockSommelierCellar is ERC4626 {
+    function totalAssetsWithdrawable() external view returns (uint256 assets){
+        return totalAssets();
+    }
+
+    function isShutdown() external pure returns (bool){
+        return false;
+    }
+
+    function isPaused() external pure returns (bool){
+        return false;
+    }
+
     constructor(address _underlyingAsset) ERC4626(IERC20(_underlyingAsset)) ERC20("Mock Sommelier Cellar", "MSC") {}
 }
 
@@ -81,13 +96,13 @@ contract DeployProtocolTestnetScript is Script {
     ////////////////////////////////////////////////////////////////
     ///                      CONSTANTS                           ///
     ////////////////////////////////////////////////////////////////
-    address public constant TREASURY = 0x60131b4F65Ab845CA0FEfF39ec51372d1388530e;
+    address public constant TREASURY = 0xCb1D84fC7925D564414bd9f81E921aA3847b58fE;
 
     function run() public {
         address [] memory keepers = new address[](3);
         keepers[0] = (0xe4a72bec8d2f18F7b9D4B3c5b2571B087F682BcE);
         keepers[1] = (0xfB09A9175c4D3b941236ad98Aeba200b8Dfd8182);
-        keepers[2] = (0x60131b4F65Ab845CA0FEfF39ec51372d1388530e);
+        keepers[2] = (0xCb1D84fC7925D564414bd9f81E921aA3847b58fE);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
@@ -108,7 +123,7 @@ contract DeployProtocolTestnetScript is Script {
         YearnWETHStrategy yStrategy = new YearnWETHStrategy();
 
         yStrategy.initialize(
-            IMaxApyVaultV2(address(maxApyVaultV2)), keepers, "Yearn WETH", address(1), IYVault(address(yVault))
+            IMaxApyVaultV2(address(maxApyVaultV2)), keepers, "Yearn WETH", 0xCb1D84fC7925D564414bd9f81E921aA3847b58fE, IYVault(address(yVault))
         );
 
         yStrategy.transferOwnership(0xfB09A9175c4D3b941236ad98Aeba200b8Dfd8182);
@@ -122,7 +137,7 @@ contract DeployProtocolTestnetScript is Script {
         SommelierTurboStEthStrategy sStrategy = new SommelierTurboStEthStrategy();
 
         sStrategy.initialize(
-            IMaxApyVaultV2(address(maxApyVaultV2)), keepers, "Sommelier Turbo StETh", address(1), ICellar(address(cellar))
+            IMaxApyVaultV2(address(maxApyVaultV2)), keepers, "Sommelier Turbo StETh", 0xCb1D84fC7925D564414bd9f81E921aA3847b58fE, ICellar(address(cellar))
         );
 
         sStrategy.transferOwnership(0xfB09A9175c4D3b941236ad98Aeba200b8Dfd8182);
