@@ -879,4 +879,30 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(data.strategyTotalDebt, 30015626);
         assertEq(data.strategyTotalLoss, 9984374);
     }
+
+    function testSommelierTurboGHO__PreviewWithraw() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDC + 23423,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();
+        uint256 expected = strategy.previewWithdraw(23489392);
+        vm.startPrank(address(vault));
+        uint256 loss = strategy.withdraw(23489392);
+        assertEq(expected, 23489392 - loss);
+    }
+
+    function testSommelierTurboGHO__PreviewWithrawRequest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDC + 23423,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 requestedAmount = strategy.previewWithdrawRequest(30 * _1_USDC);
+        vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 loss = strategy.withdraw(requestedAmount);
+        uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore ;
+        assertApproxEq(withdrawn, 30 * _1_USDC, withdrawn/ 1000);
+    }
 }

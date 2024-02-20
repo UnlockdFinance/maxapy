@@ -1296,6 +1296,32 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(vault.withdraw(type(uint256).max, users.alice, 10), 100 ether);
     }
  */
+    function testSommelierStEthDeposit_TurboStEth__PreviewWithdraw() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether + 723874239,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();
+        uint256 expected = strategy.previewWithdraw(23481322349392);
+        vm.startPrank(address(vault));
+        uint256 loss = strategy.withdraw(23481322349392);
+        assertApproxEq(expected, 23481322349392 - loss, expected / 1000);
+    }
+
+     function testSommelierStEthDeposit_TurboStEth__PreviewWithrawRequest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether + 7238742393,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 requestedAmount = strategy.previewWithdrawRequest(30 ether);
+        vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 loss = strategy.withdraw(requestedAmount);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        assertApproxEq(withdrawn, 30 ether, withdrawn/50);
+    }
+
     function _pauseCellar() internal {
         // change the value of mapping isCallerPaused(address=>bool) in the registry
         vm.store(
