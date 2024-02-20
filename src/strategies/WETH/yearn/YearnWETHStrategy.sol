@@ -5,7 +5,6 @@ import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strateg
 import {IYVault} from "src/interfaces/IYVault.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-import "forge-std/console.sol";
 /// @title YearnWETHStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `YearnWETHStrategy` supplies an underlying token into a generic Yearn Vault,
@@ -141,8 +140,8 @@ contract YearnWETHStrategy is BaseStrategy {
         return estimatedTotalAssets() != 0;
     }
 
-     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
     function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
@@ -156,39 +155,23 @@ contract YearnWETHStrategy is BaseStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
 
-            uint256 vaultTotalSupply = yVault.totalSupply();
             uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = shares * (_freeFunds() + amountToWithdraw) / (vaultTotalSupply + shares);
+            uint256 withdrawn = _shareValue(shares);
             assembly {
                 // if withdrawn < amountToWithdraw
                 if lt(withdrawn, amountToWithdraw) { loss := sub(amountToWithdraw, withdrawn) }
             }
         }
-        // liquidatedAmount = requestedAmount - loss;
-        assembly {
-            liquidatedAmount := sub(requestedAmount, loss)
-        }
+        liquidatedAmount = requestedAmount - loss;
     }
 
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the @param requestedAmount the vault has to request to this strategy
+    /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
-       /*  uint256 underlyingBalance = _underlyingBalance();
-        // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Yearn Vault
-        if (underlyingBalance < liquidatedAmount) {
-            uint256 withdrawn;
-            unchecked {
-                withdrawn = liquidatedAmount - underlyingBalance;
-            }
-
-            uint256 vaultTotalSupply = yVault.totalSupply();
-            requestedAmount = vaultTotalSupply * (withdrawn - withd)
-            requestedAmount = requestedAmount + underlyingBalance; 
-        }
-        else return liquidatedAmount; */
+        // we cannot predict losses so return as if there were not
+        return previewWithdraw(liquidatedAmount);
     }
    
     ////////////////////////////////////////////////////////////////

@@ -180,7 +180,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     }
 
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
+    /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
     function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
@@ -202,7 +202,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     }
 
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the @param requestedAmount the vault has to request to this strategy
+    /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {

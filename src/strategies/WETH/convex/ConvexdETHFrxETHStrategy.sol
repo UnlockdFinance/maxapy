@@ -7,6 +7,7 @@ import {IConvexRewards} from "src/interfaces/IConvexRewards.sol";
 import {IUniswapV2Router02 as IRouter} from "src/interfaces/IUniswap.sol";
 import {ICurve} from "src/interfaces/ICurve.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
+import "forge-std/console.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
@@ -281,7 +282,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     }
 
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
+    /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
     function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
@@ -303,22 +304,30 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     }
 
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the @param requestedAmount the vault has to request to this strategy
+    /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
-     /*    uint256 underlyingBalance = _underlyingBalance();
-        // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Cellar Vault
+        uint256 underlyingBalance = _underlyingBalance();
+        requestedAmount = liquidatedAmount;
+        // we try previewWithdraw with increasing requestedAmount till we get a 1% precision loss only
         if (underlyingBalance < liquidatedAmount) {
-            uint256 amountToWithdraw;
-            unchecked {
-                amountToWithdraw = liquidatedAmount - underlyingBalance;
+            uint256 i=0;
+            while(true){
+                console.log(i);
+                uint256 withdrawn = previewWithdraw(requestedAmount);
+                // check that there is only less or equal to 1% precision loss
+                if(_approxEq(withdrawn, liquidatedAmount, 0)) break;
+                requestedAmount*= liquidatedAmount / withdrawn;
+                ++i;
             }
-            uint256 requestedShares = cellar.previewMint(amountToWithdraw);
-            requestedAmount = _shareValue(requestedShares);
         }
-        requestedAmount = underlyingBalance + requestedAmount; */
+        return requestedAmount + underlyingBalance;
+    }
+
+    /// @dev internal helper function
+    function _approxEq(uint256 a, uint256 b, uint256 delta) internal pure returns(bool){
+        return a > b ? a - b <= delta : b - a <=delta;
     }
 
     /// @notice Returns the amount of Curve LP tokens staked in Convex
