@@ -5,6 +5,9 @@ libs = ["lib"]
 
 gas_reports = ['*']
 
+# needed to test de Morpho Eth Maximizer
+evm_version = "shanghai"
+
 [rpc_endpoints]
 mainnet = "${RPC_MAINNET}" 
 goerli = "${RPC_GOERLI}"
