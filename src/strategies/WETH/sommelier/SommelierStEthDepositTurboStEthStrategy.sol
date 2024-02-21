@@ -467,19 +467,14 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
         // convert the shares to stEth amount
-        uint256 amountStEth = cellar.convertToAssets(shares);
-        // calculate underlying amount from swap
-        // if amount is 0 get_dy will revert
-        return amountStEth == 0 ? amountStEth : pool.get_dy(1, 0, amountStEth);
+        return cellar.convertToAssets(shares);
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
-        // calculate stEth amount from swap
-        uint256 amountStEth = pool.get_dy(0, 1, amount);
         // convert to shares
-        return cellar.convertToShares(amountStEth);
+        return cellar.convertToShares(amount);
     }
 
     /// @notice Returns the current strategy's amount of Cellar vault shares
