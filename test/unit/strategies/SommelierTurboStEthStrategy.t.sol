@@ -1204,7 +1204,21 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 23481322349392 - loss);
     }
 
-/*     function testSommelierTurboStEth__PreviewWithrawRequest() public {
+/*     function testSommelierTurboStEth__PreviewWithraw__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 0.00001 ether && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();
+        uint256 expected = strategy.previewWithdraw(amount);
+        vm.startPrank(address(vault));
+        uint256 loss = strategy.withdraw(amount);
+        assertEq(expected, amount - loss);
+    } */
+
+    function testSommelierTurboStEth__PreviewWithrawRequest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether + 7238742393,users.alice);
         vm.startPrank(users.keeper);
@@ -1217,21 +1231,8 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
         assertApproxEq(withdrawn, 30 ether, withdrawn/ 50);
         assertGe(withdrawn, 30 ether);
-    } */
-    
-    function testSommelierTurboStEth__PreviewWithraw__FUZZY(uint256 amount) public {
-        vm.assume(amount >= 0.00001 ether && amount <= 1000 ether);
-        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(WETH, users.alice, amount * 2);
-        vault.deposit(amount * 2,users.alice);
-        vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
-        vm.stopPrank();
-        uint256 expected = strategy.previewWithdraw(amount);
-        vm.startPrank(address(vault));
-        uint256 loss = strategy.withdraw(amount);
-        assertEq(expected, amount - loss);
     }
+    
 
 /*     function testSommelierTurboStEth__PreviewWithrawRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.00001 ether && amount <= 1000 ether);

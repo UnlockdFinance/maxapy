@@ -1295,6 +1295,10 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(vault.withdraw(type(uint256).max, users.alice, 10), 100 ether);
     }
  */
+
+    ////////////////////////////////////////////////////////////////
+    ///                     TEST previewWithdraw()               ///
+    ////////////////////////////////////////////////////////////////
     function testSommelierStEthDeposit_TurboStEth__PreviewWithdraw() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether + 723874239,users.alice);
@@ -1307,7 +1311,25 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertApproxEq(expected, 23481322349392 - loss, expected / 1000);
     }
 
-     function testSommelierStEthDeposit_TurboStEth__PreviewWithrawRequest() public {
+/*     function testSommelierStEthDeposit_TurboStEth__PreviewWithraw__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 1e4 && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();
+        uint256 expected = strategy.previewWithdraw(amount);
+        vm.startPrank(address(vault));
+        uint256 loss = strategy.withdraw(amount);
+        assertEq(expected, amount - loss);
+    }  */
+    
+
+    ////////////////////////////////////////////////////////////////
+    ///                     TEST previewWithdrawRequest()        ///
+    ////////////////////////////////////////////////////////////////
+    function testSommelierStEthDeposit_TurboStEth__PreviewWithrawRequest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether + 7238742393,users.alice);
         vm.startPrank(users.keeper);
@@ -1321,6 +1343,27 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertApproxEq(withdrawn, 30 ether, withdrawn/50);
         assertGe(withdrawn, 30 ether);
     }
+
+    /* function testSommelierStEthDeposit_TurboStEth__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 1e4 && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);       
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 requestedAmount = strategy.previewWithdrawRequest(amount);
+        vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        strategy.withdraw(requestedAmount);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        assertApproxEq(withdrawn, amount, withdrawn / 50);
+        assertGe(withdrawn, amount);
+    }  */
+
+    ////////////////////////////////////////////////////////////////
+    ///                     HELPER FUNCTIONS                     ///
+    ////////////////////////////////////////////////////////////////
 
     function _pauseCellar() internal {
         // change the value of mapping isCallerPaused(address=>bool) in the registry
