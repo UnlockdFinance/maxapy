@@ -12,13 +12,12 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 
 /**
-  Mock WETH deployed at address: 0x5E8Ab96a3f4d04e13540A4D59cbf9fae363a0A48
-  MaxApy Vault deployed at address: 0xb5b34A401eD83308173133160aF167A92BC3DFD9
-  Mock yVault deployed at address: 0xC4E34914009eceD65e86085eb7Bbe3E169d61bdC
-  Yearn WETH Strategy Deployed at address:  0xf49571488DF92996192aca393603fFBcd7650416
-  Fake Sommelier Cellar deployed at address: 0xD63ba36Ba785E7acD90fa74a131f806cf00c16A6
-  Sommelier TurboStEth Strategy Deployed at address:  0x13b14403c2f57E36F2FFaCAa81263D40bD88cE5B
-
+  Mock WETH deployed at address: 0x28fe1886f6911db342872060aBf1c7a90417Cdb0
+  MaxApy Vault deployed at address: 0x170756B93C940980427761Db8B5Cb552f1AC1bb0
+  Mock yVault deployed at address: 0xe2a1D7710CE3C03Fdd98330F180E26A877fe4De6
+  Yearn WETH Strategy Deployed at address:  0xE528440581bfd617fA3cd1d19c72b16C76fBCcb5
+  Fake Sommelier Cellar deployed at address: 0x44CC7e1c3E07A4dcAE36bEd9D261aB4dbE3250A8
+  Sommelier TurboStEth Strategy Deployed at address:  0x150Fd75963A79f85274Eba636367e5Be2475338c
  */
 
 contract MockERC20 is ERC20 {
@@ -67,7 +66,7 @@ contract MockYearnVault is ERC20 {
     }
 
     function totalAssets() public view returns (uint256) {
-        return balanceOf(address(this));
+        return IERC20(underlyingAsset).balanceOf(address(this));
     }
 
     function lastReport() external view returns (uint256) {
