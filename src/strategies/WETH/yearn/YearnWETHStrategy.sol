@@ -171,7 +171,8 @@ contract YearnWETHStrategy is BaseStrategy {
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
         // we cannot predict losses so return as if there were not
-        return previewWithdraw(liquidatedAmount);
+        // increase 1% to be pessimistic
+        return previewWithdraw(liquidatedAmount) * 101 / 100;
     }
    
     ////////////////////////////////////////////////////////////////

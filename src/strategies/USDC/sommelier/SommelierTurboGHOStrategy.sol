@@ -187,7 +187,8 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
                 amountToWithdraw = liquidatedAmount - underlyingBalance;
             }
             uint256 requestedShares = cellar.previewMint(amountToWithdraw);
-            requestedAmount = _shareValue(requestedShares);
+            // increase 10% to be pessimistic
+            requestedAmount = _shareValue(requestedShares) * 101 / 100;
         }
         requestedAmount = underlyingBalance + requestedAmount;
     }

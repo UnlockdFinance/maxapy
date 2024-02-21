@@ -418,7 +418,6 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
-
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override

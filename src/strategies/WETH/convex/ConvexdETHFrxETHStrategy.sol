@@ -296,7 +296,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 value = _lpForAmount(amountToWithdraw);
-            uint256 withdrawn = curveDEthFrxEthPool.calc_token_amount([0, value], false);
+            uint256 withdrawn = curveDEthFrxEthPool.calc_withdraw_one_coin(value,1);
             withdrawn =  curveEthFrxEthPool.get_dy(1, 0, withdrawn);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
@@ -310,17 +310,9 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         requestedAmount = liquidatedAmount;
-        // we try previewWithdraw with increasing requestedAmount till we get a 1% precision loss only
         if (underlyingBalance < liquidatedAmount) {
-            uint256 i=0;
-            while(true){
-                console.log(i);
-                uint256 withdrawn = previewWithdraw(requestedAmount);
-                // check that there is only less or equal to 1% precision loss
-                if(_approxEq(withdrawn, liquidatedAmount, 0)) break;
-                requestedAmount*= liquidatedAmount / withdrawn;
-                ++i;
-            }
+            // increase 1% to be pessimistic
+            requestedAmount = previewWithdraw(liquidatedAmount) * 101 / 100;
         }
         return requestedAmount + underlyingBalance;
     }

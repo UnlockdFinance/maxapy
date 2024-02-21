@@ -995,6 +995,9 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertEq(data.strategyDebtRatio, 2996);
     }
 
+    ////////////////////////////////////////////////////////////////
+    ///                     TEST previewWithdraw()               ///
+    ////////////////////////////////////////////////////////////////
     function testConvexdETHFrxETH__PreviewWithdraw() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether + 723874239,users.alice);
@@ -1004,9 +1007,28 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 expected = strategy.previewWithdraw(30 ether);
         vm.startPrank(address(vault));
         uint256 loss = strategy.withdraw(30 ether);
+        // expect Curve calculations to be fully precise
         assertEq(expected, 30 ether - loss);
     }
 
+   /*  function testConvexdETHFrxETH__PreviewWithraw__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();
+        uint256 expected = strategy.previewWithdraw(amount);
+        vm.startPrank(address(vault));
+        uint256 loss = strategy.withdraw(amount);
+        // expect Curve calculations to be fully precise
+        assertEq(expected, amount - loss);
+    } */
+
+    ////////////////////////////////////////////////////////////////
+    ///                     TEST previewWithdrawRequest()        ///
+    ////////////////////////////////////////////////////////////////
     function testConvexdETHFrxETH__PreviewWithdrawRequest() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether + 723874239,users.alice);
@@ -1016,10 +1038,28 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 requestedAmount = strategy.previewWithdrawRequest(80 ether);
         vm.startPrank(address(vault));
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
-        uint256 loss = strategy.withdraw(requestedAmount);
+        strategy.withdraw(requestedAmount);
         uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
         assertApproxEq(withdrawn, 80 ether, withdrawn/ 100);
+        // expect the strategy to never withdraw less than expected
+        assertGe(withdrawn, 80 ether);
     }
 
-
+    /* function testConvexdETHFrxETH__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);       
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 requestedAmount = strategy.previewWithdrawRequest(amount);
+        vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        strategy.withdraw(requestedAmount);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        // precision loss can vary depending on the amount
+        // expect the strategy to never withdraw less than expected
+        assertGe(withdrawn, amount);
+    } */
 }

@@ -448,7 +448,6 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         deal({token: WETH, to: address(strategy), give: 1000 ether});
         uint256 expectedShares = strategy.sharesForAmount(1000 ether);
         uint256 amountExpectedFromShares = IERC4626(CELLAR_WETH_MAINNET).previewRedeem(expectedShares);
-        console.log("amountExpectedFromShares: " , amountExpectedFromShares);
         strategy.invest(1000 ether, 0);
         assertEq(expectedShares, IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)));
 
@@ -1195,6 +1194,9 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
     
     } */
 
+    ////////////////////////////////////////////////////////////////
+    ///                     TEST previewWithdraw()               ///
+    ////////////////////////////////////////////////////////////////
     function testSommelierMorphoEthMaximizer__PreviewWithraw() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether + 723874239,users.alice);
@@ -1204,9 +1206,29 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         uint256 expected = strategy.previewWithdraw(23481322349392);
         vm.startPrank(address(vault));
         uint256 loss = strategy.withdraw(23481322349392);
+        // expect the Sommelier's {previewRedeem} to be fully precise
         assertEq(expected, 23481322349392 - loss);
     }
 
+    /* function testSommelierMorphoEthMaximizer__PreviewWithraw__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();
+        uint256 expected = strategy.previewWithdraw(amount);
+        vm.startPrank(address(vault));
+        uint256 loss = strategy.withdraw(amount);
+        // expect the Sommelier's {previewRedeem} to be fully precise
+        assertEq(expected, amount - loss);
+    } */
+
+
+    ////////////////////////////////////////////////////////////////
+    ///                     TEST previewWithdrawRequest()        ///
+    ////////////////////////////////////////////////////////////////
     function testSommelierMorphoEthMaximizer__PreviewWithrawRequest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether + 7238742393,users.alice);
@@ -1216,11 +1238,33 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         uint256 requestedAmount = strategy.previewWithdrawRequest(30 ether);
         vm.startPrank(address(vault));
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
-        uint256 loss = strategy.withdraw(requestedAmount);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        strategy.withdraw(requestedAmount);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore;
+        // expect a max of 2% precision loss
         assertApproxEq(withdrawn, 30 ether, withdrawn/ 50);
+        // expect the strategy to never withdraw less than expected
+        assertGe(withdrawn, 30 ether);
     }
 
+    /* function testSommelierMorphoEthMaximizer__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);       
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 requestedAmount = strategy.previewWithdrawRequest(amount);
+        vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        strategy.withdraw(requestedAmount);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        // expect a max of 2% precision loss
+        assertApproxEq(withdrawn, amount, withdrawn / 50);
+        // expect the strategy to never withdraw less than expected
+        assertGe(withdrawn, amount);
+    }
+ */
     function _pauseCellar() internal {
         // change the value of mapping isCallerPaused(address=>bool) in the registry
         vm.store(

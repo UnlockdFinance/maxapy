@@ -1320,6 +1320,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         uint256 loss = strategy.withdraw(requestedAmount);
         uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
         assertApproxEq(withdrawn, 30 ether, withdrawn/50);
+        assertGe(withdrawn, 30 ether);
     }
 
     function _pauseCellar() internal {

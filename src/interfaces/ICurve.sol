@@ -48,5 +48,7 @@ interface ICurve is IERC20 {
 
     function owner() external view returns (address);
 
+    function calc_withdraw_one_coin(uint256 _burn_amount, int128 i) external view returns (uint256);
+
     function calc_token_amount(uint256[2] calldata _amounts, bool _is_deposit) external view returns (uint256);
 }
