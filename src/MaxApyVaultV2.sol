@@ -873,20 +873,21 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
         uint256 vaultBalance = totalIdle;
         uint256 o = _decimalsOffset();
+        // convert the assets to shares without any losses
+        // very important: ROUND UP
+        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
 
-        // in case the vault's balance covers the requested `amount`
-        if (vaultBalance >= assets) {
-            // convert the assets to shares without any losses
-            // very important: ROUND UP
-            shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
-        }
+      
         // in case the vault's balance doesn't cover the requested `assets`
-        else {
-            // shares to be burnt :
-            // the shares needed to withdraw from vault's balance(without losses) + from the strategies(with losses)
-            // very important: ROUND UP
-            shares = Math.fullMulDivUp(vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+        if(assets > vaultBalance) {
+            // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
+            // from strategies until requested value amount is covered.
+            // During forced withdrawal, a Strategy may realize a loss, which is reported back to the
+            // Vault. This will affect the withdrawer, affecting the amount of shares that will
+            // burn in order to withdraw exactly @param assets assets
 
+            uint256 totalLoss;
+            // Iterate over strategies
             for (uint256 i; i < MAXIMUM_STRATEGIES;) {
                 address strategy = withdrawalQueue[i];
 
@@ -896,28 +897,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Check if the vault balance is finally enough to cover the requested withdrawal
                 if (vaultBalance >= assets) break;
 
-                uint256 slotStrategies2;
                 // Compute remaining amount to withdraw considering the current balance of the vault
-                uint256 amountNeeded;
-                assembly ("memory-safe") {
-                    // amountNeeded = assets - vaultBalance;
-                    amountNeeded := sub(assets, vaultBalance)
-
-                    // cache slot strategies[strategy].strategyTotalDebt
-                    mstore(0x00, strategy)
-                    mstore(0x20, strategies.slot)
-                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
-
-                    // compute strategies[strategy].strategyTotalDebt
-                    let strategyTotalDebt := shr(128, shl(128, sload(slotStrategies2)))
-
-                    // Don't withdraw more than the debt loaned to the strategy so that the strategy can still continue
-                    // to work based on the profits it has.
-
-                    // amountNeeded = Math.min(amountNeeded, strategyTotalDebt)
-                    amountNeeded :=
-                        xor(amountNeeded, mul(xor(amountNeeded, strategyTotalDebt), lt(strategyTotalDebt, amountNeeded)))
-                }
+                uint256 amountNeeded = assets - vaultBalance;
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxRequest());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountNeeded == 0) {
@@ -927,35 +909,34 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     continue;
                 }
 
-                // calculate the amount to request to the strategy to get `amountNeeded`
-                uint256 requestedAmount = IStrategy(strategy).previewWithdrawRequest(amountNeeded);
-
-                // if the requested amount is greater than the strategy's total assets
-                if (requestedAmount > IStrategy(strategy).estimatedTotalAssets()) {
-                    // request strategy's debt
-                    requestedAmount = amountNeeded;
-                    // amount needed is the result of requesting the strategy's debt
-                    amountNeeded = IStrategy(strategy).previewWithdraw(requestedAmount);
-                }
+                // Withdraw from strategy. Compute amount withdrawn
+                // considering the difference between balances pre/post withdrawal
+                uint256 withdrawn = IStrategy(strategy).previewWithdrawRequest(amountNeeded);
+                uint256 loss = withdrawn - amountNeeded;
 
                 // increase the vault balance by the needed amount
-                vaultBalance += amountNeeded;
+                vaultBalance += withdrawn;
 
-                // increase the shares by the requested amount converted to shares
-                // very important: ROUND UP
-                shares += Math.fullMulDivUp(requestedAmount, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+                // If loss has been realised, withdrawer will incur it, affecting to the amount
+                // of shasers that the user will burn
+                if (loss != 0) {
+                    totalLoss += loss;
+                }
 
                 unchecked {
                     ++i;
                 }
             }
+            // Increase the shares if there are any losses
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+        }
 
-            // if there are more assets to cover(when requesting more assets then total)
-            // we add the extra shares needed, even though it would revert if someone tries
-            // to withdraw that much since they wouln't have the  needed shares
-            if (vaultBalance < assets) {
-                shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
-            }
+
+        // if there are more assets to cover(when requesting more assets then total)
+        // we add the extra shares needed, even though it would revert if someone tries
+        // to withdraw that much since they wouln't have the needed shares
+        if (vaultBalance < assets) {
+            shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
         }
     }
 
@@ -1018,7 +999,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // considering the difference between balances pre/post withdrawal
                 uint256 withdrawn = IStrategy(strategy).previewWithdraw(amountNeeded);
                 uint256 loss = amountNeeded - withdrawn;
-                if (withdrawn == 0) continue;
 
                 // Increase cached vault balance to track the newly withdrawn amount
                 vaultBalance += withdrawn;
@@ -1183,7 +1163,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
     /// @notice Burns `shares` from `owner` and sends exactly `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
-
     function withdraw(uint256 assets, address to, address owner)
         public
         override
@@ -1198,15 +1177,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 shares := sload(keccak256(0x0c, 0x20))
             }
         }
-        shares = previewWithdraw(assets);
-        if(assets == type(uint256).max) shares = balanceOf(owner);
-        if (shares > maxRedeem(owner)) {
+        if (assets > maxWithdraw(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x936941fc) // `WithdrawMoreThanMax()`.
                 revert(0x1c, 0x04)
             }
         }
-        _withdrawWithLosses(msg.sender, to, owner, convertToAssets(shares), shares);
+        shares = _withdraw(msg.sender, to, owner, assets);
     }
 
     /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.
@@ -1229,14 +1206,14 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
         // substract losses to the total assets
-        assets = _withdrawWithLosses(msg.sender, to, owner, convertToAssets(shares), shares);
+        assets = _redeem(msg.sender, to, owner, shares);
     }
 
     /// @dev Withdraws the needed amount of assets realising losses such as slippage
-    /// @return the real amount of assets withdrawn
-    function _withdrawWithLosses(address by, address to, address owner, uint256 assets, uint256 shares)
+    /// @return assets the real amount of assets withdrawn
+    function _redeem(address by, address to, address owner, uint256 shares)
         private
-        returns (uint256)
+        returns (uint256 assets)
     {
         if (by != owner) {
             _spendAllowance(owner, by, shares);
@@ -1248,8 +1225,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 mstore(0x00, 0x5a870a25)
                 revert(0x1c, 0x04)
             }
-        }
-
+        }   
+        // Calculate assets from shares
+        assets = convertToAssets(shares);
         // Cache underlying asset
         address underlying = asset();
 
@@ -1378,6 +1356,119 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
 
         return assets;
+    }
+
+
+    /// @dev Burns the needed amount of shars to withdraw @param assets after lealising loses
+    /// @return shares the real amount shares burnt
+    function _withdraw(address by, address to, address owner, uint256 assets)
+        private
+        returns (uint256 shares)
+    {
+        assembly ("memory-safe") {
+            // if assets == 0
+            if iszero(assets) {
+                // throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
+            }
+        }
+
+        uint256 vaultBalance = totalIdle;
+        uint256 o = _decimalsOffset();
+        address underlying = asset();
+        // convert the assets to shares without any losses
+        // very important: ROUND UP
+        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+
+      
+        // in case the vault's balance doesn't cover the requested `assets`
+        if(assets > vaultBalance) {
+            // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
+            // from strategies until requested value amount is covered.
+            // During forced withdrawal, a Strategy may realize a loss, which is reported back to the
+            // Vault. This will affect the withdrawer, affecting the amount of shares that will
+            // burn in order to withdraw exactly @param assets assets
+
+            uint256 totalLoss;
+            // Iterate over strategies
+            for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+                address strategy = withdrawalQueue[i];
+
+                // Check if we have exhausted the queue
+                if (strategy == address(0)) break;
+
+                // Check if the vault balance is finally enough to cover the requested withdrawal
+                if (vaultBalance >= assets) break;
+
+                // Compute remaining amount to withdraw considering the current balance of the vault
+                uint256 amountNeeded = assets - vaultBalance;
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxRequest());
+
+                // Try the next strategy if the current strategy has no debt to be withdrawn
+                if (amountNeeded == 0) {
+                    unchecked {
+                        ++i;
+                    }
+                    continue;
+                }
+
+                // Withdraw from strategy. Compute amount withdrawn
+                // considering the difference between balances pre/post withdrawal
+                uint256 preBalance = underlying.balanceOf(address(this));
+                uint256 loss = IStrategy(strategy).requestWithdraw(amountNeeded);
+
+                uint256 withdrawn = underlying.balanceOf(address(this)) - preBalance;
+
+
+                // increase the vault balance by the needed amount
+                vaultBalance += withdrawn;
+
+                // If loss has been realised, withdrawer will incur it, affecting to the amount
+                // of shasers that the user will burn
+                if (loss != 0) {
+                    totalLoss += loss;
+                    _reportLoss(strategy, loss);
+                }
+
+                unchecked {
+                    ++i;
+                }
+            }
+
+            // Update total idle with the actual vault balance that considers the total withdrawn amount
+            totalIdle = vaultBalance;
+
+            // Increase the shares if there are any losses
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+
+            // if there are more assets to cover(when requesting more assets then total)
+            // we add the extra shares needed, even though it would revert if someone tries
+            // to withdraw that much since they wouln't have the needed shares
+            if (vaultBalance < assets) {
+                shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+            }
+        }
+
+        if (by != owner) {
+            _spendAllowance(owner, by, shares);
+        }
+        
+        // Burn shares
+        _burn(owner, shares);
+
+        // Reduce value withdrawn from vault total idle
+        totalIdle -= assets;
+        // Transfer underlying to `recipient`
+        SafeTransferLib.safeTransfer(underlying, to, assets);
+
+        assembly ("memory-safe") {
+            // Emit the {Withdraw} event.
+            mstore(0x00, assets)
+            mstore(0x20, shares)
+            let m := shr(96, not(0))
+            log4(0x00, 0x40, _WITHDRAW_EVENT_SIGNATURE, and(m, by), and(m, to), and(m, owner))
+        }
     }
 
     ////////////////////////////////////////////////////////////////

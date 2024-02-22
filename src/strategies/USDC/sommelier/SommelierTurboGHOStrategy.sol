@@ -187,10 +187,26 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
                 amountToWithdraw = liquidatedAmount - underlyingBalance;
             }
             uint256 requestedShares = cellar.previewMint(amountToWithdraw);
-            // increase 10% to be pessimistic
+            // increase 1% to be pessimistic
             requestedAmount = _shareValue(requestedShares) * 101 / 100;
         }
         requestedAmount = underlyingBalance + requestedAmount;
+    }
+
+    function maxRequest() public view returns(uint256) {
+        return previewWithdraw(_estimatedTotalAssets()); 
+    }
+
+    function requestWithdraw(uint256 amountNeeded) external checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 amountRequested = previewWithdrawRequest(amountNeeded);
+        uint256 amountFreed;
+        // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
+        (amountFreed, loss) = _liquidatePosition(amountRequested);
+        // account only the loss needed to withdraw amountNeeded
+        loss = loss * amountNeeded / amountRequested;
+        // Send it directly back to vault
+        if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // Note: Reinvest anything leftover on next `harvest`
     }
 
     ////////////////////////////////////////////////////////////////

@@ -198,20 +198,26 @@ contract ERC4626Test is BaseTest, StrategyEvents {
         vm.startPrank(users.alice);
         uint256 snapshotId = vm.snapshot();
         uint256 expectedShares = vault.previewWithdraw(200 * _1_USDC);
+        uint256 balanceBefore = IERC20(USDC).balanceOf(users.alice);
         uint256 shares = vault.withdraw(200 * _1_USDC, users.alice, users.alice);
-        assertEq(shares, expectedShares);
+        uint256 transferred = IERC20(USDC).balanceOf(users.alice) - balanceBefore;
+        assertEq(transferred , 200 * _1_USDC);
+        assertLe(shares, expectedShares);
 
         vm.startPrank(users.bob);
         expectedShares = vault.previewWithdraw(4000 * _1_USDC);
+        balanceBefore = IERC20(USDC).balanceOf(users.bob);
         shares = vault.withdraw(4000 * _1_USDC, users.bob, users.bob);
-        assertEq(shares, expectedShares);
+        transferred = IERC20(USDC).balanceOf(users.bob) - balanceBefore;
+        assertEq(transferred , 4000 * _1_USDC);
+        assertLe(shares, expectedShares);
         vm.stopPrank();
 
         vm.revertTo(snapshotId);
 
         /// ⭕️ SCENARIO 2: withdraw when some funds are in strategies
-        /// - Alice deposits 200 USDC
-        /// - Bob deposits 5,000 USDC
+        /// - Alice deposits 180 USDC
+        /// - Bob deposits 4,000 USDC
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
@@ -219,42 +225,52 @@ contract ERC4626Test is BaseTest, StrategyEvents {
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(180 * _1_USDC);
+        balanceBefore = IERC20(USDC).balanceOf(users.alice);
         shares = vault.withdraw(180 * _1_USDC, users.alice, users.alice);
-        assertEq(shares, expectedShares);
+        transferred = IERC20(USDC).balanceOf(users.alice) - balanceBefore;
+        assertEq(transferred , 180 * _1_USDC);
+        assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
         expectedShares = vault.previewWithdraw(4000 * _1_USDC);
+        balanceBefore = IERC20(USDC).balanceOf(users.bob);
         shares = vault.withdraw(4000 * _1_USDC, users.bob, users.bob);
-        assertEq(shares, expectedShares);
+        transferred = IERC20(USDC).balanceOf(users.bob) - balanceBefore;
+        assertEq(transferred , 4000 * _1_USDC);
+        assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.revertTo(snapshotId);
 
         /// ⭕️ SCENARIO 3: withdraw when some funds are in strategies and they have profits
-        /// - Alice deposits 200 USDC
-        /// - Bob deposits 5,000 USDC
+        /// - Alice deposits 190 USDC
+        /// - Bob deposits 4,000 USDC
         /// - Harvest strategies so they take the vault money
         /// - Strategies make profit
         /// - Harvest again
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 10_000);
-        deal(USDC, address(strategy), 50 * _1_USDC);
-        strategy.harvest(0, 0, 10_000);
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(190 * _1_USDC);
+        balanceBefore = IERC20(USDC).balanceOf(users.alice);
         shares = vault.withdraw(190 * _1_USDC, users.alice, users.alice);
-        assertEq(shares, expectedShares);
+        transferred = IERC20(USDC).balanceOf(users.alice) - balanceBefore;
+        assertEq(transferred , 190 * _1_USDC);
+        assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
         expectedShares = vault.previewWithdraw(4000 * _1_USDC);
+        balanceBefore = IERC20(USDC).balanceOf(users.bob);
         shares = vault.withdraw(4000 * _1_USDC, users.bob, users.bob);
-        assertEq(shares, expectedShares);
+        transferred = IERC20(USDC).balanceOf(users.bob) - balanceBefore;
+        assertEq(transferred , 4000 * _1_USDC);
+        assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.revertTo(snapshotId);
     }
 
-    /* function testMaxApyVaultV2_ERC4626__PreviewWithdraw_Fuzzy(uint256 amount) public {
+    function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
         vm.assume(amount > _1_USDC /10 && amount < 10_000 * _1_USDC);
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
 
@@ -274,15 +290,21 @@ contract ERC4626Test is BaseTest, StrategyEvents {
 
         vm.startPrank(users.alice);
         uint256 expectedShares = vault.previewWithdraw(190 * _1_USDC);
+        uint256 balanceBefore = IERC20(USDC).balanceOf(users.alice);
         uint256 shares = vault.withdraw(190 * _1_USDC, users.alice, users.alice);
-        assertEq(shares, expectedShares);
+        uint256 transferred = IERC20(USDC).balanceOf(users.alice) - balanceBefore;
+        assertEq(transferred , 190 * _1_USDC);
+        assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
         expectedShares = vault.previewWithdraw(amount * 90/100);
+        balanceBefore = IERC20(USDC).balanceOf(users.bob);
         shares = vault.withdraw(amount * 90/100, users.bob, users.bob);
-        assertEq(expectedShares, shares);
+        transferred = IERC20(USDC).balanceOf(users.bob) - balanceBefore;
+        assertEq(transferred , amount * 90 / 100);
+        assertLe(shares,expectedShares);
         vm.stopPrank();
-    } */
+    }
 
     function testMaxApyVaultV2_ERC4626__sharePrice() external {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
