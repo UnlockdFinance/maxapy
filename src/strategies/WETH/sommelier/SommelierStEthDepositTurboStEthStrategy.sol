@@ -5,7 +5,6 @@ import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strateg
 import {IWETH} from "src/interfaces/IWETH.sol";
 import {ICellar} from "src/interfaces/ICellar.sol";
 import {ICurve} from "src/interfaces/ICurve.sol";
-
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 /// @title SommelierStEthDepositTurboStEthStrategy
@@ -206,18 +205,13 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public override view returns (uint256 requestedAmount) {
-        uint256 underlyingBalance = _underlyingBalance();
-        // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Cellar Vault
+       uint256 underlyingBalance = _underlyingBalance();
+        requestedAmount = liquidatedAmount;
         if (underlyingBalance < liquidatedAmount) {
-            uint256 amountToWithdraw;
-            unchecked {
-                amountToWithdraw = liquidatedAmount - underlyingBalance;
-            }
-            uint256 requestedShares = cellar.previewMint(amountToWithdraw);
-            requestedAmount = _shareValue(requestedShares);
+            // increase 2% to be pessimistic, included withdraw losses and swap losses
+            requestedAmount = previewWithdraw(liquidatedAmount) * 102 / 100;
         }
-        requestedAmount = underlyingBalance + requestedAmount;
+        return requestedAmount + underlyingBalance;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
@@ -227,7 +221,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public override view returns(uint256) {
-        return previewWithdraw(estimatedTotalAssets());
+        return previewWithdraw(estimatedTotalAssets()) * 98 / 100;
     }
 
 

@@ -896,7 +896,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 23489392 - loss);
     }
 
-/*     function testSommelierTurboGHO__PreviewWithraw__FUZZY(uint256 amount) public {
+    function testSommelierTurboGHO__PreviewWithraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1_000_000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC, users.alice, amount * 2);
@@ -908,7 +908,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(address(vault));
         uint256 loss = strategy.withdraw(amount);
         assertEq(expected, amount - loss);
-    }   */ 
+    }   
 
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewWithdrawRequest()        ///
@@ -945,5 +945,25 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertApproxEq(withdrawn, amount, amount/ 10);
         // expect the strategy to never withdraw less than expected
         assertGe(withdrawn, amount);
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                     TEST maxRequest()                    ///
+    ////////////////////////////////////////////////////////////////
+    function testSommelierTurboGHO__MaxRequest() public {
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDC + 23423,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 maxRequest = strategy.maxRequest();
+        uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 expectedLosses = strategy.previewWithdrawRequest(maxRequest);
+        vm.startPrank(address(vault));
+        uint256 losses = strategy.requestWithdraw(maxRequest);
+        uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore ;
+        assertEq(withdrawn, maxRequest);
+        // expect the strategy to never withdraw less than expected
+        assertLe(losses, expectedLosses);
     }
 }

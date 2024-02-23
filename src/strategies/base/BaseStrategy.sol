@@ -15,7 +15,6 @@ import {Initializable} from "../../lib/Initializable.sol";
 /// @notice `BaseStrategy` sets the base functionality to be implemented by MaxApy strategies.
 /// @dev Inheriting strategies should implement functionality according to the standards defined in this
 /// contract.
-
 abstract contract BaseStrategy is Initializable, OwnableRoles {
     using SafeTransferLib for address;
 
@@ -162,7 +161,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         // account only the loss needed to withdraw amountNeeded
         loss = loss * amountNeeded / amountRequested;
         // Send it directly back to vault
-        if (amountFreed >= amountRequested) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
     }
 

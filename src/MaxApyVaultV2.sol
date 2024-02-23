@@ -964,28 +964,15 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Check if the vault balance is finally enough to cover the requested withdrawal
                 if (vaultBalance >= assets) break;
 
-                uint256 slotStrategies2;
                 // Compute remaining amount to withdraw considering the current balance of the vault
                 uint256 amountNeeded;
                 assembly ("memory-safe") {
                     // amountNeeded = assets - vaultBalance;
                     amountNeeded := sub(assets, vaultBalance)
-
-                    // cache slot strategies[strategy].strategyTotalDebt
-                    mstore(0x00, strategy)
-                    mstore(0x20, strategies.slot)
-                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
-
-                    // compute strategies[strategy].strategyTotalDebt
-                    let strategyTotalDebt := shr(128, shl(128, sload(slotStrategies2)))
-
-                    // Don't withdraw more than the debt loaned to the strategy so that the strategy can still continue
-                    // to work based on the profits it has.
-
-                    // amountNeeded = Math.min(amountNeeded, strategyTotalDebt)
-                    amountNeeded :=
-                        xor(amountNeeded, mul(xor(amountNeeded, strategyTotalDebt), lt(strategyTotalDebt, amountNeeded)))
                 }
+
+                // ask for the min between the needed amount and max withdraw of the strategy
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxWithdraw());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountNeeded == 0) {
@@ -1254,27 +1241,23 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 if (vaultBalance >= assets) break;
 
                 uint256 slotStrategies2;
-                // Compute remaining amount to withdraw considering the current balance of the vault
-                uint256 amountNeeded;
-                assembly ("memory-safe") {
-                    // amountNeeded = assets - vaultBalance;
-                    amountNeeded := sub(assets, vaultBalance)
-
+                assembly{
                     // cache slot strategies[strategy].strategyTotalDebt
                     mstore(0x00, strategy)
                     mstore(0x20, strategies.slot)
                     slotStrategies2 := add(keccak256(0x00, 0x40), 2)
 
-                    // compute strategies[strategy].strategyTotalDebt
-                    let strategyTotalDebt := shr(128, shl(128, sload(slotStrategies2)))
-
-                    // Don't withdraw more than the debt loaned to the strategy so that the strategy can still continue
-                    // to work based on the profits it has.
-
-                    // amountNeeded = Math.min(amountNeeded, strategyTotalDebt)
-                    amountNeeded :=
-                        xor(amountNeeded, mul(xor(amountNeeded, strategyTotalDebt), lt(strategyTotalDebt, amountNeeded)))
                 }
+
+                // Compute remaining amount to withdraw considering the current balance of the vault
+                uint256 amountNeeded;
+                assembly ("memory-safe") {
+                    // amountNeeded = assets - vaultBalance;
+                    amountNeeded := sub(assets, vaultBalance)
+                }
+
+                // ask for the min between the needed amount and max withdraw of the strategy
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxWithdraw());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountNeeded == 0) {
@@ -1401,6 +1384,15 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Check if the vault balance is finally enough to cover the requested withdrawal
                 if (vaultBalance >= assets) break;
 
+                uint256 slotStrategies2;
+                assembly{
+                    // cache slot strategies[strategy].strategyTotalDebt
+                    mstore(0x00, strategy)
+                    mstore(0x20, strategies.slot)
+                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
+
+                }
+
                 // Compute remaining amount to withdraw considering the current balance of the vault
                 uint256 amountNeeded = assets - vaultBalance;
                 amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxRequest());
@@ -1431,16 +1423,34 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
+                assembly ("memory-safe") {
+                    // Reduce debts by the amount withdrawn
+                    //totalDebt -= withdrawn;
+                    let totalDebt_ := sload(totalDebt.slot)
+                    if gt(withdrawn, totalDebt_) { revert(0, 0) }
+                    sstore(totalDebt.slot, sub(totalDebt_, withdrawn))
+
+                    // compute strategies[strategy].strategyTotalDebt
+                    let slotContent := sload(slotStrategies2)
+                    let strategyTotalDebt := sub(shr(128, shl(128, slotContent)), withdrawn)
+                    // strategies[strategy].strategyTotalDebt -= uint128(withdrawn);
+                    sstore(slotStrategies2, or(shl(128, shr(128, slotContent)), strategyTotalDebt))
+                    // Emit the `WithdrawFromStrategy` event
+                    mstore(0x00, strategyTotalDebt)
+                    mstore(0x20, loss)
+                    log2(0x00, 0x40, _WITHDRAW_FROM_STRATEGY_EVENT_SIGNATURE, strategy)
+                }
+
                 unchecked {
                     ++i;
                 }
             }
 
+            // Increase the shares if there are any losses
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_freeFunds()));
             // Update total idle with the actual vault balance that considers the total withdrawn amount
             totalIdle = vaultBalance;
 
-            // Increase the shares if there are any losses
-            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_freeFunds()));
 
             // if there are more assets to cover(when requesting more assets then total)
             // we add the extra shares needed, even though it would revert if someone tries

@@ -10,6 +10,7 @@ contract MockLossyUSDCStrategy {
     address public immutable strategist;
     uint256 public estimatedTotalAssets;
 
+    uint256 constant _1_USDC = 1e6;
     uint256 public emergencyExit;
 
     constructor(address _vault, address _underlyingAsset, address _strategist) {
@@ -28,16 +29,29 @@ contract MockLossyUSDCStrategy {
     }
 
     function withdraw(uint256 amount) external returns (uint256) {
-        IERC20(underlyingAsset).transfer(msg.sender, amount - 10 ** 6);
-        return 10 ** 6;
+        IERC20(underlyingAsset).transfer(msg.sender, amount);
+        return _1_USDC;
+    }
+
+    function requestWithdraw(uint256 amount) external returns (uint256) {
+        IERC20(underlyingAsset).transfer(msg.sender, amount);
+        return _1_USDC;
     }
 
     function previewWithdrawRequest(uint256 amount) external pure returns (uint256) {
-        return amount + 10 ** 6;
+        return amount + _1_USDC;
     }
 
     function previewWithdraw(uint256 amount) external pure returns (uint256) {
-        return amount - 10 ** 6;
+        return amount - _1_USDC;
+    }
+
+    function maxRequest() external view returns(uint256) {
+        return estimatedTotalAssets;
+    }
+
+    function maxWithdraw() external view returns(uint256) {
+        return estimatedTotalAssets - _1_USDC;
     }
 
     function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {

@@ -71,21 +71,6 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
     }
 
     /////////////////////////////////////////////////////////////////
-    ///                    CORE LOGIC                             ///
-    ////////////////////////////////////////////////////////////////
-    /// @notice Withdraws exactly `amountNeeded` to `vault`.
-    /// @dev This may only be called by the respective Vault.
-    /// @param amountNeeded How much `underlyingAsset` to withdraw.
-    /// @return loss Any realized losses
-    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
-        uint256 burntShares = cellar.withdraw(amountNeeded, address(this), address(this));
-        loss = _shareValue(burntShares) - amountNeeded;
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
-        // Note: Reinvest anything leftover on next `harvest`
-    }
-
-
-    /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
 
@@ -154,7 +139,7 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
                 amountToWithdraw = liquidatedAmount - underlyingBalance;
             }
             uint256 requestedShares = cellar.previewMint(amountToWithdraw);
-            requestedAmount = _shareValue(requestedShares);
+            requestedAmount = _shareValue(requestedShares) * 99 / 100;
         }
         requestedAmount = underlyingBalance + requestedAmount;
     }

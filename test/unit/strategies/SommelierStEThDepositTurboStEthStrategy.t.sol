@@ -1361,6 +1361,45 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertGe(withdrawn, amount);
     }  */
 
+     ////////////////////////////////////////////////////////////////
+    ///                     TEST maxRequest()                    ///
+    ////////////////////////////////////////////////////////////////
+    function testSommelierStEthDeposit_TurboStEth__MaxRequest() public {
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether + 723874239,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 maxRequest = strategy.maxRequest();
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 expectedLosses = strategy.previewWithdrawRequest(maxRequest);
+        vm.startPrank(address(vault));
+        uint256 losses = strategy.requestWithdraw(maxRequest);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        assertEq(withdrawn, maxRequest);
+        // expect the strategy to never withdraw less than expected
+        assertLe(losses, expectedLosses);
+    }
+
+    function testSommelierStEthDeposit_TurboStEth__MaxRequest__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);       
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                                   
+        uint256 maxRequest = strategy.maxRequest();
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 expectedLosses = strategy.previewWithdrawRequest(maxRequest);
+        vm.startPrank(address(vault));
+        uint256 losses = strategy.requestWithdraw(maxRequest);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        assertEq(withdrawn, maxRequest);
+        // expect the strategy to never withdraw less than expected
+        assertLe(losses, expectedLosses);
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                     HELPER FUNCTIONS                     ///
     ////////////////////////////////////////////////////////////////

@@ -7,7 +7,6 @@ import {IConvexRewards} from "src/interfaces/IConvexRewards.sol";
 import {IUniswapV2Router02 as IRouter} from "src/interfaces/IUniswap.sol";
 import {ICurve} from "src/interfaces/ICurve.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
-import "forge-std/console.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
@@ -324,8 +323,8 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public override view returns(uint256) {
-        // make sure it doesnt revert when increaseing it 1% in the withdraw
-        return previewWithdraw(estimatedTotalAssets()) * 99 / 100;
+        // make sure it doesnt revert when increasing it 1% in the withdraw
+        return previewWithdraw(estimatedTotalAssets());
     }
     /// @notice Returns the amount of Curve LP tokens staked in Convex
     /// @return the amount of staked LP tokens
