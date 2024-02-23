@@ -285,7 +285,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
+    function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -307,7 +307,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         requestedAmount = liquidatedAmount;
         if (underlyingBalance < liquidatedAmount) {
@@ -317,11 +317,16 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         return requestedAmount + underlyingBalance;
     }
 
-    /// @dev internal helper function
-    function _approxEq(uint256 a, uint256 b, uint256 delta) internal pure returns(bool){
-        return a > b ? a - b <= delta : b - a <=delta;
+    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
+    function maxWithdraw() public override view returns(uint256){
+        return estimatedTotalAssets();
     }
 
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxRequest() public override view returns(uint256) {
+        // make sure it doesnt revert when increaseing it 1% in the withdraw
+        return previewWithdraw(estimatedTotalAssets()) * 99 / 100;
+    }
     /// @notice Returns the amount of Curve LP tokens staked in Convex
     /// @return the amount of staked LP tokens
     function stakedBalance() external view returns (uint256) {

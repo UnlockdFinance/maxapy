@@ -55,5 +55,7 @@ interface IStrategy {
 
     function previewWithdrawRequest(uint256) external view returns (uint256);
 
+    function maxWithdraw() external view returns (uint256);
+    
     function maxRequest() external view returns (uint256);
 }

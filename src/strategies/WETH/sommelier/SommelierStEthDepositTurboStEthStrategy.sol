@@ -183,7 +183,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
+    function previewWithdraw(uint256 requestedAmount) public override view returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -205,7 +205,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
+    function previewWithdrawRequest(uint256 liquidatedAmount) public override view returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Cellar Vault
@@ -218,6 +218,16 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
             requestedAmount = _shareValue(requestedShares);
         }
         requestedAmount = underlyingBalance + requestedAmount;
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
+    function maxWithdraw() public override view returns(uint256){
+        return estimatedTotalAssets();
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxRequest() public override view returns(uint256) {
+        return previewWithdraw(estimatedTotalAssets());
     }
 
 

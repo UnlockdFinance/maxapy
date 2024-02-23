@@ -119,6 +119,20 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     }
 
     /////////////////////////////////////////////////////////////////
+    ///                    CORE LOGIC                             ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 burntShares = cellar.withdraw(amountNeeded, address(this), address(this));
+        loss = _shareValue(burntShares) - amountNeeded;
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // Note: Reinvest anything leftover on next `harvest`
+    }
+
+    /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
 
@@ -156,7 +170,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
+    function previewWithdraw(uint256 requestedAmount) public override view returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -177,7 +191,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// @dev calculates the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
+    function previewWithdrawRequest(uint256 liquidatedAmount) public override view returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Cellar Vault
@@ -187,26 +201,19 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
                 amountToWithdraw = liquidatedAmount - underlyingBalance;
             }
             uint256 requestedShares = cellar.previewMint(amountToWithdraw);
-            // increase 1% to be pessimistic
-            requestedAmount = _shareValue(requestedShares) * 101 / 100;
+            requestedAmount = _shareValue(requestedShares);
         }
         requestedAmount = underlyingBalance + requestedAmount;
     }
 
-    function maxRequest() public view returns(uint256) {
-        return previewWithdraw(_estimatedTotalAssets()); 
+    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
+    function maxWithdraw() public override view returns(uint256){
+        return estimatedTotalAssets();
     }
 
-    function requestWithdraw(uint256 amountNeeded) external checkRoles(VAULT_ROLE) returns (uint256 loss) {
-        uint256 amountRequested = previewWithdrawRequest(amountNeeded);
-        uint256 amountFreed;
-        // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
-        (amountFreed, loss) = _liquidatePosition(amountRequested);
-        // account only the loss needed to withdraw amountNeeded
-        loss = loss * amountNeeded / amountRequested;
-        // Send it directly back to vault
-        if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
-        // Note: Reinvest anything leftover on next `harvest`
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxRequest() public override view returns(uint256) {
+        return previewWithdraw(estimatedTotalAssets());
     }
 
     ////////////////////////////////////////////////////////////////
