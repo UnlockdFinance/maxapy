@@ -170,7 +170,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public override view returns (uint256 liquidatedAmount) {
+    function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -191,7 +191,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// @dev calculates the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public override view returns (uint256 requestedAmount) {
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Cellar Vault
@@ -207,12 +207,12 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public override view returns(uint256){
+    function maxWithdraw() public view override returns (uint256) {
         return estimatedTotalAssets();
     }
-    
+
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public override view returns(uint256) {
+    function maxRequest() public view override returns (uint256) {
         return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
 
@@ -244,7 +244,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-       // Fetch initial strategy state
+        // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
         uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
@@ -259,7 +259,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         }
 
         // initialize the lastEstimatedTotalAssets in case it is not
-        if(_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
+        if (_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
 
         assembly {
             switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)

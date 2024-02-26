@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    SommelierTurboGHOStrategy, SafeTransferLib
-} from "src/strategies/USDC/sommelier/SommelierTurboGHOStrategy.sol";
+import {SommelierTurboGHOStrategy, SafeTransferLib} from "src/strategies/USDC/sommelier/SommelierTurboGHOStrategy.sol";
 
 contract SommelierTurboGHOStrategyWrapper is SommelierTurboGHOStrategy {
     using SafeTransferLib for address;

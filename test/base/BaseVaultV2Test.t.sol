@@ -61,7 +61,7 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
 
         uint256 expectedShares = vault.previewWithdraw(assets);
         uint256 burntShares = _vault.withdraw(assets, user, user);
-        uint256 withdrawn =  IERC20(asset).balanceOf(user) - userBalanceBefore;
+        uint256 withdrawn = IERC20(asset).balanceOf(user) - userBalanceBefore;
 
         assertEq(withdrawn, assets);
         assertLe(burntShares, expectedShares);

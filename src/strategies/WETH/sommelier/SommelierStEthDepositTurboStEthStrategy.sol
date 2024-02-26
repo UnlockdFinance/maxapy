@@ -23,6 +23,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
+
     error InvalidZeroAddress();
     error NotEnoughFundsToInvest();
     error CellarIsPaused();
@@ -104,7 +105,6 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
         minSingleTrade = 1e4;
     }
 
-
     ////////////////////////////////////////////////////////////////
     ///                 STRATEGY CONFIGURATION                   ///
     ////////////////////////////////////////////////////////////////
@@ -183,7 +183,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public override view returns (uint256 liquidatedAmount) {
+    function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -205,22 +205,20 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public override view returns (uint256 requestedAmount) {
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         // increase 1% to be pessimistic
-       return previewWithdraw(liquidatedAmount) * 101 / 100;
+        return previewWithdraw(liquidatedAmount) * 101 / 100;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public override view returns(uint256){
+    function maxWithdraw() public view override returns (uint256) {
         return estimatedTotalAssets();
     }
 
-    
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public override view returns(uint256) {
+    function maxRequest() public view override returns (uint256) {
         return previewWithdraw(estimatedTotalAssets()) * 99 / 100;
     }
-
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
@@ -266,7 +264,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
         }
 
         // initialize the lastEstimatedTotalAssets in case it is not
-        if(_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
+        if (_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
 
         assembly {
             switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
@@ -346,6 +344,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// Strategy.
     /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
+
     function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
         uint256 toInvest = _underlyingBalance();
         if (toInvest > minSingleTrade) {

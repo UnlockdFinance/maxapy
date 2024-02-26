@@ -884,9 +884,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         // very important: ROUND UP
         shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
 
-      
         // in case the vault's balance doesn't cover the requested `assets`
-        if(assets > vaultBalance) {
+        if (assets > vaultBalance) {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
             // from strategies until requested value amount is covered.
             // During forced withdrawal, a Strategy may realize a loss, which is reported back to the
@@ -937,7 +936,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Increase the shares if there are any losses
             shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_freeFunds()));
         }
-
 
         // if there are more assets to cover(when requesting more assets then total)
         // we add the extra shares needed, even though it would revert if someone tries
@@ -1157,13 +1155,14 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
     /// @notice Burns `shares` from `owner` and sends exactly `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
+
     function withdraw(uint256 assets, address to, address owner)
         public
         override
         nonReentrant
         returns (uint256 shares)
     {
-        if(assets == type(uint256).max) assets = maxWithdraw(owner);
+        if (assets == type(uint256).max) assets = maxWithdraw(owner);
         if (assets > maxWithdraw(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x936941fc) // `WithdrawMoreThanMax()`.
@@ -1176,7 +1175,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function redeem(uint256 shares, address to, address owner) public override nonReentrant returns (uint256 assets) {
-        if(shares == type(uint256).max) shares = maxRedeem(owner);
+        if (shares == type(uint256).max) shares = maxRedeem(owner);
         if (shares > maxRedeem(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x4656425a) // `RedeemMoreThanMax()`.
@@ -1189,10 +1188,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @dev Withdraws the needed amount of assets realising losses such as slippage
     /// @return assets the real amount of assets withdrawn
-    function _redeem(address by, address to, address owner, uint256 shares)
-        private
-        returns (uint256 assets)
-    {
+    function _redeem(address by, address to, address owner, uint256 shares) private returns (uint256 assets) {
         if (by != owner) {
             _spendAllowance(owner, by, shares);
         }
@@ -1203,7 +1199,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 mstore(0x00, 0x5a870a25)
                 revert(0x1c, 0x04)
             }
-        }   
+        }
         // Calculate assets from shares
         assets = convertToAssets(shares);
         // Cache underlying asset
@@ -1232,12 +1228,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 if (vaultBalance >= assets) break;
 
                 uint256 slotStrategies2;
-                assembly{
+                assembly {
                     // cache slot strategies[strategy].strategyTotalDebt
                     mstore(0x00, strategy)
                     mstore(0x20, strategies.slot)
                     slotStrategies2 := add(keccak256(0x00, 0x40), 2)
-
                 }
 
                 // Compute remaining amount to withdraw considering the current balance of the vault
@@ -1248,7 +1243,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
 
                 // ask for the min between the needed amount and max withdraw of the strategy
-                amountNeeded = Math.min(amountNeeded,IStrategy(strategy).maxWithdraw());
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxWithdraw());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountNeeded == 0) {
@@ -1278,9 +1273,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
                 totalDebt = _sub0(totalDebt, withdrawn);
 
-                uint128 strategyTotalDebt = uint128(_sub0(
-                     strategies[strategy].strategyTotalDebt, withdrawn
-                ));
+                uint128 strategyTotalDebt = uint128(_sub0(strategies[strategy].strategyTotalDebt, withdrawn));
 
                 strategies[strategy].strategyTotalDebt = strategyTotalDebt;
 
@@ -1327,13 +1320,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         return assets;
     }
 
-
     /// @dev Burns the needed amount of shars to withdraw @param assets after lealising loses
     /// @return shares the real amount shares burnt
-    function _withdraw(address by, address to, address owner, uint256 assets)
-        private
-        returns (uint256 shares)
-    {
+    function _withdraw(address by, address to, address owner, uint256 assets) private returns (uint256 shares) {
         assembly ("memory-safe") {
             // if assets == 0
             if iszero(assets) {
@@ -1350,9 +1339,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         // very important: ROUND UP
         shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
 
-      
         // in case the vault's balance doesn't cover the requested `assets`
-        if(assets > vaultBalance) {
+        if (assets > vaultBalance) {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
             // from strategies until requested value amount is covered.
             // During forced withdrawal, a Strategy may realize a loss, which is reported back to the
@@ -1371,12 +1359,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 if (vaultBalance >= assets) break;
 
                 uint256 slotStrategies2;
-                assembly{
+                assembly {
                     // cache slot strategies[strategy].strategyTotalDebt
                     mstore(0x00, strategy)
                     mstore(0x20, strategies.slot)
                     slotStrategies2 := add(keccak256(0x00, 0x40), 2)
-
                 }
 
                 // Compute remaining amount to withdraw considering the current balance of the vault
@@ -1412,9 +1399,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
                 totalDebt = _sub0(totalDebt, withdrawn);
 
-                uint128 strategyTotalDebt = uint128(_sub0(
-                     strategies[strategy].strategyTotalDebt, withdrawn
-                ));
+                uint128 strategyTotalDebt = uint128(_sub0(strategies[strategy].strategyTotalDebt, withdrawn));
 
                 strategies[strategy].strategyTotalDebt = strategyTotalDebt;
 
@@ -1435,7 +1420,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Update total idle with the actual vault balance that considers the total withdrawn amount
             totalIdle = vaultBalance;
 
-
             // if there are more assets to cover(when requesting more assets then total)
             // we add the extra shares needed, even though it would revert if someone tries
             // to withdraw that much since they wouln't have the needed shares
@@ -1448,7 +1432,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (by != owner) {
             _spendAllowance(owner, by, shares);
         }
-        
+
         // Burn shares
         _burn(owner, shares);
 

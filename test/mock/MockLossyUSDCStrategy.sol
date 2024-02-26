@@ -29,7 +29,7 @@ contract MockLossyUSDCStrategy {
     }
 
     function withdraw(uint256 amount) external returns (uint256) {
-        if(amount <= _1_USDC) return(0);
+        if (amount <= _1_USDC) return (0);
         IERC20(underlyingAsset).transfer(msg.sender, amount - _1_USDC);
         return _1_USDC;
     }
@@ -47,11 +47,11 @@ contract MockLossyUSDCStrategy {
         return amount - _1_USDC;
     }
 
-    function maxRequest() external view returns(uint256) {
+    function maxRequest() external view returns (uint256) {
         return estimatedTotalAssets == 0 ? 0 : estimatedTotalAssets - _1_USDC;
     }
 
-    function maxWithdraw() external view returns(uint256) {
+    function maxWithdraw() external view returns (uint256) {
         return estimatedTotalAssets;
     }
 

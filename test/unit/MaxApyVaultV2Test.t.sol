@@ -38,7 +38,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// Grant extra emergency admin role to alice
         vault.grantRoles(users.alice, vault.EMERGENCY_ADMIN_ROLE());
 
-        vm.label(address(USDC),"USDC");
+        vm.label(address(USDC), "USDC");
     }
 
     /*==================INITIALIZATION TESTS==================*/
@@ -2184,7 +2184,9 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
             assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), previousStrategyData.balance - 49 * _1_USDC, "s1");
             /// withdraw 49 (50 ETH - 1 ETH loss) ETH from first strategy
 
-            assertEq(IERC20(USDC).balanceOf(address(lossyStrategy2)), previousStrategy2Data.balance - 14 * _1_USDC, "s2");
+            assertEq(
+                IERC20(USDC).balanceOf(address(lossyStrategy2)), previousStrategy2Data.balance - 14 * _1_USDC, "s2"
+            );
             /// withdraw 14 (15 ETH - 1 ETH loss) ETH from second strategy
 
             assertEq(IERC20(USDC).balanceOf(address(lossyStrategy3)), previousStrategy3Data.balance, "s3");
@@ -2233,7 +2235,6 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// 100 ETH - 50 ETH - 15 ETH
 
         assertEq(vault.totalIdle(), 0);
-
     }
 
     ////////////////////////////////////////////////////////////////

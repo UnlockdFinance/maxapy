@@ -265,7 +265,8 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         strategy.mockReport(0, 0, 0);
 
         /// there are no profits so setting the harvest to 50% wont have any effect
-        (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 ether, 0, 5_000);
+        (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) =
+            strategy.prepareReturn(1 ether, 0, 5_000);
         assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
         assertEq(loss, 0);
@@ -362,7 +363,6 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
 
         vm.revertTo(snapshotId);
     }
-
 
     ////////////////////////////////////////////////////////////////
     ///                   TEST _adjustPosition()                 ///
@@ -491,7 +491,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         /// Liquidate position where underlying balance can't cover liquidation
         /// Scenario 1
         deal({token: WETH, to: address(strategy), give: 5 ether});
-        // 
+        //
         strategy.invest(5 ether, 0);
         deal({token: WETH, to: address(strategy), give: 10 ether});
 
@@ -559,7 +559,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
 
         /// Deposit into vault
         vault.deposit(100 ether, users.alice);
-        
+
         // it should revert if profit harvest percentage is > 100 %
         vm.startPrank(users.keeper);
         vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
@@ -584,7 +584,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vm.expectEmit();
-        
+
         emit StrategyReported(
             address(strategy),
             0,
@@ -632,7 +632,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
             address(strategy),
             /// vault realized gain - 10 ETH
             10 ether,
-             /// vault unrealized gain - 10 ETH
+            /// vault unrealized gain - 10 ETH
             10 ether,
             /// vault loss
             0,
@@ -702,7 +702,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
             address(strategy),
             /// vault realized gain - 0
             5 ether,
-             /// vault unrealized gain - 10 ETH
+            /// vault unrealized gain - 10 ETH
             10 ether,
             /// vault loss
             0,
@@ -796,7 +796,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
             49.980656151763373926 ether,
             /// vault gain + all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
-            /// unrealized vault gain is 0 because we dont want to assess fees 
+            /// unrealized vault gain is 0 because we dont want to assess fees
             0,
             /// vault loss
             0,
@@ -885,7 +885,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
             address(strategy),
             0,
             // vault realized gain
-            0, 
+            0,
             // vault unrealized gain
             9.995164037940843482 ether,
             /// vault loss - 9.995164037940843482 ether
@@ -917,7 +917,6 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(data.strategyTotalDebt, 30.004835962059156518 ether);
         assertEq(data.strategyTotalLoss, 9.995164037940843482 ether);
     }
-
 
     function testSommelierTurboStEth__Harvest_CellarIsShutdown_Paused() public {
         /// ⭕️ SCENARIO 1:
@@ -963,7 +962,6 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         // strategy takes 40 eth
         strategy.harvest(0, 0, 0);
 
-
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
@@ -1007,7 +1005,6 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
         strategy.harvest(0, 0, 0);
-
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -1053,7 +1050,6 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.stopPrank();
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0);
-
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertGt(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -1108,7 +1104,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vm.expectEmit();
-               emit StrategyReported(
+        emit StrategyReported(
             address(strategy),
             0,
             /// vault realized gain
@@ -1141,7 +1137,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertGt(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
     }
 
-/*     function testSommelierTurboStEth__Withdraw_CellarIsPaused() public {
+    /*     function testSommelierTurboStEth__Withdraw_CellarIsPaused() public {
         uint256 shares = vault.deposit(100 ether, users.alice);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -1197,9 +1193,9 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboStEth__PreviewWithraw() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        vault.deposit(100 ether,users.alice);
+        vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
+        strategy.harvest(0, 0, 0);
         vm.stopPrank();
         uint256 expected = strategy.previewWithdraw(30 ether);
         vm.startPrank(address(vault));
@@ -1208,7 +1204,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 30 ether - loss);
     }
 
- /*    function testSommelierTurboStEth__PreviewWithraw__FUZZY(uint256 amount) public {
+    /*    function testSommelierTurboStEth__PreviewWithraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH, users.alice, amount * 2);
@@ -1228,22 +1224,22 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboStEth__PreviewWithrawRequest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        vault.deposit(100 ether,users.alice);
+        vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
-        vm.stopPrank();                                          
+        strategy.harvest(0, 0, 0);
+        vm.stopPrank();
         uint256 requestedAmount = strategy.previewWithdrawRequest(30 ether);
         vm.startPrank(address(vault));
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
         strategy.requestWithdraw(30 ether);
         uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore;
-        // withdraw exactly what requested 
+        // withdraw exactly what requested
         assertEq(withdrawn, 30 ether);
         // losses are equal or fewer than expected
-        assertLe(withdrawn - 30 ether , requestedAmount - 30 ether);
+        assertLe(withdrawn - 30 ether, requestedAmount - 30 ether);
     }
 
-/*     function testSommelierTurboStEth__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+    /*     function testSommelierTurboStEth__PreviewWithrawRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH, users.alice, amount * 2);
@@ -1267,23 +1263,23 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboStEth__MaxRequest() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-        vault.deposit(100 ether,users.alice);
+        vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
-        vm.stopPrank();                                          
+        strategy.harvest(0, 0, 0);
+        vm.stopPrank();
         uint256 maxRequest = strategy.maxRequest();
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
         uint256 requestedAmount = strategy.previewWithdrawRequest(maxRequest);
         vm.startPrank(address(vault));
         uint256 losses = strategy.requestWithdraw(maxRequest);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
-        // withdraw exactly what requested 
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore;
+        // withdraw exactly what requested
         assertEq(withdrawn, maxRequest);
         // losses are equal or fewer than expected
         assertLe(losses, requestedAmount - maxRequest);
     }
 
-/*     function testSommelierTurboStEth__MaxRequest__FUZZY(uint256 amount) public {
+    /*     function testSommelierTurboStEth__MaxRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH, users.alice, amount * 2);
@@ -1308,19 +1304,19 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboStEth__MaxWithdraw() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-        vault.deposit(100 ether,users.alice);
+        vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
-        vm.stopPrank();                                          
+        strategy.harvest(0, 0, 0);
+        vm.stopPrank();
         uint256 maxWithdraw = strategy.maxWithdraw();
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.withdraw(maxWithdraw);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
 
-/*     function testSommelierTurboStEth__MaxWithdraw__FUZZY(uint256 amount) public {
+    /*     function testSommelierTurboStEth__MaxWithdraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.00001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH, users.alice, amount * 2);
@@ -1336,7 +1332,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     } */
 
-     ///////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////
     ///                     HELPER FUNCTIONS                     ///
     ////////////////////////////////////////////////////////////////
     function _pauseCellar() internal {

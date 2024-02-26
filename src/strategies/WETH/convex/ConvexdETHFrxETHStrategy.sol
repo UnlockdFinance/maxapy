@@ -270,7 +270,6 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
     }
 
-
     /// @notice Provides an indication of whether this strategy is currently "active"
     /// in that it is managing an active position, or will manage a position in
     /// the future. This should correlate to `harvest()` activity, so that Harvest
@@ -295,8 +294,8 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 value = _lpForAmount(amountToWithdraw);
-            uint256 withdrawn = curveDEthFrxEthPool.calc_withdraw_one_coin(value,1);
-            withdrawn =  curveEthFrxEthPool.get_dy(1, 0, withdrawn);
+            uint256 withdrawn = curveDEthFrxEthPool.calc_withdraw_one_coin(value, 1);
+            withdrawn = curveEthFrxEthPool.get_dy(1, 0, withdrawn);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
@@ -317,16 +316,17 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public override view returns(uint256){
+    function maxWithdraw() public view override returns (uint256) {
         return estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public override view returns(uint256) {
+    function maxRequest() public view override returns (uint256) {
         return previewWithdraw(estimatedTotalAssets()) * 99 / 100;
     }
     /// @notice Returns the amount of Curve LP tokens staked in Convex
     /// @return the amount of staked LP tokens
+
     function stakedBalance() external view returns (uint256) {
         return _stakedBalance(convexRewardPool);
     }
@@ -377,7 +377,6 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
             }
         }
 
-
         uint256 debt;
         assembly {
             // debt = vault.strategies(address(this)).strategyTotalDebt;
@@ -388,7 +387,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         }
 
         // initialize the lastEstimatedTotalAssets in case it is not
-        if(_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
+        if (_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
 
         assembly {
             switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
@@ -410,7 +409,6 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Convex
             if (amountToWithdraw > underlyingBalance) {
-
                 uint256 expectedAmountToWithdraw = Math.min(maxSingleTrade, amountToWithdraw - underlyingBalance);
 
                 uint256 lpToWithdraw = _lpForAmount(expectedAmountToWithdraw);

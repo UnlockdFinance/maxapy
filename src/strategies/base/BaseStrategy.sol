@@ -157,7 +157,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         uint256 amountRequested = previewWithdrawRequest(amountNeeded);
         uint256 amountFreed;
         // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
-        (amountFreed, loss) = _liquidatePosition(amountRequested);                          
+        (amountFreed, loss) = _liquidatePosition(amountRequested);
         // Send it directly back to vault
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // something didn't work as expected
@@ -400,7 +400,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @return the strategy's total assets(idle + investment positions)
     function _estimatedTotalAssets() internal view virtual returns (uint256);
 
-
     ////////////////////////////////////////////////////////////////
     ///                    EXTERNAL VIEW FUNCTIONS               ///
     ////////////////////////////////////////////////////////////////
@@ -409,17 +408,17 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public virtual view returns (uint256 liquidatedAmount);
+    function previewWithdraw(uint256 requestedAmount) public view virtual returns (uint256 liquidatedAmount);
 
     /// @notice This function is meant to be called from the vault
     /// @dev calculates the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public virtual view returns (uint256 requestedAmount);
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view virtual returns (uint256 requestedAmount);
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxRequest() public virtual view returns(uint256);
+    function maxRequest() public view virtual returns (uint256);
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxWithdraw() public virtual view returns(uint256);
+    function maxWithdraw() public view virtual returns (uint256);
 }

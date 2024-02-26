@@ -21,7 +21,8 @@ import {ConvexdETHFrxETHStrategyWrapper} from "../mock/ConvexdETHFrxETHStrategyW
 import {ConvexdETHFrxETHStrategyEvents} from "../helpers/ConvexdETHFrxETHStrategyEvents.sol";
 
 import {SommelierMorphoEthMaximizerStrategyWrapper} from "../mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
-import {SommelierMorphoEthMaximizerStrategy} from "src/strategies/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
+import {SommelierMorphoEthMaximizerStrategy} from
+    "src/strategies/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 
 import {SommelierTurboStEthStrategy} from "src/strategies/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import {SommelierTurboStEthStrategyWrapper} from "../mock/SommelierTurboStEthStrategyWrapper.sol";
@@ -31,7 +32,7 @@ import {SommelierStEthDepositTurboStEthStrategyWrapper} from
 
 import {YearnWETHStrategyWrapper} from "../mock/YearnWETHStrategyWrapper.sol";
 
-contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
+contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
     ////////////////////////////////////////////////////////////////
     ///                    CONSTANTS                             ///
     ////////////////////////////////////////////////////////////////
@@ -59,7 +60,6 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         IERC20(ST_ETH).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
     }
 
-
     ////////////////////////////////////////////////////////////////
     ///                      STORAGE                             ///
     ////////////////////////////////////////////////////////////////
@@ -67,7 +67,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
     IStrategyWrapper public strategy1; // yearn
     IStrategyWrapper public strategy2; // sommelier turbo steth
     IStrategyWrapper public strategy3; // sommelier steth deposit
-    IStrategyWrapper public strategy4; // convex 
+    IStrategyWrapper public strategy4; // convex
 
     IMaxApyVaultV2 public vault;
     ITransparentUpgradeableProxy public proxy;
@@ -132,7 +132,8 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         strategy2 = IStrategyWrapper(address(_proxy));
 
         // Deploy strategy3
-        SommelierStEthDepositTurboStEthStrategyWrapper implementation3 = new SommelierStEthDepositTurboStEthStrategyWrapper();
+        SommelierStEthDepositTurboStEthStrategyWrapper implementation3 =
+            new SommelierStEthDepositTurboStEthStrategyWrapper();
         _proxy = new TransparentUpgradeableProxy(
             address(implementation3),
             address(proxyAdmin),
@@ -179,7 +180,6 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         vault.addStrategy(address(strategy2), 2250, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy3), 2250, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy4), 2250, type(uint72).max, 0, 0);
-        
 
         vm.rollFork(19267583);
         vm.label(address(WETH), "WETH");
@@ -189,7 +189,6 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         IERC20(WETH).approve(address(vault), type(uint256).max);
         vm.stopPrank();
         vm.startPrank(users.alice);
-
     }
 
     function testMaxApyVaultV2_ERC4626__PreviewDeposit() public {
@@ -271,7 +270,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         /// - Strategies make profit
         /// - Harvest again
         /// - Alice and Bob redeem
-        vm.startPrank(users.keeper);    
+        vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, 0);
         strategy2.harvest(0, 0, 0);
         strategy3.harvest(0, 0, 0);
@@ -314,7 +313,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         uint256 balanceBefore = IERC20(WETH).balanceOf(users.alice);
         uint256 shares = vault.withdraw(20 ether, users.alice, users.alice);
         uint256 transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
-        assertEq(transferred , 20 ether);
+        assertEq(transferred, 20 ether);
         assertLe(shares, expectedShares);
 
         vm.startPrank(users.bob);
@@ -322,7 +321,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         balanceBefore = IERC20(WETH).balanceOf(users.bob);
         shares = vault.withdraw(400 ether, users.bob, users.bob);
         transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
-        assertEq(transferred , 400 ether);
+        assertEq(transferred, 400 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
 
@@ -344,7 +343,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         balanceBefore = IERC20(WETH).balanceOf(users.alice);
         shares = vault.withdraw(18 ether, users.alice, users.alice);
         transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
-        assertEq(transferred , 18 ether);
+        assertEq(transferred, 18 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -352,7 +351,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         balanceBefore = IERC20(WETH).balanceOf(users.bob);
         shares = vault.withdraw(400 ether, users.bob, users.bob);
         transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
-        assertEq(transferred , 400 ether);
+        assertEq(transferred, 400 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.revertTo(snapshotId);
@@ -375,7 +374,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         balanceBefore = IERC20(WETH).balanceOf(users.alice);
         shares = vault.withdraw(19 ether, users.alice, users.alice);
         transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
-        assertEq(transferred , 19 ether);
+        assertEq(transferred, 19 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -383,7 +382,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         balanceBefore = IERC20(WETH).balanceOf(users.bob);
         shares = vault.withdraw(400 ether, users.bob, users.bob);
         transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
-        assertEq(transferred , 400 ether);
+        assertEq(transferred, 400 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.revertTo(snapshotId);
@@ -412,7 +411,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         uint256 balanceBefore = IERC20(WETH).balanceOf(users.alice);
         uint256 shares = vault.withdraw(19 ether, users.alice, users.alice);
         uint256 transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
-        assertEq(transferred , 19 ether);
+        assertEq(transferred, 19 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -420,20 +419,20 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         balanceBefore = IERC20(WETH).balanceOf(users.bob);
         shares = vault.withdraw(amount, users.bob, users.bob);
         transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
-        assertEq(transferred , amount);
-        assertLe(shares,expectedShares);
+        assertEq(transferred, amount);
+        assertLe(shares, expectedShares);
         vm.stopPrank();
     }
 
-    function testMaxApyVaultV2_ERC4626__sharePrice() external {     
-        console.log(1);   
+    function testMaxApyVaultV2_ERC4626__sharePrice() external {
+        console.log(1);
         vault.deposit(20 ether, users.alice);
         assertEq(vault.sharePrice(), 1 ether);
 
         assertEq(strategy1.estimatedTotalAssets(), 0);
         assertEq(strategy1.lastEstimatedTotalAssets(), 0);
 
-        console.log(2);   
+        console.log(2);
         // sending assets directly to the vault won't work
         deal(WETH, address(vault), 500 ether);
         assertEq(vault.sharePrice(), 1 ether);
@@ -444,19 +443,19 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         strategy2.harvest(0, 0, 0);
         strategy3.harvest(0, 0, 0);
         strategy4.harvest(0, 0, 0);
-        console.log(3);   
+        console.log(3);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
 
         // sending assets directly to the strategy won't work
         deal(WETH, address(strategy1), 50 ether);
-        console.log(4);   
+        console.log(4);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         skip(1);
         strategy1.harvest(0, 0, 0);
 
         // after harvesting and taking the project the price will progresively increase
         // because of the locked profit degradation
-        console.log(5);   
+        console.log(5);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         // progresively unlock the profit
         skip(2000);
@@ -469,8 +468,8 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         vm.startPrank(address(strategy1));
         // transfer shares to a random addresss
         IERC20(YVAULT_WETH_MAINNET).transfer(makeAddr("random"), 50 ether);
-        console.log(6);   
+        console.log(6);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
-        console.log(7);   
+        console.log(7);
     }
 }
