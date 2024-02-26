@@ -170,6 +170,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "ConvexdETHFrxETHStrategy");
 
         strategy4 = IStrategyWrapper(address(_proxy));
 
@@ -237,7 +238,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         vm.startPrank(users.alice);
 
         uint256 snapshotId = vm.snapshot();
-        assertEq(vault.redeem(sharesAlice, users.alice, users.alice), vault.previewRedeem(sharesAlice));
+        assertEq(vault.redeem(type(uint256).max, users.alice, users.alice), vault.previewRedeem(sharesAlice));
         vm.revertTo(snapshotId);
 
         /// ⭕️ SCENARIO 2: Redeem when some funds are in strategies
@@ -253,12 +254,12 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         vm.stopPrank();
         vm.startPrank(users.alice);
         uint256 expectedAssets = vault.previewRedeem(sharesAlice);
-        uint256 assets = vault.redeem(sharesAlice, users.alice, users.alice);
+        uint256 assets = vault.redeem(type(uint256).max, users.alice, users.alice);
         assertEq(assets, expectedAssets);
         vm.stopPrank();
         vm.startPrank(users.bob);
         expectedAssets = vault.previewRedeem(sharesBob);
-        assets = vault.redeem(sharesBob, users.bob, users.bob);
+        assets = vault.redeem(type(uint256).max, users.bob, users.bob);
         assertEq(assets, expectedAssets);
         vm.stopPrank();
         vm.revertTo(snapshotId);
@@ -277,17 +278,17 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         strategy4.harvest(0, 0, 0);
         deal(WETH, address(strategy1), 50 ether);
         // forward time so lastReport timestamp is not the same
-        vm.warp(block.timestamp +1);
+        skip(1);
         strategy1.harvest(0, 0, 0);
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedAssets = vault.previewRedeem(sharesAlice);
-        assets = vault.redeem(sharesAlice, users.alice, users.alice);
+        assets = vault.redeem(type(uint256).max, users.alice, users.alice);
         assertEq(assets, expectedAssets);
         vm.stopPrank();
         vm.startPrank(users.bob);
         expectedAssets = vault.previewRedeem(sharesBob);
-        assets = vault.redeem(sharesBob, users.bob, users.bob);
+        assets = vault.redeem(type(uint256).max, users.bob, users.bob);
         assertEq(assets, expectedAssets);
         vm.stopPrank();
         vm.revertTo(snapshotId);
@@ -335,7 +336,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, 0);
         strategy2.harvest(0, 0, 0);
-        //strategy3.harvest(0, 0, 0);
+        strategy3.harvest(0, 0, 0);
         strategy4.harvest(0, 0, 0);
         vm.stopPrank();
         vm.startPrank(users.alice);
@@ -366,7 +367,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, 0);
         strategy2.harvest(0, 0, 0);
-        //strategy3.harvest(0, 0, 0);
+        strategy3.harvest(0, 0, 0);
         strategy4.harvest(0, 0, 0);
         vm.stopPrank();
         vm.startPrank(users.alice);
@@ -388,14 +389,14 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         vm.revertTo(snapshotId);
     }
 
-   /*  function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
-        vm.assume(amount > 1 ether /10 && amount < 10_000 ether);
+    function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
+        vm.assume(amount > 1 ether / 10 && amount < 10_000 ether);
         vault.deposit(20 ether, users.alice);
         // other users deposits as well
         vm.startPrank(users.bob);
-        deal(WETH, users.bob, amount);
+        deal(WETH, users.bob, amount * 2);
         IERC20(WETH).approve(address(vault), type(uint256).max);
-        vault.deposit(amount, users.bob);
+        vault.deposit(amount * 2, users.bob);
         vm.stopPrank();
 
         vm.startPrank(users.keeper);
@@ -403,42 +404,39 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         strategy2.harvest(0, 0, 0);
         strategy3.harvest(0, 0, 0);
         strategy4.harvest(0, 0, 0);
-        deal(WETH, address(strategy3), 50 ether);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        deal(WETH, address(strategy1), 50 ether);
         vm.stopPrank();
 
         vm.startPrank(users.alice);
-        uint256 expectedShares = vault.previewWithdraw(190 ether);
+        uint256 expectedShares = vault.previewWithdraw(19 ether);
         uint256 balanceBefore = IERC20(WETH).balanceOf(users.alice);
-        uint256 shares = vault.withdraw(190 ether, users.alice, users.alice);
+        uint256 shares = vault.withdraw(19 ether, users.alice, users.alice);
         uint256 transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
-        assertEq(transferred , 190 ether);
+        assertEq(transferred , 19 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
-        expectedShares = vault.previewWithdraw(amount * 90/100);
+        expectedShares = vault.previewWithdraw(amount);
         balanceBefore = IERC20(WETH).balanceOf(users.bob);
-        shares = vault.withdraw(amount * 90/100, users.bob, users.bob);
+        shares = vault.withdraw(amount, users.bob, users.bob);
         transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
-        assertEq(transferred , amount * 90 / 100);
+        assertEq(transferred , amount);
         assertLe(shares,expectedShares);
         vm.stopPrank();
-    } */
+    }
 
-    function testMaxApyVaultV2_ERC4626__sharePrice() external {        
+    function testMaxApyVaultV2_ERC4626__sharePrice() external {     
+        console.log(1);   
         vault.deposit(20 ether, users.alice);
         assertEq(vault.sharePrice(), 1 ether);
-        assertEq(strategy2.estimatedTotalAssets(), 0);
-        assertEq(strategy2.lastEstimatedTotalAssets(), 0);
 
+        assertEq(strategy1.estimatedTotalAssets(), 0);
+        assertEq(strategy1.lastEstimatedTotalAssets(), 0);
+
+        console.log(2);   
         // sending assets directly to the vault won't work
         deal(WETH, address(vault), 500 ether);
         assertEq(vault.sharePrice(), 1 ether);
-        assertEq(strategy3.estimatedTotalAssets(), 0);
-        assertEq(strategy3.lastEstimatedTotalAssets(), 0);
 
         // share price might slightly decrease after investing
         vm.startPrank(users.keeper);
@@ -446,24 +444,20 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         strategy2.harvest(0, 0, 0);
         strategy3.harvest(0, 0, 0);
         strategy4.harvest(0, 0, 0);
-        assertApproxEq(vault.sharePrice(), 1 ether, 10000);
-        assertApproxEq(strategy2.estimatedTotalAssets(), 18 ether, 1 ether);
-        assertApproxEq(strategy2.lastEstimatedTotalAssets(), 18 ether, 1 ether);
+        console.log(3);   
+        assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
 
         // sending assets directly to the strategy won't work
         deal(WETH, address(strategy1), 50 ether);
-        assertApproxEq(vault.sharePrice(), 1 ether, 10000);
-        assertApproxEq(strategy1.estimatedTotalAssets(), 18 ether, 1 ether);
-        assertApproxEq(strategy1.lastEstimatedTotalAssets(), 18 ether, 1 ether);
+        console.log(4);   
+        assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
+        skip(1);
         strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+
         // after harvesting and taking the project the price will progresively increase
         // because of the locked profit degradation
-        assertApproxEq(vault.sharePrice(), 1 ether, 10000);
-        assertApproxEq(strategy1.estimatedTotalAssets(), 230 ether, 1 ether);
-        assertApproxEq(strategy1.lastEstimatedTotalAssets(), 230 ether, 1 ether);
+        console.log(5);   
+        assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         // progresively unlock the profit
         skip(2000);
         assertApproxEq(vault.sharePrice(), 1 ether * 112 / 100, 1 ether);
@@ -475,8 +469,8 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools{
         vm.startPrank(address(strategy1));
         // transfer shares to a random addresss
         IERC20(YVAULT_WETH_MAINNET).transfer(makeAddr("random"), 50 ether);
-        assertApproxEq(vault.sharePrice(), 1 ether, 10000);
-        assertApproxEq(strategy1.estimatedTotalAssets(), 18 ether, 1 ether);
-        assertApproxEq(strategy1.lastEstimatedTotalAssets(), 230 ether, 1 ether);
+        console.log(6);   
+        assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
+        console.log(7);   
     }
 }

@@ -838,7 +838,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Returns the estimate price of 1 vault share
     function sharePrice() external view returns (uint256) {
-        return convertToAssets(10 ** (_underlyingDecimals() + _decimalsOffset()));
+        return convertToAssets(10 ** decimals());
     }
 
     /// @notice Returns the amount of shares that the Vault will exchange for the amount of
@@ -1163,14 +1163,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         nonReentrant
         returns (uint256 shares)
     {
-        assembly ("memory-safe") {
-            if eq(shares, not(0)) {
-                // compute `balanceOf(msg.sender)` and store it in `shares`
-                mstore(0x0c, 0x87a211a2) // `_BALANCE_SLOT_SEED`
-                mstore(0x00, caller())
-                shares := sload(keccak256(0x0c, 0x20))
-            }
-        }
+        if(assets == type(uint256).max) assets = maxWithdraw(owner);
         if (assets > maxWithdraw(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x936941fc) // `WithdrawMoreThanMax()`.
@@ -1183,20 +1176,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function redeem(uint256 shares, address to, address owner) public override nonReentrant returns (uint256 assets) {
-        if(shares == type(uint256).max) shares = balanceOf(owner);
+        if(shares == type(uint256).max) shares = maxRedeem(owner);
         if (shares > maxRedeem(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x4656425a) // `RedeemMoreThanMax()`.
                 revert(0x1c, 0x04)
-            }
-        }
-        // if (shares == type(uint256).max) shares = balanceOf(msg.sender);
-        assembly ("memory-safe") {
-            if eq(shares, not(0)) {
-                // compute `balanceOf(msg.sender)` and store it in `shares`
-                mstore(0x0c, 0x87a211a2) // `_BALANCE_SLOT_SEED`
-                mstore(0x00, caller())
-                shares := sload(keccak256(0x0c, 0x20))
             }
         }
         // substract losses to the total assets
@@ -1292,29 +1276,20 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                totalDebt -= _sub0(totalDebt, withdrawn);
+                totalDebt = _sub0(totalDebt, withdrawn);
 
-                strategies[strategy].strategyTotalDebt = uint128(_sub0(
-                    strategies[strategy].strategyTotalDebt, withdrawn
+                uint128 strategyTotalDebt = uint128(_sub0(
+                     strategies[strategy].strategyTotalDebt, withdrawn
                 ));
 
-               /*  assembly ("memory-safe") {
-                    // Reduce debts by the amount withdrawn
-                    //totalDebt -= withdrawn;
-                    let totalDebt_ := sload(totalDebt.slot)
-                    if gt(withdrawn, totalDebt_) { revert(0, 0) }
-                    sstore(totalDebt.slot, sub(totalDebt_, withdrawn))
+                strategies[strategy].strategyTotalDebt = strategyTotalDebt;
 
-                    // compute strategies[strategy].strategyTotalDebt
-                    let slotContent := sload(slotStrategies2)
-                    let strategyTotalDebt := sub(shr(128, shl(128, slotContent)), withdrawn)
-                    // strategies[strategy].strategyTotalDebt -= uint128(withdrawn);
-                    sstore(slotStrategies2, or(shl(128, shr(128, slotContent)), strategyTotalDebt))
+                assembly ("memory-safe") {
                     // Emit the `WithdrawFromStrategy` event
                     mstore(0x00, strategyTotalDebt)
                     mstore(0x20, loss)
                     log2(0x00, 0x40, _WITHDRAW_FROM_STRATEGY_EVENT_SIGNATURE, strategy)
-                } */
+                }
 
                 unchecked {
                     ++i;
@@ -1435,29 +1410,20 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                totalDebt -= _sub0(totalDebt, withdrawn);
+                totalDebt = _sub0(totalDebt, withdrawn);
 
-                strategies[strategy].strategyTotalDebt = uint128(_sub0(
-                    strategies[strategy].strategyTotalDebt, withdrawn
+                uint128 strategyTotalDebt = uint128(_sub0(
+                     strategies[strategy].strategyTotalDebt, withdrawn
                 ));
 
-                /* assembly ("memory-safe") {
-                    // Reduce debts by the amount withdrawn
-                    //totalDebt -= withdrawn;
-                    let totalDebt_ := sload(totalDebt.slot)
-                    if gt(withdrawn, totalDebt_) { revert(0, 0) }
-                    sstore(totalDebt.slot, sub(totalDebt_, withdrawn))
+                strategies[strategy].strategyTotalDebt = strategyTotalDebt;
 
-                    // compute strategies[strategy].strategyTotalDebt
-                    let slotContent := sload(slotStrategies2)
-                    let strategyTotalDebt := sub(shr(128, shl(128, slotContent)), withdrawn)
-                    // strategies[strategy].strategyTotalDebt -= uint128(withdrawn);
-                    sstore(slotStrategies2, or(shl(128, shr(128, slotContent)), strategyTotalDebt))
+                assembly ("memory-safe") {
                     // Emit the `WithdrawFromStrategy` event
                     mstore(0x00, strategyTotalDebt)
                     mstore(0x20, loss)
                     log2(0x00, 0x40, _WITHDRAW_FROM_STRATEGY_EVENT_SIGNATURE, strategy)
-                } */
+                }
 
                 unchecked {
                     ++i;
@@ -1478,6 +1444,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
 
+        // spend allowance
         if (by != owner) {
             _spendAllowance(owner, by, shares);
         }

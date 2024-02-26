@@ -84,16 +84,14 @@ contract SommelierTurboStEthStrategy is BaseStrategy {
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
             loss = _shareValue(burntShares) - amountNeeded;
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded + underlyingBalance);
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
     }
-
-
 
     /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
-
+    
     /// @notice Provide an accurate estimate for the total amount of assets
     /// (principle + return) that this Strategy is currently managing,
     /// denominated in terms of `underlyingAsset` tokens.

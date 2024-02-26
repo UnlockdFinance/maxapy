@@ -127,7 +127,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// @return loss Any realized losses
     function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 burntShares = cellar.withdraw(amountNeeded, address(this), address(this));
-        loss = amountNeeded - _shareValue(burntShares);
+        loss = _shareValue(burntShares) - amountNeeded;
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
     }

@@ -6,7 +6,6 @@ import {IWETH} from "src/interfaces/IWETH.sol";
 import {ICellar} from "src/interfaces/ICellar.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-
 /// @title SommelierMorphoEthMaximizerStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `SommelierMorphoEthMaximizerStrategy` supplies an underlying token into a generic Sommelier Vault,
@@ -84,7 +83,7 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
             loss = _shareValue(burntShares) - amountNeeded;
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded + underlyingBalance);
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
     }
     
