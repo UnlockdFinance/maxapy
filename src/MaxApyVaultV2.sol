@@ -705,6 +705,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
     }
 
+    /// @dev Private helper to substract a - b or 0 if it underflows
+    function _sub0(uint256 a, uint256 b) internal pure virtual returns (uint256) {
+        unchecked {
+            return a - b > a ? 0 : a - b;
+        }
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                INTERNAL VIEW FUNCTIONS                   ///
     ////////////////////////////////////////////////////////////////
@@ -1257,7 +1264,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
 
                 // ask for the min between the needed amount and max withdraw of the strategy
-                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxWithdraw());
+                amountNeeded = Math.min(amountNeeded,IStrategy(strategy).maxWithdraw());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountNeeded == 0) {
@@ -1271,9 +1278,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // considering the difference between balances pre/post withdrawal
                 uint256 preBalance = SafeTransferLib.balanceOf(underlying, address(this));
                 uint256 loss = IStrategy(strategy).withdraw(amountNeeded);
-
                 uint256 withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
-
                 if (withdrawn == 0) continue;
 
                 // Increase cached vault balance to track the newly withdrawn amount
@@ -1287,7 +1292,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                assembly ("memory-safe") {
+                totalDebt -= _sub0(totalDebt, withdrawn);
+
+                strategies[strategy].strategyTotalDebt = uint128(_sub0(
+                    strategies[strategy].strategyTotalDebt, withdrawn
+                ));
+
+               /*  assembly ("memory-safe") {
                     // Reduce debts by the amount withdrawn
                     //totalDebt -= withdrawn;
                     let totalDebt_ := sload(totalDebt.slot)
@@ -1303,7 +1314,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     mstore(0x00, strategyTotalDebt)
                     mstore(0x20, loss)
                     log2(0x00, 0x40, _WITHDRAW_FROM_STRATEGY_EVENT_SIGNATURE, strategy)
-                }
+                } */
 
                 unchecked {
                     ++i;
@@ -1412,6 +1423,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
                 uint256 withdrawn = underlying.balanceOf(address(this)) - preBalance;
 
+                if (withdrawn == 0) continue;
 
                 // increase the vault balance by the needed amount
                 vaultBalance += withdrawn;
@@ -1423,7 +1435,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                assembly ("memory-safe") {
+                totalDebt -= _sub0(totalDebt, withdrawn);
+
+                strategies[strategy].strategyTotalDebt = uint128(_sub0(
+                    strategies[strategy].strategyTotalDebt, withdrawn
+                ));
+
+                /* assembly ("memory-safe") {
                     // Reduce debts by the amount withdrawn
                     //totalDebt -= withdrawn;
                     let totalDebt_ := sload(totalDebt.slot)
@@ -1439,7 +1457,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     mstore(0x00, strategyTotalDebt)
                     mstore(0x20, loss)
                     log2(0x00, 0x40, _WITHDRAW_FROM_STRATEGY_EVENT_SIGNATURE, strategy)
-                }
+                } */
 
                 unchecked {
                     ++i;

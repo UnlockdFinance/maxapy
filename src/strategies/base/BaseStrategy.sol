@@ -157,11 +157,11 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         uint256 amountRequested = previewWithdrawRequest(amountNeeded);
         uint256 amountFreed;
         // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
-        (amountFreed, loss) = _liquidatePosition(amountRequested);
-        // account only the loss needed to withdraw amountNeeded
-        loss = loss * amountNeeded / amountRequested;
+        (amountFreed, loss) = _liquidatePosition(amountRequested);                          
         // Send it directly back to vault
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // something didn't work as expected
+        else revert();
         // Note: Reinvest anything leftover on next `harvest`
     }
 

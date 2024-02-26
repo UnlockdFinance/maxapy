@@ -127,7 +127,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// @return loss Any realized losses
     function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 burntShares = cellar.withdraw(amountNeeded, address(this), address(this));
-        loss = _shareValue(burntShares) - amountNeeded;
+        loss = amountNeeded - _shareValue(burntShares);
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
     }
@@ -210,10 +210,10 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     function maxWithdraw() public override view returns(uint256){
         return estimatedTotalAssets();
     }
-
+    
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public override view returns(uint256) {
-        return previewWithdraw(estimatedTotalAssets());
+        return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
 
     ////////////////////////////////////////////////////////////////

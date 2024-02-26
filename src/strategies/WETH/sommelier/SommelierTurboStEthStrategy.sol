@@ -78,11 +78,16 @@ contract SommelierTurboStEthStrategy is BaseStrategy {
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
     function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
-        uint256 burntShares = cellar.withdraw(amountNeeded, address(this), address(this));
-        loss = _shareValue(burntShares) - amountNeeded;
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < amountNeeded) {
+            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
+            loss = _shareValue(burntShares) - amountNeeded;
+        }
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded + underlyingBalance);
         // Note: Reinvest anything leftover on next `harvest`
     }
+
 
 
     /////////////////////////////////////////////////////////////////
@@ -145,18 +150,12 @@ contract SommelierTurboStEthStrategy is BaseStrategy {
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public override view returns (uint256 requestedAmount) {
-        uint256 underlyingBalance = _underlyingBalance();
-        // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Cellar Vault
+       uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < liquidatedAmount) {
-            uint256 amountToWithdraw;
-            unchecked {
-                amountToWithdraw = liquidatedAmount - underlyingBalance;
-            }
-            uint256 requestedShares = cellar.previewMint(amountToWithdraw);
-            requestedAmount = _shareValue(requestedShares);
+            liquidatedAmount = liquidatedAmount - underlyingBalance;
+            requestedAmount = _shareValue(cellar.previewWithdraw(liquidatedAmount));
         }
-        requestedAmount = underlyingBalance + requestedAmount;
+        return requestedAmount + underlyingBalance;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
@@ -166,7 +165,7 @@ contract SommelierTurboStEthStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public override view returns(uint256) {
-        return previewWithdraw(estimatedTotalAssets());
+        return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
 
     ////////////////////////////////////////////////////////////////

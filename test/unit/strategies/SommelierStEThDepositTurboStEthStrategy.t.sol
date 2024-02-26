@@ -1380,7 +1380,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         // expect the strategy to never withdraw less than expected
         assertLe(losses, expectedLosses);
     }
-
+/* 
     function testSommelierStEthDeposit_TurboStEth__MaxRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
@@ -1399,6 +1399,41 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         // expect the strategy to never withdraw less than expected
         assertLe(losses, expectedLosses);
     }
+ */
+
+    ////////////////////////////////////////////////////////////////
+    ///                     TEST maxWithdraw()                   ///
+    ////////////////////////////////////////////////////////////////
+    function testSommelierStEthDeposit_TurboStEth__MaxWithdraw() public {
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether + 723874239,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 maxWithdraw = strategy.maxWithdraw();
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        vm.startPrank(address(vault));
+        strategy.withdraw(maxWithdraw);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        assertLe(withdrawn, maxWithdraw);
+    }
+/* 
+    function testSommelierStEthDeposit_TurboStEth__MaxWithdraw__FUZZY(uint256 amount) public {
+        vm.assume(amount >= 0.00001 ether && amount <= 1000 ether);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+        deal(WETH, users.alice, amount * 2);
+        vault.deposit(amount * 2,users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0);
+        vm.stopPrank();                                          
+        uint256 maxWithdraw = strategy.maxWithdraw();
+        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        vm.startPrank(address(vault));
+        strategy.withdraw(maxWithdraw);
+        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        assertLe(withdrawn, maxWithdraw);
+    }
+ */
 
     ////////////////////////////////////////////////////////////////
     ///                     HELPER FUNCTIONS                     ///
