@@ -15,7 +15,6 @@ import {Initializable} from "../../lib/Initializable.sol";
 /// @notice `BaseStrategy` sets the base functionality to be implemented by MaxApy strategies.
 /// @dev Inheriting strategies should implement functionality according to the standards defined in this
 /// contract.
-
 abstract contract BaseStrategy is Initializable, OwnableRoles {
     using SafeTransferLib for address;
 
@@ -137,16 +136,32 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ////////////////////////////////////////////////////////////////
     ///                STRATEGY CORE LOGIC                       ///
     ////////////////////////////////////////////////////////////////
-    /// @notice Withdraws `amountNeeded` to `vault`.
+    /// @notice Tries to withdraw `amountNeeded` to `vault`.
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function withdraw(uint256 amountNeeded) external checkRoles(VAULT_ROLE) returns (uint256 loss) {
+    function withdraw(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 amountFreed;
         // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountNeeded);
         // Send it directly back to vault
         if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountFreed);
+        // Note: Reinvest anything leftover on next `harvest`
+    }
+
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    function requestWithdraw(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 amountRequested = previewWithdrawRequest(amountNeeded);
+        uint256 amountFreed;
+        // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
+        (amountFreed, loss) = _liquidatePosition(amountRequested);
+        // Send it directly back to vault
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // something didn't work as expected
+        else revert();
         // Note: Reinvest anything leftover on next `harvest`
     }
 
@@ -384,4 +399,26 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
     function _estimatedTotalAssets() internal view virtual returns (uint256);
+
+    ////////////////////////////////////////////////////////////////
+    ///                    EXTERNAL VIEW FUNCTIONS               ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
+    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
+    /// @return liquidatedAmount output in assets
+    function previewWithdraw(uint256 requestedAmount) public view virtual returns (uint256 liquidatedAmount);
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view virtual returns (uint256 requestedAmount);
+
+    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
+    function maxRequest() public view virtual returns (uint256);
+
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxWithdraw() public view virtual returns (uint256);
 }

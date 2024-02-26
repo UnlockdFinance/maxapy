@@ -26,6 +26,8 @@ interface IStrategy {
 
     function withdraw(uint256 amountNeeded) external returns (uint256);
 
+    function requestWithdraw(uint256 amountNeeded) external returns (uint256);
+
     function delegatedAssets() external view returns (uint256);
 
     function estimatedTotalAssets() external view returns (uint256);
@@ -52,4 +54,8 @@ interface IStrategy {
     function previewWithdraw(uint256) external view returns (uint256);
 
     function previewWithdrawRequest(uint256) external view returns (uint256);
+
+    function maxWithdraw() external view returns (uint256);
+
+    function maxRequest() external view returns (uint256);
 }

@@ -119,6 +119,20 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     }
 
     /////////////////////////////////////////////////////////////////
+    ///                    CORE LOGIC                             ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 burntShares = cellar.withdraw(amountNeeded, address(this), address(this));
+        loss = _shareValue(burntShares) - amountNeeded;
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // Note: Reinvest anything leftover on next `harvest`
+    }
+
+    /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
 
@@ -156,7 +170,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
+    function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -177,7 +191,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /// @dev calculates the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view returns (uint256 requestedAmount) {
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Cellar Vault
@@ -187,10 +201,19 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
                 amountToWithdraw = liquidatedAmount - underlyingBalance;
             }
             uint256 requestedShares = cellar.previewMint(amountToWithdraw);
-            // increase 10% to be pessimistic
-            requestedAmount = _shareValue(requestedShares) * 101 / 100;
+            requestedAmount = _shareValue(requestedShares);
         }
         requestedAmount = underlyingBalance + requestedAmount;
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
+    function maxWithdraw() public view override returns (uint256) {
+        return estimatedTotalAssets();
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxRequest() public view override returns (uint256) {
+        return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
 
     ////////////////////////////////////////////////////////////////
@@ -221,7 +244,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-       // Fetch initial strategy state
+        // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
         uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
@@ -236,7 +259,7 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
         }
 
         // initialize the lastEstimatedTotalAssets in case it is not
-        if(_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
+        if (_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
 
         assembly {
             switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)

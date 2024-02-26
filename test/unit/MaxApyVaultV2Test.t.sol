@@ -37,6 +37,8 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
 
         /// Grant extra emergency admin role to alice
         vault.grantRoles(users.alice, vault.EMERGENCY_ADMIN_ROLE());
+
+        vm.label(address(USDC), "USDC");
     }
 
     /*==================INITIALIZATION TESTS==================*/
@@ -1452,7 +1454,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         ///     - assert emitting `WithdrawFromStrategy`
 
         /// Deposit 20 USDC in vault
-        _deposit(users.alice, vault, 20 * _1_USDC);
+        uint256 shares = _deposit(users.alice, vault, 20 * _1_USDC);
 
         vm.startPrank(users.alice);
         MockLossyUSDCStrategy lossyStrategy = new MockLossyUSDCStrategy(address(vault), USDC, makeAddr("strategist"));
@@ -1487,7 +1489,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         uint256 expectedRatioChange = _computeExpectedRatioChange(vault, address(lossyStrategy), 1 * _1_USDC);
 
         // we can only withdraw 19 USDC since the lossy strategy lost 1 USDC
-        valueWithdrawn = _redeem(users.alice, vault, 20 * 10 ** vault.decimals(), _1_USDC);
+        valueWithdrawn = _redeem(users.alice, vault, shares, _1_USDC);
 
         /// Assert balances
         assertEq(valueWithdrawn, 19 * _1_USDC);
@@ -1838,7 +1840,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         vaultReentrant.withdraw(10 * _1_USDC, users.alice, users.alice);
 
         /// Test 0 assets
-        vm.expectRevert(abi.encodeWithSignature("InvalidZeroShares()"));
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAmount()"));
         vault.withdraw(0, users.alice, users.alice);
 
         /// Expect revert due to max loss reached
@@ -1912,7 +1914,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// - User deposits 20 USDC
         /// - Lossy strategy is added with 50% debt ratio
         /// - Strategy reports and 50% of vault funds, or 10 USDC (0.5 * 20 USDC), gets transferred to strategy
-        /// - User tries to withdraw back 20 USDC, 10 USDC get withdrawn from strategy with 1 USDC loss
+        /// - User tries to withdraw back 20 USDC, 19 USDC get withdrawn from strategy with 1 USDC loss
         /// - User finally gets 19 USDC due to strategy losing 1 USDC
         /// Goal: test adding and removing liquidity withdrawing from  a single strategy
         ///     - assert computing the `amountNeeded` properly
@@ -1959,12 +1961,12 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         uint256 expectedRatioChange = _computeExpectedRatioChange(vault, address(lossyStrategy), 1 * _1_USDC);
 
         // we can only withdraw 19 USDC since the lossy strategy lost 1 USDC
-        valueWithdrawn = _withdraw(users.alice, vault, 20 * _1_USDC - _1_USDC);
+        valueWithdrawn = _withdraw(users.alice, vault, 19 * _1_USDC);
 
         /// Assert balances
         assertEq(valueWithdrawn, 19 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(users.alice), aliceBalanceBefore + 19 * _1_USDC);
-        assertEq(vault.balanceOf(users.alice), 0, "user balance");
+        assertEq(vault.balanceOf(users.alice), 0);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), previousStrategyData.balance - 9 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
 
@@ -2143,7 +2145,6 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         vaultPreviousDebtRatio = vault.debtRatio();
 
         /// First strategy previous data
-
         previousStrategyData.balance = IERC20(USDC).balanceOf(address(lossyStrategy));
         previousStrategyData.debtRatio = vault.strategies(address(lossyStrategy)).strategyDebtRatio;
         previousStrategyData.totalLoss = vault.strategies(address(lossyStrategy)).strategyTotalLoss;
@@ -2180,17 +2181,20 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
             assertEq(valueWithdrawn, 63 * _1_USDC);
             assertEq(IERC20(USDC).balanceOf(users.alice), aliceBalanceBefore + 63 * _1_USDC);
             assertEq(vault.balanceOf(users.alice), 35 * _1_USDC * 10 ** 6);
-            assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), previousStrategyData.balance - 49 * _1_USDC);
+            assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), previousStrategyData.balance - 49 * _1_USDC, "s1");
             /// withdraw 49 (50 ETH - 1 ETH loss) ETH from first strategy
 
-            assertEq(IERC20(USDC).balanceOf(address(lossyStrategy2)), previousStrategy2Data.balance - 14 * _1_USDC);
+            assertEq(
+                IERC20(USDC).balanceOf(address(lossyStrategy2)), previousStrategy2Data.balance - 14 * _1_USDC, "s2"
+            );
             /// withdraw 14 (15 ETH - 1 ETH loss) ETH from second strategy
 
-            assertEq(IERC20(USDC).balanceOf(address(lossyStrategy3)), previousStrategy3Data.balance);
+            assertEq(IERC20(USDC).balanceOf(address(lossyStrategy3)), previousStrategy3Data.balance, "s3");
             /// no loss incurred in third strategy
 
-            assertEq(IERC20(USDC).balanceOf(address(vault)), 0);
+            assertEq(IERC20(USDC).balanceOf(address(vault)), 0, "v");
         }
+
         /// Assert parameters
 
         /// First strategy assertions
