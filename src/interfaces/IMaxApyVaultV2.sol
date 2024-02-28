@@ -89,6 +89,10 @@ interface IMaxApyVaultV2 is IERC4626 {
     function withdrawalQueue(uint256 index) external returns (address);
 
     function emergencyShutdown() external returns (bool);
+    
+    function nexHarvestStrategyIndex() external view returns(uint8);
+
+    function autopilotEnabled() external returns (bool);
 
     /// Vault management
     function setEmergencyShutdown(bool _emergencyShutdown) external;
@@ -131,6 +135,8 @@ interface IMaxApyVaultV2 is IERC4626 {
     function performanceFee() external returns (uint256);
 
     function managementFee() external returns (uint256);
+
+    function AUTOPILOT_HARVEST_INTERVAL() external returns (uint256);
 
     function MAXIMUM_STRATEGIES() external returns (uint256);
 

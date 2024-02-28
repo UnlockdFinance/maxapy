@@ -2529,4 +2529,28 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(vault.totalAccountedAssets(), 100 * _1_USDC);
         assertEq(vault.totalAssets(), 140 * _1_USDC);
     }
+
+    ////////////////////////////////////////////////////////////////
+    ///              TEST setAutopilotEnabled() NEGATIVES         ///
+    ////////////////////////////////////////////////////////////////
+    function testMaxApyVaultV2__setAutopilotEnabledNegatives() public {
+        vm.startPrank(users.bob);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        vault.setAutopilotEnabled(true);
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///              TEST setAutopilotEnabled() POSITIVES         ///
+    ////////////////////////////////////////////////////////////////
+    function testMaxApyVaultV2__setAutopilotEnabledPositives() public {
+        assertFalse(vault.autopilotEnabled());
+        vm.expectEmit();
+        emit AutopilotEnabled(true);
+        vault.setAutopilotEnabled(true);
+        assertTrue(vault.autopilotEnabled());
+        vm.expectEmit();
+        emit AutopilotEnabled(false);
+        vault.setAutopilotEnabled(false);
+        assertFalse(vault.autopilotEnabled());
+    }
 }

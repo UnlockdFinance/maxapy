@@ -77,4 +77,6 @@ interface IStrategyWrapper is IYearnStrategy {
     function estimatedTotalAssets() external view returns (uint256);
 
     function lastEstimatedTotalAssets() external view returns (uint256);
+
+    function setAutopilot(bool) external;
 }

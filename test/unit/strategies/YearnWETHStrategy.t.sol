@@ -1057,4 +1057,33 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
         uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
         assertLe(withdrawn, maxWithdraw);
     } */
+
+    /////////////////////////////////////////////////////////////////
+    ///                     TEST forceHarvest()                   ///
+    ////////////////////////////////////////////////////////////////
+    function testYearnWETH__ForceHarvest() public {
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        // enable autoPilot in the vault
+        vault.setAutopilotEnabled(true);
+        // set the strategy in autoPilot mode
+        strategy.setAutopilot(true);
+        vault.deposit(100 ether, users.alice);
+        // harvest to take funds
+        vm.startPrank(users.keeper);
+        strategy.harvest(0,0,0,address(0));
+        vm.stopPrank();
+        uint256 balanceBefore = vault.balanceOf(users.alice);
+        vm.startPrank(address(vault));
+        skip(vault.AUTOPILOT_HARVEST_INTERVAL() + 1);
+        // simulate profit
+        deal(WETH, address(strategy), 10 ether);
+        uint256 expectedShares = vault.previewDeposit(10 ether * 200 / MAX_BPS); // 2% management fee
+        // trigger harvest from the vault
+        strategy.harvest(0, 0, 0, users.alice);
+        vm.stopPrank();
+        uint256 balanceAfter = vault.balanceOf(users.alice);
+        // management fee shares are minted to the harvester
+        assertEq(balanceAfter, balanceBefore + expectedShares);
+    }
+
 }

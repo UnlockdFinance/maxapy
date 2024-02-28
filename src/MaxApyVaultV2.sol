@@ -302,15 +302,18 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         address[MAXIMUM_STRATEGIES] memory strats = withdrawalQueue;
         // find the first strategy that is in autopilot
         uint8 i = nexHarvestStrategyIndex > l - 1 ? 0 : nexHarvestStrategyIndex;
+        bool strategyFound;
         for(i; i < l;){
             if(strategies[strats[i]].autoPilot){
                 strategy = strats[i];
+                strategyFound = true;
                 break;
             }
             unchecked{
                 ++i;
             }
         }
+
         // if the strategy we will harvest is the last of the array or its out of bounds
         // because of some change in the withdrawal queue
         // set it back to the first index(0) of the array
@@ -320,6 +323,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
             else nexHarvestStrategyIndex = ++i;
         }
+        
+        // if there are no strategies to harvest return 
+        if(!strategyFound) return (strategy,true, reason);
+
 
         // use try/catch so deposits always succeed
         // and next index is updated
