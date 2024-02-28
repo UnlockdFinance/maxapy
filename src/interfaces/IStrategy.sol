@@ -11,7 +11,7 @@ interface IStrategy {
 
     function renounceRoles(uint256 roles) external payable;
 
-    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedPreofitBPS)
+    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedPreofitBPS, address harvester)
         external;
 
     function setEmergencyExit(uint256 _emergencyExit) external;

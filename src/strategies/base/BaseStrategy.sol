@@ -35,10 +35,13 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 
     /// @notice Emitted when the strategy's emergency exit status is updated
-    event StrategyEmergencyExitUpdated(address indexed strategy, address emergencyExitStatus);
+    event StrategyEmergencyExitUpdated(address indexed strategy, uint256 emergencyExitStatus);
 
     /// @notice Emitted when the strategy's strategist is updated
     event StrategistUpdated(address indexed strategy, address newStrategist);
+
+    /// @notice Emitted when the strategy's autopilot status is updated
+    event StrategyAutopilotUpdated(address indexed strategy, bool autoPilotStatus);
 
     /// @dev `keccak256(bytes("Harvested(uint256,uint256,uint256,uint256)"))`.
     uint256 internal constant _HARVESTED_EVENT_SIGNATURE =
@@ -51,6 +54,10 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @dev `keccak256(bytes("StrategistUpdated(address,address)"))`.
     uint256 internal constant _STRATEGY_STRATEGIST_UPDATED_EVENT_SIGNATURE =
         0xf6a8d961ba4f41874e38ad8bed56ca4bcf2356a3dd5bfa626b8a73a0da9f5c69;
+
+     /// @dev `keccak256(bytes("StrategistUpdated(address,address)"))`.
+    uint256 internal constant _STRATEGY_AUTOPILOT_UPDATED =
+        0x517fe77f85715a129ee7e042c1b69addb2890b8cc86b9dcad191c565d43d69d3;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -175,7 +182,9 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param minOutputAfterInvestment minimum expected output after `_invest()`
     /// strategy unwinding (if applies).
     /// @param harvestedProfitBPS percentage of the profit to be sent to the vault as net profit
-    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedProfitBPS)
+    /// @param harvester only relevant when the harvest is triggered from the vault, is the address of the user that is enduring the harvest gas cost
+    /// from the vault
+    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedProfitBPS, address harvester)
         external
         checkRoles(KEEPER_ROLE)
     {
@@ -187,6 +196,16 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
                 revert(0x1c, 0x04)
             }
         }
+        // normally the treasury would get the management fee
+        address managementFeeReceiver = vault.treasury();
+        // if the harvest was done from the vault means it the
+        // harvest was triggered on a deposit
+        if(msg.sender == address(vault)){
+            // the depositing user will get the management fees as a reward
+            // for paying gas costs of harvest
+            managementFeeReceiver = harvester;
+        }
+
         uint256 realizedProfit;
         uint256 unrealizedProfit;
         uint256 loss;
@@ -248,12 +267,13 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             let m := mload(0x40) // Store free memory pointer
 
             // Store `vault`'s `report()` function selector:
-            // `bytes4(keccak256("report(uint128,uint128,uint128,uint128)"))`
+            // `bytes4(keccak256("report(uint128,uint128,uint128,uint128,address)"))`
             mstore(0x00, 0xe3d124c0)
             mstore(0x20, realizedProfit) // append the `profit` argument
             mstore(0x40, unrealizedProfit) // append the `profit` argument
             mstore(0x60, loss) // append the `loss` argument
             mstore(0x80, debtPayment) // append the `debtPayment` argument
+            mstore(0xa0, managementFeeReceiver) // append the `debtPayment` argument
 
             // Report to vault
             if iszero(
@@ -262,7 +282,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
                     cachedVault, // Address of `vault`
                     0, // `msg.value`
                     0x1c, // byte offset in memory where calldata starts
-                    0x84, // size of the calldata to copy
+                    0xa4, // size of the calldata to copy
                     0x00, // byte offset in memory to store the return data
                     0x20 // size of the return data
                 )
@@ -313,6 +333,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
     }
 
+
     /// @notice Sets the strategy's new strategist
     /// @param _newStrategist The new strategist address
     function setStrategist(address _newStrategist) external checkRoles(ADMIN_ROLE) {
@@ -328,6 +349,21 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             // Emit the `StrategistUpdated` event
             mstore(0x00, _newStrategist)
             log2(0x00, 0x20, _STRATEGY_STRATEGIST_UPDATED_EVENT_SIGNATURE, address())
+        }
+    }
+    
+    /// @notice Sets the strategy in emergency exit mode
+    /// @param _autoPilot The new autopilot status: true for active false for inactive
+    function setAutopilot(bool _autoPilot) external checkRoles(ADMIN_ROLE) {
+        // grante the keeper role to the vault
+        if (!hasAnyRole(address(vault),KEEPER_ROLE)){
+            _grantRoles(address(vault), KEEPER_ROLE);
+        }
+        vault.setAutoPilot(_autoPilot);
+        assembly ("memory-safe") {
+            // Emit the `StrategyAutopilotStatusUpdated` event
+            mstore(0x00, _autoPilot)
+            log2(0x00, 0x20, _STRATEGY_AUTOPILOT_UPDATED, address())
         }
     }
 
