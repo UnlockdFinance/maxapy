@@ -9,7 +9,7 @@ src
     ├─ BaseVault — "Base abstract implementation of MaxAPYVault"
 ├─ helpers
     ├─ VaultTypes — "Contains data structures of the vault"
-├─ interfaces - "Interfaces of all the contracts involved in the protocol"
+├─ interfaces  — "Interfaces of all the contracts involved in the protocol"
     ├─ IConvexBooster
     ├─ IConvexRewards
     ├─ IMaxApyVaultV2
