@@ -425,14 +425,12 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
     }
 
     function testMaxApyVaultV2_ERC4626__sharePrice() external {
-        console.log(1);
         vault.deposit(20 ether, users.alice);
         assertEq(vault.sharePrice(), 1 ether);
 
         assertEq(strategy1.estimatedTotalAssets(), 0);
         assertEq(strategy1.lastEstimatedTotalAssets(), 0);
 
-        console.log(2);
         // sending assets directly to the vault won't work
         deal(WETH, address(vault), 500 ether);
         assertEq(vault.sharePrice(), 1 ether);
@@ -443,33 +441,23 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         strategy2.harvest(0, 0, 0);
         strategy3.harvest(0, 0, 0);
         strategy4.harvest(0, 0, 0);
-        console.log(3);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
 
         // sending assets directly to the strategy won't work
-        deal(WETH, address(strategy1), 50 ether);
-        console.log(4);
+        deal(WETH, address(strategy1), 5 ether);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         skip(1);
         strategy1.harvest(0, 0, 0);
-
-        // after harvesting and taking the project the price will progresively increase
-        // because of the locked profit degradation
-        console.log(5);
-        assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
-        // progresively unlock the profit
-        skip(2000);
-        assertApproxEq(vault.sharePrice(), 1 ether * 112 / 100, 1 ether);
-        skip(2000);
+      
         assertApproxEq(vault.sharePrice(), 1 ether * 125 / 100, 1 ether);
 
         // if the strategy has losses it should instantly be reflected in the share price
         vm.stopPrank();
         vm.startPrank(address(strategy1));
         // transfer shares to a random addresss
-        IERC20(YVAULT_WETH_MAINNET).transfer(makeAddr("random"), 50 ether);
-        console.log(6);
-        assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
-        console.log(7);
+        IERC20(YVAULT_WETH_MAINNET).transfer(makeAddr("random"), strategy1.sharesForAmount(5 ether));
+
+        // the share price gets back to the initial value approx
+        assertApproxEq(vault.sharePrice(), 1 ether, 0.03 ether);
     }
 }

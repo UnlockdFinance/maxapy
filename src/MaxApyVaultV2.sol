@@ -54,7 +54,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     uint256 public constant MAXIMUM_STRATEGIES = 20;
     uint256 public constant MAX_BPS = 10_000;
-    uint256 public constant DEGRADATION_COEFFICIENT = 1e18;
     uint256 public constant SECS_PER_YEAR = 31_556_952;
     /// 365.2425 days
 
@@ -78,7 +77,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     error InvalidMinDebtPerHarvest();
     error InvalidPerformanceFee();
     error InvalidManagementFee();
-    error InvalidLockedProfitDegradation();
     error StrategyDebtRatioAlreadyZero();
     error InvalidQueueOrder();
     error VaultDepositLimitExceeded();
@@ -127,9 +125,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Emitted when the vault's management fee is updated
     event ManagementFeeUpdated(uint256 newManagementFee);
-
-    /// @notice Emitted the vault's locked profit degradation is updated
-    event LockedProfitDegradationUpdated(uint256 newLockedProfitDegradation);
 
     /// @notice Emitted when the vault's deposit limit is updated
     event DepositLimitUpdated(uint256 newDepositLimit);
@@ -188,9 +183,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     uint256 internal constant _MANAGEMENT_FEE_UPDATED_EVENT_SIGNATURE =
         0x2147e2bc8c39e67f74b1a9e08896ea1485442096765942206af1f4bc8bcde917;
 
-    uint256 internal constant _LOCKED_PROFIT_DEGRADATION_UPDATED_EVENT_SIGNATURE =
-        0x056863905a721211fc4dda1d688efc8f120b4b689d2e41da8249cf6eff200691;
-
     uint256 internal constant _DEPOSIT_LIMIT_UPDATED_EVENT_SIGNATURE =
         0xc512617347fd848ec9d7347c99c10e4fa7059132c92d0445930a7fb0c8252ff5;
 
@@ -228,10 +220,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     uint256 public totalDebt;
     /// @notice block.timestamp of last report
     uint256 public lastReport;
-    /// @notice How much profit is locked and cant be withdrawn
-    uint256 public lockedProfit;
-    /// @notice Rate per block of degradation. DEGRADATION_COEFFICIENT is 100% per block
-    uint256 public lockedProfitDegradation;
     /// @notice Rewards address where performance and management fees are sent to
     address public treasury;
 
@@ -276,7 +264,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         performanceFee = 1000; // 10% of reported yield (per Strategy)
         managementFee = 200; // 2% of reported yield (per Strategy)
         lastReport = block.timestamp;
-        lockedProfitDegradation = (DEGRADATION_COEFFICIENT * 46) / 10 ** 6; // 6 hours in blocks
         (bool success, uint8 result) = _tryGetAssetDecimals(underlyingAsset_);
         _decimals = success ? result : _DEFAULT_UNDERLYING_DECIMALS;
         // deposit limit is 10M tokens
@@ -705,7 +692,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
     }
 
-    /// @dev Private helper to substract a - b or 0 if it underflows
+    /// @dev Private helper to substract a - b or return 0 if it underflows
     function _sub0(uint256 a, uint256 b) internal pure virtual returns (uint256) {
         unchecked {
             return a - b > a ? 0 : a - b;
@@ -715,12 +702,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     ////////////////////////////////////////////////////////////////
     ///                INTERNAL VIEW FUNCTIONS                   ///
     ////////////////////////////////////////////////////////////////
-
-    /// @notice Calculates the free funds available considering the locked profit
-    /// @return The amount of free funds available
-    function _freeFunds() internal view returns (uint256) {
-        return _totalAssets() - _calculateLockedProfit();
-    }
 
     /// @notice the number of decimals of the underlying token
     function _underlyingDecimals() internal view override returns (uint8) {
@@ -760,38 +741,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
             // Perform overflow check
             if lt(totalAssets_, totalDebt_) { revert(0, 0) }
-        }
-    }
-
-    /// @notice Calculates how much profit is locked and cant be withdrawn
-    /// @return calculatedLockedProfit The total assets locked
-    function _calculateLockedProfit() internal view returns (uint256 calculatedLockedProfit) {
-        assembly {
-            // No need to check for underflow, since block.timestamp is always greater or equal than lastReport
-            let difference := sub(timestamp(), sload(lastReport.slot)) // difference = block.timestamp - lastReport
-            let lockedProfitDegradation_ := sload(lockedProfitDegradation.slot)
-
-            // Overflow check equivalent to require(lockedProfitDegradation_ == 0 || difference <= type(uint256).max / lockedProfitDegradation_)
-            if iszero(iszero(mul(lockedProfitDegradation_, gt(difference, div(not(0), lockedProfitDegradation_))))) {
-                revert(0, 0)
-            }
-
-            // lockedFundsRatio = (block.timestamp - lastReport) * lockedProfitDegradation
-            let lockedFundsRatio := mul(difference, lockedProfitDegradation_)
-
-            if lt(lockedFundsRatio, DEGRADATION_COEFFICIENT) {
-                let vaultLockedProfit := sload(lockedProfit.slot)
-                // Overflow check equivalent to require(vaultLockedProfit == 0 || lockedFundsRatio <= type(uint256).max / vaultLockedProfit)
-                if iszero(iszero(mul(vaultLockedProfit, gt(lockedFundsRatio, div(not(0), vaultLockedProfit))))) {
-                    revert(0, 0)
-                }
-                // ((lockedFundsRatio * vaultLockedProfit) / DEGRADATION_COEFFICIENT
-                let degradation := div(mul(lockedFundsRatio, vaultLockedProfit), DEGRADATION_COEFFICIENT)
-                // Overflow check
-                if gt(degradation, vaultLockedProfit) { revert(0, 0) }
-                // calculatedLockedProfit = vaultLockedProfit - ((lockedFundsRatio * vaultLockedProfit) / DEGRADATION_COEFFICIENT);
-                calculatedLockedProfit := sub(vaultLockedProfit, degradation)
-            }
         }
     }
 
@@ -843,37 +792,31 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Returns the amount of shares that the Vault will exchange for the amount of
     /// assets provided, in an ideal scenario where all conditions are met.
-    /// @notice the share price is calculated taking the {_freeFunds} instead of {totalAssets}
-    /// in order to ignore the locked profit
     /// @dev some the virtual shares and decimal offset checks have been removed for further
     /// gas optimization
     function convertToShares(uint256 assets) public view override returns (uint256 shares) {
         uint256 o = _decimalsOffset();
-        return Math.fullMulDiv(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+        return Math.fullMulDiv(assets, totalSupply() + 10 ** o, _inc_(_totalAssets()));
     }
 
     /// @dev Returns the amount of assets that the Vault will exchange for the amount of
     /// shares provided, in an ideal scenario where all conditions are met.
-    /// @notice the share price is calculated taking the {_freeFunds} instead of {totalAssets}
-    /// in order to ignore the locked profit
     /// @dev some the virtual shares and decimal offset checks have been removed for further
     /// gas optimization
     function convertToAssets(uint256 shares) public view override returns (uint256 assets) {
         uint256 o = _decimalsOffset();
-        return Math.fullMulDiv(shares, _freeFunds() + 1, totalSupply() + 10 ** o);
+        return Math.fullMulDiv(shares, _totalAssets() + 1, totalSupply() + 10 ** o);
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their mint
     /// at the current block, given current on-chain conditions.
     function previewMint(uint256 shares) public view override returns (uint256 assets) {
         uint256 o = _decimalsOffset();
-        return Math.fullMulDivUp(shares, _freeFunds() + 1, totalSupply() + 10 ** o);
+        return Math.fullMulDivUp(shares, _totalAssets() + 1, totalSupply() + 10 ** o);
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal
     /// at the current block, given the current on-chain conditions.
-    /// @notice the share price is calculated taking the {_freeFunds} instead of {totalAssets}
-    /// in order to ignore the locked profit
     function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
         if (assets == 0) return 0;
         if (assets == type(uint256).max) assets = convertToAssets(balanceOf(msg.sender));
@@ -882,7 +825,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 o = _decimalsOffset();
         // convert the assets to shares without any losses
         // very important: ROUND UP
-        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_totalAssets()));
 
         // in case the vault's balance doesn't cover the requested `assets`
         if (assets > vaultBalance) {
@@ -934,21 +877,19 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
             }
             // Increase the shares if there are any losses
-            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_totalAssets()));
         }
 
         // if there are more assets to cover(when requesting more assets then total)
         // we add the extra shares needed, even though it would revert if someone tries
         // to withdraw that much since they wouln't have the needed shares
         if (vaultBalance < assets) {
-            shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+            shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_totalAssets()));
         }
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redemption
     /// at the current block, given current on-chain conditions.
-    /// @notice the share price is calculated taking the {_freeFunds} instead of {totalAssets}
-    /// in order to ignore the locked profit
     function previewRedeem(uint256 shares) public view override returns (uint256 assets) {
         if (shares == 0) return 0;
         if (shares == type(uint256).max) shares = balanceOf(msg.sender);
@@ -1337,7 +1278,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         address underlying = asset();
         // convert the assets to shares without any losses
         // very important: ROUND UP
-        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_totalAssets()));
 
         // in case the vault's balance doesn't cover the requested `assets`
         if (assets > vaultBalance) {
@@ -1416,7 +1357,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
 
             // Increase the shares if there are any losses
-            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_totalAssets()));
             // Update total idle with the actual vault balance that considers the total withdrawn amount
             totalIdle = vaultBalance;
 
@@ -1424,7 +1365,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // we add the extra shares needed, even though it would revert if someone tries
             // to withdraw that much since they wouln't have the needed shares
             if (vaultBalance < assets) {
-                shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+                shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_totalAssets()));
             }
         }
 
@@ -1541,15 +1482,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
 
             // else don't do anything (credit and reported amounts are balanced, hence no transfers need to be executed)
-        }
-
-        // Profit is locked and gradually released per block
-        uint256 lockedProfitBeforeLoss = _calculateLockedProfit() + unrealizedGain - totalFees;
-
-        if (lockedProfitBeforeLoss > 0) {
-            lockedProfit = lockedProfitBeforeLoss - loss;
-        } else {
-            lockedProfit = 0;
         }
 
         // Update reporting time
@@ -2003,27 +1935,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Emit the `ManagementFeeUpdated` event
             mstore(0x00, _managementFee)
             log1(0x00, 0x20, _MANAGEMENT_FEE_UPDATED_EVENT_SIGNATURE)
-        }
-    }
-
-    /// @notice Used to change the value of `lockedProfitDegradation`
-    /// @param _lockedProfitDegradation The rate of degradation in percent per second scaled to 1e18
-    function setLockedProfitDegradation(uint256 _lockedProfitDegradation) external checkRoles(ADMIN_ROLE) {
-        assembly ("memory-safe") {
-            // if (_lockedProfitDegradation > DEGRADATION_COEFFICIENT)
-            if gt(_lockedProfitDegradation, DEGRADATION_COEFFICIENT) {
-                // throw the `InvalidLockedProfitDegradation` error
-                mstore(0x00, 0xd5fccc67)
-                revert(0x1c, 0x04)
-            }
-        }
-
-        lockedProfitDegradation = _lockedProfitDegradation;
-
-        assembly ("memory-safe") {
-            // Emit the `LockedProfitDegradationUpdated` event
-            mstore(0x00, _lockedProfitDegradation)
-            log1(0x00, 0x20, _LOCKED_PROFIT_DEGRADATION_UPDATED_EVENT_SIGNATURE)
         }
     }
 
