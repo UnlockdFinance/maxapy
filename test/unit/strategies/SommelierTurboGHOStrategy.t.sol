@@ -185,7 +185,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
@@ -196,7 +196,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
 
         deal(USDC, address(strategy), 1 * _1_USDC);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         assertEq(strategy.isActive(), true);
     }
 
@@ -235,7 +235,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
 
         // Expect revert if output amount is gt amount obtained
         vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-        strategy.harvest(0, type(uint256).max, 10_000);
+        strategy.harvest(0, type(uint256).max, 10_000, address(0));
     }
 
     ////////////////////////////////////////////////////////////////
@@ -265,7 +265,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.deposit(100 * _1_USDC, users.alice);
 
         /// Fake report to increase `strategyTotalDebt`
-        strategy.mockReport(0, 0, 0);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
         /// there are no profits so setting the harvest to 50% wont have any effect
         (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) =
@@ -308,7 +308,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.deposit(100 * _1_USDC, users.alice);
 
         /// Fake report to increase `strategyTotalDebt`
-        strategy.mockReport(0, 0, 0);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
         uint256 beforeReturnSnapshotId = vm.snapshot();
 
@@ -352,7 +352,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.deposit(100 * _1_USDC, users.alice);
 
         /// Fake report to increase `strategyTotalDebt`
-        strategy.mockReport(0, 0, 0);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
         /// Fake strategy loss of 10 ETH
         strategy.triggerLoss(10 * _1_USDC);
@@ -529,7 +529,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     function testSommelierTurboGHO__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         /// ⭕️ SCENARIO 1:
         /// 1. Strategy performs initial harvest to request vault funds
@@ -574,7 +574,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(0, 0, 0, 0);
         uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
         // strategy takes 40 USDC
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         // there are 60 USDC left in the vault
         assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
@@ -614,7 +614,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(10 * _1_USDC, 0, 0, 0);
         /// 10 USDC harvested
-        strategy.harvest(0, 0, 10_000);
+        strategy.harvest(0, 0, 10_000,  address(0));
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(address(vault)), 70 * _1_USDC); // 70 USDC
         assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
@@ -648,7 +648,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         /// 0 USDC harvested
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC));
         assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
@@ -685,7 +685,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// 7.23 USDC harvested
 
         /// harvest 72.33% of the profit
-        strategy.harvest(0, 0, 7_233);
+        strategy.harvest(0, 0, 7_233, address(0));
         expectedStrategyShareBalance =
             strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - (10 * _1_USDC * 7_233 / 10000)));
         assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC + (10 * _1_USDC * 7_233 / 10000));
@@ -738,7 +738,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
@@ -780,7 +780,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(49986635, 0, 0, 0);
         /// 49.99 USDC harvested
         /// no effect since the strategy is in emergency exit
-        strategy.harvest(0, 0, 2_000);
+        strategy.harvest(0, 0, 2_000,  address(0));
         assertEq(IERC20(USDC).balanceOf(address(vault)), 109986635); // 109.99 USDC
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
 
@@ -827,7 +827,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(0, 0, 0, 0);
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
@@ -871,7 +871,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(0, 9996658, 0, 2993340);
         /// 10 USDC loss
         /// only losses, no effect
-        strategy.harvest(0, 0, 1_000);
+        strategy.harvest(0, 0, 1_000, address(0));
 
         StrategyData memory data = vault.strategies(address(strategy));
 
@@ -889,7 +889,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 expected = strategy.previewWithdraw(30 * _1_USDC);
         vm.startPrank(address(vault));
@@ -904,7 +904,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         deal(USDC, users.alice, amount * 2);
         vault.deposit(amount * 2, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 expected = strategy.previewWithdraw(amount);
         vm.startPrank(address(vault));
@@ -920,7 +920,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewWithdrawRequest(30 * _1_USDC);
         vm.startPrank(address(vault));
@@ -939,7 +939,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         deal(USDC, users.alice, amount * 2);
         vault.deposit(amount * 2, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewWithdrawRequest(amount);
         vm.startPrank(address(vault));
@@ -959,7 +959,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxRequest = strategy.maxRequest();
         uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
@@ -979,7 +979,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         deal(USDC, users.alice, amount * 2);
         vault.deposit(amount * 2, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxRequest = strategy.maxRequest();
         uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
@@ -1000,7 +1000,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxWithdraw();
         uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
@@ -1016,7 +1016,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         deal(USDC, users.alice, amount * 2);
         vault.deposit(amount * 2, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxWithdraw();
         uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));

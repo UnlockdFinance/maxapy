@@ -246,10 +246,10 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         vm.startPrank(users.alice);
         uint256 expectedAssets = vault.previewRedeem(sharesAlice);
@@ -271,14 +271,14 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest again
         /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         deal(WETH, address(strategy1), 50 ether);
         // forward time so lastReport timestamp is not the same
         skip(1);
-        strategy1.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedAssets = vault.previewRedeem(sharesAlice);
@@ -333,10 +333,10 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(18 ether);
@@ -364,10 +364,10 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest again
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(19 ether);
@@ -399,10 +399,10 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
 
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         deal(WETH, address(strategy1), 50 ether);
         vm.stopPrank();
 
@@ -437,17 +437,17 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
 
         // share price might slightly decrease after investing
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
 
         // sending assets directly to the strategy won't work
         deal(WETH, address(strategy1), 5 ether);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         skip(1);
-        strategy1.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
       
         assertApproxEq(vault.sharePrice(), 1 ether * 125 / 100, 1 ether);
 

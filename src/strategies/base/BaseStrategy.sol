@@ -197,7 +197,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             }
         }
         // normally the treasury would get the management fee
-        address managementFeeReceiver = vault.treasury();
+        address managementFeeReceiver;
         // if the harvest was done from the vault means it the
         // harvest was triggered on a deposit
         if(msg.sender == address(vault)){
@@ -268,7 +268,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
 
             // Store `vault`'s `report()` function selector:
             // `bytes4(keccak256("report(uint128,uint128,uint128,uint128,address)"))`
-            mstore(0x00, 0xe3d124c0)
+            mstore(0x00, 0xfb7053b2)
             mstore(0x20, realizedProfit) // append the `profit` argument
             mstore(0x40, unrealizedProfit) // append the `profit` argument
             mstore(0x60, loss) // append the `loss` argument

@@ -15,8 +15,8 @@ contract SommelierTurboGHOStrategyWrapper is SommelierTurboGHOStrategy {
         underlyingAsset.safeTransfer(address(1), amount);
     }
 
-    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {
-        vault.report(gain, gain, loss, debtPayment);
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
+        vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
     function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)

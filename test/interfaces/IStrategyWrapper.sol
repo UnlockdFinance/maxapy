@@ -28,7 +28,7 @@ interface IStrategyWrapper is IYearnStrategy {
 
     function shareBalance() external view returns (uint256);
 
-    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external;
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external;
 
     function investYearn(uint256 amount) external returns (uint256);
 

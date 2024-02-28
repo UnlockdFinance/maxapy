@@ -184,7 +184,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
@@ -195,7 +195,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
 
         deal(WETH, address(strategy), 1 ether);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         assertEq(strategy.isActive(), true);
     }
 
@@ -234,7 +234,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
 
         // Expect revert if output amount is gt amount obtained
         vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-        strategy.harvest(0, type(uint256).max, 10_000);
+        strategy.harvest(0, type(uint256).max, 10_000, address(0));
     }
 
     ////////////////////////////////////////////////////////////////
@@ -263,7 +263,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vault.deposit(100 ether, users.alice);
 
         /// Fake report to increase `strategyTotalDebt`
-        strategy.mockReport(0, 0, 0);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
         /// there are no profits so setting the harvest to 50% wont have any effect
         (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) =
@@ -306,7 +306,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vault.deposit(100 ether, users.alice);
 
         /// Fake report to increase `strategyTotalDebt`
-        strategy.mockReport(0, 0, 0);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
         uint256 beforeReturnSnapshotId = vm.snapshot();
 
@@ -349,7 +349,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vault.deposit(100 ether, users.alice);
 
         /// Fake report to increase `strategyTotalDebt`
-        strategy.mockReport(0, 0, 0);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
         /// Fake strategy loss of 10 ETH
         strategy.triggerLoss(10 ether);
@@ -565,13 +565,13 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         // it should revert if profit harvest percentage is > 100 %
         vm.startPrank(users.keeper);
         vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, 10_001);
+        strategy.harvest(0, 0, 10_001, address(0));
     }
 
     function testSommelierMorphoEthMaximizer__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         /// ⭕️ SCENARIO 1:
         /// 1. Strategy performs initial harvest to request vault funds
@@ -613,7 +613,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         // there are 60 eth left in the vault
@@ -655,7 +655,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(10 ether, 0, 0, 0);
         /// 10 ETH harvested
-        strategy.harvest(0, 0, 10_000);
+        strategy.harvest(0, 0, 10_000,  address(0));
         assertEq(IERC20(WETH).balanceOf(address(vault)), 70 ether);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
@@ -690,7 +690,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         /// 10 ETH harvested
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
@@ -726,7 +726,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(5 ether, 0, 0, 0);
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 5 ether);
         /// 10 ETH harvested
-        strategy.harvest(0, 0, 5_000);
+        strategy.harvest(0, 0, 5_000, address(0));
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether + 5 ether);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
@@ -776,7 +776,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
@@ -820,7 +820,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         /// 49.99999 ETH harvested
 
         /// no effect since the strategy is in emergency exit
-        strategy.harvest(0, 0, 2_000);
+        strategy.harvest(0, 0, 2_000,  address(0));
         assertEq(IERC20(WETH).balanceOf(address(vault)), 109.979874544512611813 ether);
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
@@ -864,7 +864,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
@@ -909,7 +909,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(0, 9.994968636128152952 ether, 0, 2994521451573905749);
         /// 10 ETH loss
         // only losses , no effect
-        strategy.harvest(0, 0, 10_000);
+        strategy.harvest(0, 0, 10_000,  address(0));
 
         StrategyData memory data = vault.strategies(address(strategy));
 
@@ -962,7 +962,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), 40 ether);
@@ -1007,7 +1007,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -1052,7 +1052,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(0, 0, 0, 0);
         vm.stopPrank();
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertGt(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -1088,7 +1088,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), 10 ether);
 
@@ -1134,7 +1134,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertGt(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -1172,7 +1172,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         // user tries to withdraw
         vm.startPrank(users.alice);
         // cellar is paused, so strategy will only withdraw
@@ -1198,7 +1198,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 expected = strategy.previewWithdraw(30 ether);
         vm.startPrank(address(vault));
@@ -1213,7 +1213,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         deal(WETH, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
+        strategy.harvest(0,0,0, address(0));
         vm.stopPrank();
         uint256 expected = strategy.previewWithdraw(amount);
         vm.startPrank(address(vault));
@@ -1229,7 +1229,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewWithdrawRequest(30 ether);
         vm.startPrank(address(vault));
@@ -1248,7 +1248,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         deal(WETH, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);       
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
+        strategy.harvest(0,0,0, address(0));
         vm.stopPrank();                                          
         uint256 requestedAmount = strategy.previewWithdrawRequest(amount);
         vm.startPrank(address(vault));
@@ -1268,7 +1268,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxRequest = strategy.maxRequest();
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
@@ -1288,7 +1288,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         deal(WETH, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);       
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
+        strategy.harvest(0,0,0, address(0));
         vm.stopPrank();                                                   
         uint256 maxRequest = strategy.maxRequest();
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
@@ -1309,7 +1309,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0);
+        strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxWithdraw();
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
@@ -1325,7 +1325,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         deal(WETH, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0,0,0);
+        strategy.harvest(0,0,0, address(0));
         vm.stopPrank();                                          
         uint256 maxWithdraw = strategy.maxWithdraw();
         uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
