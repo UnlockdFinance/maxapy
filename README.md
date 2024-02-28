@@ -42,7 +42,7 @@ src
             ├─SommelierStEthDepositTurboStEthStrategy
             ├─SommelierTurboStEthStrategy
         ├─ yearn — "Strategies interacting with Yearn Finance"
-        ├─YearnWETHStrategy
+            ├─YearnWETHStrategy
 ├─ MaxApyVaultV2 — "Yield farming vault"
 ```
 
