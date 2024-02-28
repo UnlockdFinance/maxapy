@@ -31,7 +31,7 @@ src
 ├─ strategies
     ├─ base
         ├─ BaseStrategy — "Base vault strategy implementation"
-    ├─ USDC - "USDC strategies"
+    ├─ USDC — "USDC strategies" 
         ├─ sommelier — "Stratgies interacting with Sommelier Finance"
             ├─SommelierTurboGHOStrategy
     ├─ WETH — "Wrapped Ether strategies" 
