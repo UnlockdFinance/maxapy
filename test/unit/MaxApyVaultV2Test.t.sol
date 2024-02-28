@@ -1101,49 +1101,6 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     }
 
     ////////////////////////////////////////////////////////////////
-    ///                 TEST setLockedProfitDegradation()        ///
-    ////////////////////////////////////////////////////////////////
-
-    function testMaxApyVaultV2__SetLockedProfitDegradation() public {
-        uint256 DEGRADATION_COEFFICIENT = vault.DEGRADATION_COEFFICIENT();
-        /// Test access control
-        vm.startPrank(users.eve);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT + 1);
-        vm.stopPrank();
-
-        vm.startPrank(users.alice);
-
-        /// Test invalid locked profit degradation
-        vm.expectRevert(abi.encodeWithSignature("InvalidLockedProfitDegradation()"));
-        vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT + 1);
-
-        vm.expectRevert(abi.encodeWithSignature("InvalidLockedProfitDegradation()"));
-        vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT + 2000);
-
-        /// Test correct behavior
-        vm.expectEmit();
-        emit LockedProfitDegradationUpdated(9999);
-        vault.setLockedProfitDegradation(9999);
-        assertEq(vault.lockedProfitDegradation(), 9999);
-
-        vm.expectEmit();
-        emit LockedProfitDegradationUpdated(0);
-        vault.setLockedProfitDegradation(0);
-        assertEq(vault.lockedProfitDegradation(), 0);
-
-        vm.expectEmit();
-        emit LockedProfitDegradationUpdated(DEGRADATION_COEFFICIENT);
-        vault.setLockedProfitDegradation(DEGRADATION_COEFFICIENT);
-        assertEq(vault.lockedProfitDegradation(), DEGRADATION_COEFFICIENT);
-
-        vm.expectEmit();
-        emit LockedProfitDegradationUpdated(1e16);
-        vault.setLockedProfitDegradation(1e16);
-        assertEq(vault.lockedProfitDegradation(), 1e16);
-    }
-
-    ////////////////////////////////////////////////////////////////
     ///                 TEST setMaxDeposit()                   ///
     ////////////////////////////////////////////////////////////////
 
@@ -2462,25 +2419,19 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
 
         vm.warp(block.timestamp + 100);
 
-        deal({token: USDC, to: address(lossyStrategy), give: 100 * _1_USDC});
-
         /// mock 100 USDC gain in strategy
+        deal({token: USDC, to: address(lossyStrategy), give: 100 * _1_USDC});
+        lossyStrategy.setEstimatedTotalAssets((40 + 100) * _1_USDC);
 
         previousVaultBalance = IERC20(USDC).balanceOf(address(vault));
         previousStrategyBalance = IERC20(USDC).balanceOf(address(lossyStrategy));
-
-        vm.recordLogs();
-
-        /// record FeesReported() event
-
-        debt = vault.report(uint128(100 * _1_USDC), uint128(100 * _1_USDC), 0, 0);
-
-        entries = vm.getRecordedLogs();
 
         uint256 expectedShares = _calculateExpectedShares(2 * _1_USDC + 15 * _1_USDC / 10 + 10 * _1_USDC);
         uint256 expectedStrategistFees = _calculateExpectedStrategistFees(
             15 * _1_USDC / 10, expectedShares, 2 * _1_USDC + 15 * _1_USDC / 10 + 10 * _1_USDC
         );
+
+        debt = vault.report(uint128(100 * _1_USDC), uint128(100 * _1_USDC), 0, 0);
 
         /// - Assess vault management fee is 2% of reported yield
         //assertEq(2 * _1_USDC, uint256(entries[3].topics[1]));

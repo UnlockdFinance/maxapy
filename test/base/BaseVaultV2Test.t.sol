@@ -102,19 +102,6 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         return (computedStrategistFee * reward) / totalFee;
     }
 
-    function _freeFunds() internal view returns (uint256) {
-        return vault.totalAssets() - _calculateLockedProfit();
-    }
-
-    function _calculateLockedProfit() internal view returns (uint256 calculatedLockedProfit) {
-        uint256 lockedFundsRatio = (block.timestamp - vault.lastReport()) * vault.lockedProfitDegradation();
-        if (lockedFundsRatio < vault.DEGRADATION_COEFFICIENT()) {
-            uint256 vaultLockedProfit = vault.lockedProfit();
-            calculatedLockedProfit =
-                vaultLockedProfit - ((lockedFundsRatio * vaultLockedProfit) / vault.DEGRADATION_COEFFICIENT());
-        }
-    }
-
     function _calculateMaxExpectedLoss(uint256 maxLoss, uint256 valueToWithdraw, uint256 totalLoss)
         internal
         pure
