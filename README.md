@@ -54,7 +54,49 @@ git clone https://github.com/UnlockdFinance/maxapy-v2.git
 ```
 forge build
 ```
-## Test
+## Run local fork 
+Set the `.env` environment values and fetch them everytime you open a new terminal:
 ```
-forge test
+source .env
+```
+Run the local fork:
+```
+anvil --fork-url $RPC_MAINNET  --fork-block-number $FORK_BLOCK_NUMBER
+```
+**Note:** It's recommended using one of the private keys provided by anvil for testing 
+
+Run the deployment script in a new terminal:
+```solidity 
+forge script script/MaxApyV2.s.sol:DeploymentScript --fork-url http://localhost:8545 --etherscan-api-key $ETHERSCAN_API_KEY --broadcast -vvv
+```
+
+After that interact with the fork freely using `cast`, here some example of what you can do:
+```
+cast rpc anvil_impersonateAccount <address of user to impersonate>
+```
+For calling contract performing a transaction:
+```
+cast send <address of contract to interact with> \
+--from <address to impersonate> \
+  <function signature as string> \
+  arg1 \
+  arg2 \
+  ...
+  --unlocked
+```
+For calling contract view methods:
+```
+cast call <address of contract to interact with> \
+  <function signature as string> \
+  arg1 \
+  arg2 \
+  ...
+```
+
+```
+cast gas-price     
+```
+
+```
+cast storage <address of contract to read storage from>
 ```
