@@ -92,7 +92,7 @@ interface IMaxApyVaultV2 is IERC4626 {
     
     function nexHarvestStrategyIndex() external view returns(uint8);
 
-    function autopilotEnabled() external returns (bool);
+    function autoPilotEnabled() external returns (bool);
 
     /// Vault management
     function setEmergencyShutdown(bool _emergencyShutdown) external;

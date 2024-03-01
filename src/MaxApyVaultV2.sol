@@ -318,7 +318,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         // because of some change in the withdrawal queue
         // set it back to the first index(0) of the array
         unchecked{
-            if(i >= withdrawalQueue.length - 1){
+            if(i >= l - 1 || strats[i +1] == address(0)){
                 nexHarvestStrategyIndex = 0;
             }
             else nexHarvestStrategyIndex = ++i;
@@ -550,7 +550,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // if the harvest was triggered by a regular user send management fee to 
                 // the user that endured the harvest
                 if(managementFeeReceiver != address(0)) {
-                    address(this).safeTransfer(managementFeeReceiver, computedManagementFee);
+                    address(this).safeTransfer(managementFeeReceiver, cachedBalance * computedManagementFee / totalFee);
                     cachedBalance = balanceOf(address(this));
                 }
                 // transfer the rest of it to the treasury

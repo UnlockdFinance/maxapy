@@ -2543,14 +2543,14 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///              TEST setAutopilotEnabled() POSITIVES         ///
     ////////////////////////////////////////////////////////////////
     function testMaxApyVaultV2__setAutopilotEnabledPositives() public {
-        assertFalse(vault.autopilotEnabled());
+        assertFalse(vault.autoPilotEnabled());
         vm.expectEmit();
         emit AutopilotEnabled(true);
         vault.setAutopilotEnabled(true);
-        assertTrue(vault.autopilotEnabled());
+        assertTrue(vault.autoPilotEnabled());
         vm.expectEmit();
         emit AutopilotEnabled(false);
         vault.setAutopilotEnabled(false);
-        assertFalse(vault.autopilotEnabled());
+        assertFalse(vault.autoPilotEnabled());
     }
 }
