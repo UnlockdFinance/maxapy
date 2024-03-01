@@ -32,8 +32,7 @@ contract StrategyEvents is BaseStrategyEvents {
 
     /// @notice Emitted when the strategy is harvested
     event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
-    
+
     /// @notice Emitted after a forced harvest fails unexpectedly
     event ForceHarvestFailed(address indexed strategy, bytes reason);
-
 }

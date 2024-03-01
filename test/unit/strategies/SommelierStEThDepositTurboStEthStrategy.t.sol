@@ -764,7 +764,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(10 ether, 0, 0, 0);
         /// 10 ETH harvested
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
         assertEq(IERC20(WETH).balanceOf(address(vault)), 70 ether);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
         vm.revertTo(beforeReportSnapshotId);
@@ -924,7 +924,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         /// 49.997 ETH harvested
 
         /// no effect since the strategy is in emergency exit
-        strategy.harvest(0, 0, 2_000,  address(0));
+        strategy.harvest(0, 0, 2_000, address(0));
         assertEq(IERC20(WETH).balanceOf(address(vault)), 109.970026864837587483 ether);
         assertEq(IERC20(CELLAR_STETH_MAINNET).balanceOf(address(strategy)), 0);
 
@@ -1016,7 +1016,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 9.994505359021543791 ether, 0, 2.994845699220821501 ether);
         /// 10 ETH loss
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
 
         StrategyData memory data = vault.strategies(address(strategy));
 
@@ -1082,7 +1082,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(CELLAR_STETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -1127,7 +1127,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(CELLAR_STETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -1173,7 +1173,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertGt(IERC20(CELLAR_STETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -1208,7 +1208,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH).balanceOf(address(strategy)), 10 ether);
 
@@ -1254,7 +1254,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         // strategy takes 40 eth
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
 
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         assertGt(IERC20(CELLAR_STETH_MAINNET).balanceOf(address(strategy)), 0);

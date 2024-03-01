@@ -55,7 +55,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     uint256 internal constant _STRATEGY_STRATEGIST_UPDATED_EVENT_SIGNATURE =
         0xf6a8d961ba4f41874e38ad8bed56ca4bcf2356a3dd5bfa626b8a73a0da9f5c69;
 
-     /// @dev `keccak256(bytes("StrategistUpdated(address,address)"))`.
+    /// @dev `keccak256(bytes("StrategistUpdated(address,address)"))`.
     uint256 internal constant _STRATEGY_AUTOPILOT_UPDATED =
         0x517fe77f85715a129ee7e042c1b69addb2890b8cc86b9dcad191c565d43d69d3;
 
@@ -184,10 +184,12 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param harvestedProfitBPS percentage of the profit to be sent to the vault as net profit
     /// @param harvester only relevant when the harvest is triggered from the vault, is the address of the user that is enduring the harvest gas cost
     /// from the vault
-    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment, uint256 harvestedProfitBPS, address harvester)
-        external
-        checkRoles(KEEPER_ROLE)
-    {
+    function harvest(
+        uint256 minExpectedBalance,
+        uint256 minOutputAfterInvestment,
+        uint256 harvestedProfitBPS,
+        address harvester
+    ) external checkRoles(KEEPER_ROLE) {
         assembly ("memory-safe") {
             // if harvestedProfitBPS > MAX_BPS
             if gt(harvestedProfitBPS, MAX_BPS) {
@@ -200,7 +202,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         address managementFeeReceiver;
         // if the harvest was done from the vault means it the
         // harvest was triggered on a deposit
-        if(msg.sender == address(vault)){
+        if (msg.sender == address(vault)) {
             // the depositing user will get the management fees as a reward
             // for paying gas costs of harvest
             managementFeeReceiver = harvester;
@@ -333,7 +335,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
     }
 
-
     /// @notice Sets the strategy's new strategist
     /// @param _newStrategist The new strategist address
     function setStrategist(address _newStrategist) external checkRoles(ADMIN_ROLE) {
@@ -351,12 +352,12 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             log2(0x00, 0x20, _STRATEGY_STRATEGIST_UPDATED_EVENT_SIGNATURE, address())
         }
     }
-    
+
     /// @notice Sets the strategy in emergency exit mode
     /// @param _autoPilot The new autopilot status: true for active false for inactive
     function setAutopilot(bool _autoPilot) external checkRoles(ADMIN_ROLE) {
         // grante the keeper role to the vault
-        if (!hasAnyRole(address(vault),KEEPER_ROLE)){
+        if (!hasAnyRole(address(vault), KEEPER_ROLE)) {
             _grantRoles(address(vault), KEEPER_ROLE);
         }
         vault.setAutoPilot(_autoPilot);

@@ -29,9 +29,13 @@ interface IMaxApyVaultV2 is IERC4626 {
         address receiver
     ) external returns (uint256 assets);
 
-    function report(uint128 realizedGain, uint128 unrealizedGain, uint128 loss, uint128 debtPayment, address managementFeeReceiver)
-        external
-        returns (uint256);
+    function report(
+        uint128 realizedGain,
+        uint128 unrealizedGain,
+        uint128 loss,
+        uint128 debtPayment,
+        address managementFeeReceiver
+    ) external returns (uint256);
 
     /// Ownership
     function transferOwnership(address newOwner) external payable;
@@ -89,8 +93,8 @@ interface IMaxApyVaultV2 is IERC4626 {
     function withdrawalQueue(uint256 index) external returns (address);
 
     function emergencyShutdown() external returns (bool);
-    
-    function nexHarvestStrategyIndex() external view returns(uint8);
+
+    function nexHarvestStrategyIndex() external view returns (uint8);
 
     function autoPilotEnabled() external returns (bool);
 

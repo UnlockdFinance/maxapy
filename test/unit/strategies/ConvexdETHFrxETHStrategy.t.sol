@@ -356,10 +356,10 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 minimumExpectedEthAmount = (expectedAmountCrv[1] + expectedAmountCvx) * 9999 / 10_000;
         // Setting a higher amount should fail
         vm.expectRevert(abi.encodeWithSignature("MinExpectedBalanceAfterSwapNotReached()"));
-        strategy.harvest(expectedAmountCrv[1] + expectedAmountCvx + 1, 0, 10_000,address(0));
+        strategy.harvest(expectedAmountCrv[1] + expectedAmountCvx + 1, 0, 10_000, address(0));
 
         // Setting a proper amount should allow swapping
-        strategy.harvest(minimumExpectedEthAmount, 0, 10_000,address(0));
+        strategy.harvest(minimumExpectedEthAmount, 0, 10_000, address(0));
     }
 
     function testConvexdETHFrxETH__InvestmentSlippage() public {

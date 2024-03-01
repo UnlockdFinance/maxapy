@@ -564,7 +564,7 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
     function testYearnWETH__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
 
         /// ⭕️ SCENARIO 1:
         /// 1. Strategy performs initial harvest to request vault funds
@@ -603,7 +603,7 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
 
         uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
@@ -814,7 +814,7 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        strategy.harvest(0, 0, 10_000,  address(0));
+        strategy.harvest(0, 0, 10_000, address(0));
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
@@ -858,7 +858,7 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
         /// 10 ETH loss
         /// if we request to harvest only 30% of profit it wont have any effect neither,
         /// since the strategy has loses only
-        strategy.harvest(0, 0, 3_000,  address(0));
+        strategy.harvest(0, 0, 3_000, address(0));
 
         StrategyData memory data = vault.strategies(address(strategy));
 

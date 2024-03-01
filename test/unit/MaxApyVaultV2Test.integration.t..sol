@@ -389,7 +389,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.revertTo(snapshotId);
     }
 
-/*     function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
+    /*     function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
         vm.assume(amount > 1 ether / 10 && amount < 10_000 ether);
         vault.deposit(20 ether, users.alice);
         // other users deposits as well
@@ -449,7 +449,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         skip(1);
         strategy1.harvest(0, 0, 0, address(0));
-      
+
         assertApproxEq(vault.sharePrice(), 1 ether * 125 / 100, 1 ether);
 
         // if the strategy has losses it should instantly be reflected in the share price
@@ -492,7 +492,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         expectedShares += vault.previewDeposit(20 ether);
         vm.expectEmit();
         // harvest should happen
-        emit Harvested(0,0,0,0);
+        emit Harvested(0, 0, 0, 0);
         vm.startPrank(users.bob);
         vault.deposit(20 ether, users.bob);
         // user gets shares + performanceFee
