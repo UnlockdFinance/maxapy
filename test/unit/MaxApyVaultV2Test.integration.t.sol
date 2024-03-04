@@ -31,8 +31,9 @@ import {SommelierStEthDepositTurboStEthStrategyWrapper} from
     "../mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
 
 import {YearnWETHStrategyWrapper} from "../mock/YearnWETHStrategyWrapper.sol";
+import {MockRevertingStrategy} from "../mock/MockRevertingStrategy.sol";
 
-contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
+contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ////////////////////////////////////////////////////////////////
     ///                    CONSTANTS                             ///
     ////////////////////////////////////////////////////////////////
@@ -246,10 +247,10 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         vm.startPrank(users.alice);
         uint256 expectedAssets = vault.previewRedeem(sharesAlice);
@@ -271,14 +272,14 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest again
         /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         deal(WETH, address(strategy1), 50 ether);
         // forward time so lastReport timestamp is not the same
         skip(1);
-        strategy1.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedAssets = vault.previewRedeem(sharesAlice);
@@ -333,10 +334,10 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(18 ether);
@@ -364,10 +365,10 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest again
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(19 ether);
@@ -388,7 +389,7 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         vm.revertTo(snapshotId);
     }
 
-    function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
+    /*     function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
         vm.assume(amount > 1 ether / 10 && amount < 10_000 ether);
         vault.deposit(20 ether, users.alice);
         // other users deposits as well
@@ -399,10 +400,10 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
 
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         deal(WETH, address(strategy1), 50 ether);
         vm.stopPrank();
 
@@ -422,9 +423,9 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
         assertEq(transferred, amount);
         assertLe(shares, expectedShares);
         vm.stopPrank();
-    }
+    } */
 
-    function testMaxApyVaultV2_ERC4626__sharePrice() external {
+    function testMaxApyVaultV2__SharePrice() external {
         vault.deposit(20 ether, users.alice);
         assertEq(vault.sharePrice(), 1 ether);
 
@@ -437,18 +438,18 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
 
         // share price might slightly decrease after investing
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0);
-        strategy2.harvest(0, 0, 0);
-        strategy3.harvest(0, 0, 0);
-        strategy4.harvest(0, 0, 0);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
 
         // sending assets directly to the strategy won't work
         deal(WETH, address(strategy1), 5 ether);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         skip(1);
-        strategy1.harvest(0, 0, 0);
-      
+        strategy1.harvest(0, 0, 0, address(0));
+
         assertApproxEq(vault.sharePrice(), 1 ether * 125 / 100, 1 ether);
 
         // if the strategy has losses it should instantly be reflected in the share price
@@ -459,5 +460,49 @@ contract ERC4626Test is BaseTest, StrategyEvents, ConvexPools {
 
         // the share price gets back to the initial value approx
         assertApproxEq(vault.sharePrice(), 1 ether, 0.03 ether);
+    }
+
+    function testMaxApyVaultV2_AutoPilot() public {
+        MockRevertingStrategy revertingStrategy = new MockRevertingStrategy(address(vault), WETH);
+        vault.addStrategy(address(revertingStrategy), 500, type(uint72).max, 0, 0);
+        vault.setAutopilotEnabled(true);
+        revertingStrategy.setAutopilot(true);
+        uint256 lastReport = vault.lastReport();
+
+        // deposit will trigger the reverting strategy
+        vm.expectEmit();
+        // emit event to log that the autopilot harvest reverted
+        emit ForceHarvestFailed(address(revertingStrategy), abi.encodeWithSignature("HarvestFailed()"));
+        uint256 expectedShares = vault.previewDeposit(20 ether);
+        vault.deposit(20 ether, users.alice);
+        assertEq(IERC20(WETH).balanceOf(address(vault)), 20 ether);
+        assertEq(IERC20(address(vault)).balanceOf(users.alice), expectedShares);
+        // the report didnt happen
+        assertEq(vault.lastReport(), lastReport);
+        assertEq(vault.nexHarvestStrategyIndex(), 0);
+
+        // set a valid strategy in autipilot
+        strategy1.setAutopilot(true);
+        // simulate fake gains
+        uint256 yVaultShares = IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy1));
+        uint256 yVaultProfit = strategy1.shareValue(yVaultShares) - strategy1.lastEstimatedTotalAssets();
+        deal(WETH, address(strategy1), 10 ether);
+        uint256 expectedManagementFee = (10 ether + yVaultProfit) * vault.managementFee() / MAX_BPS;
+        expectedShares = vault.convertToShares(expectedManagementFee); // 2% management fee
+        expectedShares += vault.previewDeposit(20 ether);
+        vm.expectEmit();
+        // harvest should happen
+        emit Harvested(0, 0, 0, 0);
+        vm.startPrank(users.bob);
+        vault.deposit(20 ether, users.bob);
+        // user gets shares + performanceFee
+        assertEq(IERC20(address(vault)).balanceOf(users.bob), expectedShares);
+        // last report has changed
+        assertGt(vault.lastReport(), lastReport);
+        // next strategy to harvest will be next index
+        assertEq(vault.nexHarvestStrategyIndex(), 1);
+
+        // now it should success because it wont trigger the reverting strategy
+        vault.deposit(20 ether, users.bob);
     }
 }

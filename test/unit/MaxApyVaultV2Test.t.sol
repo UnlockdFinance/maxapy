@@ -1303,7 +1303,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         vault.addStrategy(address(lossyStrategy), 1000, type(uint72).max, 0, 1000);
 
         /// Initially report from lossy strategy so that they have a positive `strategyTotalDebt`
-        lossyStrategy.mockReport(0, 0, 0);
+        lossyStrategy.mockReport(0, 0, 0, TREASURY);
 
         StrategyData memory lossyStrategyData = vault.strategies(address(lossyStrategy));
 
@@ -1427,7 +1427,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         );
 
         /// Initially report from lossy strategy so that they have a positive `strategyTotalDebt`
-        lossyStrategy.mockReport(0, 0, 0);
+        lossyStrategy.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), 10 * _1_USDC);
         lossyStrategy.setEstimatedTotalAssets(10 * _1_USDC);
 
@@ -1513,7 +1513,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         );
 
         /// Initially report from lossy strategy funded so that they have a positive `strategyTotalDebt`
-        lossyStrategyFunded.mockReport(0, 0, 0);
+        lossyStrategyFunded.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategyFunded)), 25 * _1_USDC);
         lossyStrategyFunded.setEstimatedTotalAssets(25 * _1_USDC);
 
@@ -1612,11 +1612,11 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         );
 
         /// Report from lossy strategies so that they have a positive `strategyTotalDebt`
-        lossyStrategy.mockReport(0, 0, 0);
+        lossyStrategy.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), 50 * _1_USDC);
-        lossyStrategy2.mockReport(0, 0, 0);
+        lossyStrategy2.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy2)), 25 * _1_USDC);
-        lossyStrategy3.mockReport(0, 0, 0);
+        lossyStrategy3.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy3)), 25 * _1_USDC);
 
         /// Set the estimated total assets of the strategies
@@ -1776,7 +1776,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         vault.addStrategy(address(lossyStrategy), 1000, type(uint72).max, 0, 1000);
 
         /// Initially report from lossy strategy so that they have a positive `strategyTotalDebt`
-        lossyStrategy.mockReport(0, 0, 0);
+        lossyStrategy.mockReport(0, 0, 0, TREASURY);
 
         StrategyData memory lossyStrategyData = vault.strategies(address(lossyStrategy));
 
@@ -1899,7 +1899,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         );
 
         /// Initially report from lossy strategy so that they have a positive `strategyTotalDebt`
-        lossyStrategy.mockReport(0, 0, 0);
+        lossyStrategy.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), 10 * _1_USDC);
         lossyStrategy.setEstimatedTotalAssets(10 * _1_USDC);
 
@@ -1985,7 +1985,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         );
 
         /// Initially report from lossy strategy funded so that they have a positive `strategyTotalDebt`
-        lossyStrategyFunded.mockReport(0, 0, 0);
+        lossyStrategyFunded.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategyFunded)), 25 * _1_USDC);
         lossyStrategyFunded.setEstimatedTotalAssets(25 * _1_USDC);
 
@@ -2084,11 +2084,11 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         );
 
         /// Report from lossy strategies so that they have a positive `strategyTotalDebt`
-        lossyStrategy.mockReport(0, 0, 0);
+        lossyStrategy.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy)), 50 * _1_USDC);
-        lossyStrategy2.mockReport(0, 0, 0);
+        lossyStrategy2.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy2)), 25 * _1_USDC);
-        lossyStrategy3.mockReport(0, 0, 0);
+        lossyStrategy3.mockReport(0, 0, 0, TREASURY);
         assertEq(IERC20(USDC).balanceOf(address(lossyStrategy3)), 25 * _1_USDC);
 
         /// Set the estimated total assets of the strategies
@@ -2206,13 +2206,13 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
 
         vault.addStrategy(address(lossyStrategy), 4000, 0, 0, 0);
 
-        lossyStrategy.mockReport(0, 0, 0);
+        lossyStrategy.mockReport(0, 0, 0, TREASURY);
         /// *************** 🔸 Tests 🔸 *************** ///
 
         /// Check access control with unauthorized user
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        vault.report(0, 0, 0, 0);
+        vault.report(0, 0, 0, 0, TREASURY);
 
         vm.stopPrank();
 
@@ -2220,34 +2220,34 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
 
         /// Check report with a strategy who does not have enough funds to cover `gain` and `debtPayment`
         vm.expectRevert(abi.encodeWithSignature("InvalidReportedGainAndDebtPayment()"));
-        vault.report(1, 1, 0, 0);
+        vault.report(1, 1, 0, 0, TREASURY);
         /// `gain` (1) + `debtPayment` (0) are gt. `balanceOf(strategy)`
 
         vm.expectRevert(abi.encodeWithSignature("InvalidReportedGainAndDebtPayment()"));
-        vault.report(0, 0, 0, 1);
+        vault.report(0, 0, 0, 1, TREASURY);
         /// `gain` (0) + `debtPayment` (1) are gt. `balanceOf(strategy)`
 
         vm.expectRevert(abi.encodeWithSignature("InvalidReportedGainAndDebtPayment()"));
-        vault.report(uint128(1 * _1_USDC), uint128(1 * _1_USDC), 0, uint128(450 * _1_USDC));
+        vault.report(uint128(1 * _1_USDC), uint128(1 * _1_USDC), 0, uint128(450 * _1_USDC), TREASURY);
         /// `gain` (1 ETH) + `debtPayment` (450 ETH) are gt. `balanceOf(strategy)`
 
         /// Check reported loss is higher than strategy total debt
         vm.expectRevert(abi.encodeWithSignature("LossGreaterThanStrategyTotalDebt()"));
-        vault.report(0, 0, 1, 0);
+        vault.report(0, 0, 1, 0, TREASURY);
         /// 1 ETH of `loss` is gt. 0 ETH of balance
 
         deal({token: USDC, to: address(lossyStrategy), give: 1 * _1_USDC});
 
         /// provide strategy with 1 USDC
         vm.expectRevert(abi.encodeWithSignature("LossGreaterThanStrategyTotalDebt()"));
-        vault.report(0, 0, uint128(11 * _1_USDC / 10), 0);
+        vault.report(0, 0, uint128(11 * _1_USDC / 10), 0, TREASURY);
         /// 1.1 ETH of `loss` is gt. 1 ETH of balance
 
         /// Test assess fees twice in same block.timestamp
         vm.warp(block.timestamp + 1);
-        vault.report(1, 1, 0, 0);
+        vault.report(1, 1, 0, 0, TREASURY);
         vm.expectRevert(abi.encodeWithSignature("FeesAlreadyAssesed()"));
-        vault.report(1, 1, 0, 0);
+        vault.report(1, 1, 0, 0, TREASURY);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -2300,7 +2300,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         );
         /// strategyDebtRatio
 
-        uint256 debt = vault.report(0, 0, 0, 0);
+        uint256 debt = vault.report(0, 0, 0, 0, TREASURY);
 
         StrategyData memory strategyData = vault.strategies(address(lossyStrategy));
 
@@ -2364,7 +2364,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
 
         /// record StrategyReported() event
 
-        debt = vault.report(0, 0, uint128(1 * _1_USDC), 0);
+        debt = vault.report(0, 0, uint128(1 * _1_USDC), 0, TREASURY);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -2431,7 +2431,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
             15 * _1_USDC / 10, expectedShares, 2 * _1_USDC + 15 * _1_USDC / 10 + 10 * _1_USDC
         );
 
-        debt = vault.report(uint128(100 * _1_USDC), uint128(100 * _1_USDC), 0, 0);
+        debt = vault.report(uint128(100 * _1_USDC), uint128(100 * _1_USDC), 0, 0, TREASURY);
 
         /// - Assess vault management fee is 2% of reported yield
         //assertEq(2 * _1_USDC, uint256(entries[3].topics[1]));
@@ -2480,7 +2480,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         previousVaultBalance = IERC20(USDC).balanceOf(address(vault));
         previousStrategyBalance = IERC20(USDC).balanceOf(address(lossyStrategy));
         previousStrategyData = vault.strategies(address(lossyStrategy));
-        debt = vault.report(0, 0, 0, uint128(40 * _1_USDC));
+        debt = vault.report(0, 0, 0, uint128(40 * _1_USDC), TREASURY);
 
         /// report 40 ETH of `debtPayment`
 
@@ -2515,7 +2515,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// record FeesReported() event
         previousVaultBalance = IERC20(USDC).balanceOf(address(vault));
         previousStrategyBalance = IERC20(USDC).balanceOf(address(lossyStrategy));
-        debt = vault.report(0, 0, 0, uint128(40 * _1_USDC));
+        debt = vault.report(0, 0, 0, uint128(40 * _1_USDC), TREASURY);
         /// report 40 ETH of `debtPayment`
 
         entries = vm.getRecordedLogs();
@@ -2528,5 +2528,29 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// - Assert returned debt is vault's `estimatedTotalAssets`
         assertEq(vault.totalAccountedAssets(), 100 * _1_USDC);
         assertEq(vault.totalAssets(), 140 * _1_USDC);
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///              TEST setAutopilotEnabled() NEGATIVES         ///
+    ////////////////////////////////////////////////////////////////
+    function testMaxApyVaultV2__setAutopilotEnabledNegatives() public {
+        vm.startPrank(users.bob);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        vault.setAutopilotEnabled(true);
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///              TEST setAutopilotEnabled() POSITIVES         ///
+    ////////////////////////////////////////////////////////////////
+    function testMaxApyVaultV2__setAutopilotEnabledPositives() public {
+        assertFalse(vault.autoPilotEnabled());
+        vm.expectEmit();
+        emit AutopilotEnabled(true);
+        vault.setAutopilotEnabled(true);
+        assertTrue(vault.autoPilotEnabled());
+        vm.expectEmit();
+        emit AutopilotEnabled(false);
+        vault.setAutopilotEnabled(false);
+        assertFalse(vault.autoPilotEnabled());
     }
 }

@@ -54,8 +54,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     uint256 public constant MAXIMUM_STRATEGIES = 20;
     uint256 public constant MAX_BPS = 10_000;
-    uint256 public constant SECS_PER_YEAR = 31_556_952;
     /// 365.2425 days
+    uint256 public constant SECS_PER_YEAR = 31_556_952;
+    // every week
+    uint256 public constant AUTOPILOT_HARVEST_INTERVAL = 1 weeks;
 
     /// Roles
     uint256 public constant ADMIN_ROLE = _ROLE_0;
@@ -105,6 +107,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Emitted when a vault's emergency shutdown state is switched
     event EmergencyShutdownUpdated(bool emergencyShutdown);
 
+    /// @notice Emitted when a vault's autopilot mode is enabled or disabled
+    event AutopilotEnabled(bool isEnabled);
+
     /// @notice Emitted when a strategy is revoked from the vault
     event StrategyRevoked(address indexed strategy);
 
@@ -144,6 +149,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Emitted after assessing protocol fees
     event FeesReported(uint256 managementFee, uint16 performanceFee, uint256 strategistFee, uint256 duration);
 
+    /// @notice Emitted after a forced harvest fails unexpectedly
+    event ForceHarvestFailed(address indexed strategy, bytes reason);
+
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
@@ -167,6 +175,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     uint256 internal constant _EMERGENCY_SHUTDOWN_UPDATED_EVENT_SIGNATURE =
         0xa63137c77816d51f856c11ffb11e84757ac9db0ce2569f94edd04c91fe2250a1;
+
+    uint256 internal constant _AUTOPILOT_ENABLED_EVENT_SIGNATURE =
+        0xba59cddbbe4aad399b09d7f484fdd0a4bc54da6a697a48549cbe72d79c66fcb3;
 
     uint256 internal constant _STRATEGY_REVOKED_EVENT_SIGNATURE =
         0x4201c688d84c01154d321afa0c72f1bffe9eef53005c9de9d035074e71e9b32a;
@@ -210,6 +221,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Vault state stating if vault is in emergency shutdown mode
     bool public emergencyShutdown;
+    /// @notice Vault state stating if vault allows for automated harvesting of strategies
+    bool public autoPilotEnabled;
+    /// @notice the decimals of the underlying ERC20 token
+    uint8 private immutable _decimals;
+    /// @notice the index in {withdrawalQueue} of the next strategy to be harvested from the autopilot
+    uint8 public nexHarvestStrategyIndex;
     /// @notice Limit for totalAssets the Vault can hold
     uint256 public depositLimit;
     /// @notice Debt ratio for the Vault across all strategies (in BPS, <= 10k)
@@ -237,10 +254,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     string private _name;
     /// @notice symbol of the vault shares ERC20 token
     string private _symbol;
-    /// @notice the decimals of the underlying ERC20 token
-    uint8 private immutable _decimals;
     /// @notice the assets in which the vault earns interest
     address private immutable _underlyingAsset;
+
+    /// @notice the assets in which the vault earns interest
 
     ////////////////////////////////////////////////////////////////
     ///                         MODIFIERS                        ///
@@ -277,6 +294,52 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     ////////////////////////////////////////////////////////////////
     ///                    INTERNAL FUNCTIONS                    ///
     ////////////////////////////////////////////////////////////////
+    /// @notice Forces the harvest of a
+    /// @param harvester user that will get extra shares for harvesting
+    /// @dev it should never revert to ensure users can always deposit
+    function _forceOneHarvest(address harvester)
+        internal
+        returns (address strategy, bool success, bytes memory reason)
+    {
+        uint256 l = withdrawalQueue.length;
+        address[MAXIMUM_STRATEGIES] memory strats = withdrawalQueue;
+        // find the first strategy that is in autopilot
+        uint8 i = nexHarvestStrategyIndex > l - 1 ? 0 : nexHarvestStrategyIndex;
+        bool strategyFound;
+        for (i; i < l;) {
+            if (strategies[strats[i]].autoPilot) {
+                strategy = strats[i];
+                strategyFound = true;
+                break;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        // if the strategy we will harvest is the last of the array or its out of bounds
+        // because of some change in the withdrawal queue
+        // set it back to the first index(0) of the array
+        unchecked {
+            if (i >= l - 1 || strats[i + 1] == address(0)) {
+                nexHarvestStrategyIndex = 0;
+            } else {
+                nexHarvestStrategyIndex = ++i;
+            }
+        }
+
+        // if there are no strategies to harvest return
+        if (!strategyFound) return (strategy, true, reason);
+
+        // use try/catch so deposits always succeed
+        // and next index is updated
+        try IStrategy(strategy).harvest(0, 0, 0, harvester) {
+            success = true;
+        } catch (bytes memory _reason) {
+            reason = _reason;
+            success = false;
+        }
+    }
 
     /// @notice Reports a strategy loss, adjusting the corresponding vault and strategy parameters
     /// to minimize trust in the strategy
@@ -383,7 +446,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Issues new shares to cover performance, management and strategist fees
     /// @param strategy The strategy reporting the gain
     /// @return the total fees (performance + management + strategist) extracted from the gain
-    function _assessFees(address strategy, uint256 gain) internal returns (uint256) {
+    function _assessFees(address strategy, uint256 gain, address managementFeeReceiver) internal returns (uint256) {
         bool success;
         uint256 slot0Content;
         assembly ("memory-safe") {
@@ -485,7 +548,16 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Treasury earns remaining shares (performance fee + management fee + any dust leftover from flooring math above)
             uint256 cachedBalance = balanceOf(address(this));
             if (cachedBalance != 0) {
-                address(this).safeTransfer(treasury, cachedBalance);
+                // if the harvest was triggered by a regular user send management fee to
+                // the user that endured the harvest
+                if (managementFeeReceiver != address(0)) {
+                    address(this).safeTransfer(managementFeeReceiver, cachedBalance * computedManagementFee / totalFee);
+                    cachedBalance = balanceOf(address(this));
+                }
+                // transfer the rest of it to the treasury
+                if (cachedBalance != 0) {
+                    address(this).safeTransfer(treasury, cachedBalance);
+                }
             }
         }
 
@@ -1093,10 +1165,19 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             let m := shr(96, not(0))
             log3(0x00, 0x40, _DEPOSIT_EVENT_SIGNATURE, and(m, by), and(m, to))
         }
+        // if autipilot is enabled and > 1 week from last harvest check if there is any strategy in autopilot
+        // and harvest one strategy
+        if (autoPilotEnabled && lastReport + AUTOPILOT_HARVEST_INTERVAL < block.timestamp) {
+            // `to` will receive the extra shares from the management fees
+            (address strategy, bool success, bytes memory reason) = _forceOneHarvest(to);
+            if (!success) {
+                emit ForceHarvestFailed(strategy, reason);
+            }
+        }
     }
+
     /// @notice Burns `shares` from `owner` and sends exactly `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
-
     function withdraw(uint256 assets, address to, address owner)
         public
         override
@@ -1410,11 +1491,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// The next time the strategy will harvest, it will pay back the debt in an attempt to adjust to the new debt limit.
     /// @param debtPayment Amount Strategy has made available to cover outstanding debt
     /// @return debt Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
-    function report(uint128 realizedGain, uint128 unrealizedGain, uint128 loss, uint128 debtPayment)
-        external
-        checkRoles(STRATEGY_ROLE)
-        returns (uint256)
-    {
+    function report(
+        uint128 realizedGain,
+        uint128 unrealizedGain,
+        uint128 loss,
+        uint128 debtPayment,
+        address managementFeeReceiver
+    ) external checkRoles(STRATEGY_ROLE) returns (uint256) {
         // Cache underlying asset
         address underlying = asset();
         // Cache strategy balance
@@ -1440,7 +1523,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             _reportLoss(msg.sender, loss);
         }
 
-        uint256 totalFees = _assessFees(msg.sender, uint256(unrealizedGain));
+        uint256 totalFees = _assessFees(msg.sender, uint256(unrealizedGain), managementFeeReceiver);
 
         // Set gain returns as realized gains for the vault
         strategies[msg.sender].strategyTotalRealizedGain += realizedGain;
@@ -1975,6 +2058,28 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             mstore(0x00, _treasury)
             log1(0x00, 0x20, _TREASURY_UPDATED_EVENT_SIGNATURE)
         }
+    }
+
+    /// @notice Enables or disables the autopilot mode, that allows for automated harvesting
+    /// of strategies from the vault
+    /// If autopilot is enabled:
+    /// 1. Strategies can switch to autopilot mode
+    /// 2. Every week ,when one user deposits the vault with force the harvest of one strategy every time
+    /// 3. The depositing user that calls harvest will get extra shares as a reward for paying for the harvest gas
+    /// @param _autoPilotEnabled  If true, it is  activated, if false it is disabled
+    function setAutopilotEnabled(bool _autoPilotEnabled) external checkRoles(ADMIN_ROLE) {
+        autoPilotEnabled = _autoPilotEnabled;
+        assembly ("memory-safe") {
+            // Emit the `AutoPilotEnabled` event
+            mstore(0x00, _autoPilotEnabled)
+            log1(0x00, 0x20, _AUTOPILOT_ENABLED_EVENT_SIGNATURE)
+        }
+    }
+
+    /// @notice Switches the autopilot mode of a strategy
+    /// @param _autoPilot If true, set the strategy in autiopilot mode
+    function setAutoPilot(bool _autoPilot) external checkRoles(STRATEGY_ROLE) {
+        strategies[msg.sender].autoPilot = _autoPilot;
     }
 
     ////////////////////////////////////////////////////////////////

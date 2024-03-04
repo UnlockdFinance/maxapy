@@ -29,9 +29,13 @@ interface IMaxApyVaultV2 is IERC4626 {
         address receiver
     ) external returns (uint256 assets);
 
-    function report(uint128 realizedGain, uint128 unrealizedGain, uint128 loss, uint128 debtPayment)
-        external
-        returns (uint256);
+    function report(
+        uint128 realizedGain,
+        uint128 unrealizedGain,
+        uint128 loss,
+        uint128 debtPayment,
+        address managementFeeReceiver
+    ) external returns (uint256);
 
     /// Ownership
     function transferOwnership(address newOwner) external payable;
@@ -90,6 +94,10 @@ interface IMaxApyVaultV2 is IERC4626 {
 
     function emergencyShutdown() external returns (bool);
 
+    function nexHarvestStrategyIndex() external view returns (uint8);
+
+    function autoPilotEnabled() external returns (bool);
+
     /// Vault management
     function setEmergencyShutdown(bool _emergencyShutdown) external;
 
@@ -119,22 +127,22 @@ interface IMaxApyVaultV2 is IERC4626 {
 
     function setManagementFee(uint256 _managementFee) external;
 
-    function setLockedProfitDegradation(uint256 _lockedProfitDegradation) external;
-
     function setDepositLimit(uint256 _depositLimit) external;
 
     function setTreasury(address _treasury) external;
+
+    function setAutopilotEnabled(bool _autoPilotEnabled) external;
+
+    function setAutoPilot(bool _autoPilot) external;
 
     /// Vault view functions
     function performanceFee() external returns (uint256);
 
     function managementFee() external returns (uint256);
 
-    function lockedProfitDegradation() external view returns (uint256);
+    function AUTOPILOT_HARVEST_INTERVAL() external returns (uint256);
 
     function MAXIMUM_STRATEGIES() external returns (uint256);
-
-    function DEGRADATION_COEFFICIENT() external view returns (uint256);
 
     function debtOutstanding(address strategy) external view returns (uint256);
 
@@ -143,8 +151,6 @@ interface IMaxApyVaultV2 is IERC4626 {
     function totalAccountedAssets() external view returns (uint256);
 
     function lastReport() external view returns (uint256);
-
-    function lockedProfit() external view returns (uint256);
 
     function treasury() external view returns (address);
 
