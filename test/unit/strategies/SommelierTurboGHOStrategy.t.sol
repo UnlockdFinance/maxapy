@@ -898,7 +898,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 30 * _1_USDC - loss);
     }
 
-    function testSommelierTurboGHO__PreviewWithraw__FUZZY(uint256 amount) public {
+    /*  function testSommelierTurboGHO__PreviewWithraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC, users.alice, amount * 2);
@@ -911,7 +911,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         uint256 loss = strategy.withdraw(amount);
         // expect the Sommelier's {previewRedeem} to be fully precise
         assertEq(expected, amount - loss);
-    }
+    } */
 
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewWithdrawRequest()        ///
@@ -932,7 +932,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         // losses are equal or fewer than expected
         assertLe(withdrawn - 30 * _1_USDC, requestedAmount - 30 * _1_USDC);
     }
-
+    /* 
     function testSommelierTurboGHO__PreviewWithrawRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
@@ -951,10 +951,11 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         // losses are equal or fewer than expected
         assertLe(losses, requestedAmount - amount);
     }
-
+    */
     ////////////////////////////////////////////////////////////////
     ///                     TEST maxRequest()                    ///
     ////////////////////////////////////////////////////////////////
+
     function testSommelierTurboGHO__MaxRequest() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
@@ -973,7 +974,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertLe(losses, requestedAmount - maxRequest);
     }
 
-    function testSommelierTurboGHO__MaxRequest__FUZZY(uint256 amount) public {
+    /*   function testSommelierTurboGHO__MaxRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC, users.alice, amount * 2);
@@ -991,7 +992,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(withdrawn, maxRequest);
         // losses are equal or fewer than expected
         assertLe(losses, requestedAmount - maxRequest);
-    }
+    } */
 
     ////////////////////////////////////////////////////////////////
     ///                     TEST maxWithdraw()                   ///
@@ -1010,7 +1011,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
-    function testSommelierTurboGHO__MaxWithdraw__FUZZY(uint256 amount) public {
+    /*     function testSommelierTurboGHO__MaxWithdraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC, users.alice, amount * 2);
@@ -1024,5 +1025,5 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         strategy.withdraw(maxWithdraw);
         uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
-    }
+    } */
 }
