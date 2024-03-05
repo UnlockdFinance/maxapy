@@ -22,7 +22,10 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
     /// @notice Ethereum mainnet's Ajna Token
     IERC20 public constant ajna = IERC20(0x9a96ec9B57Fb64FbC60B423d1f4da7691Bd35079);
     /// @notice Router to perform AJNA-WETH swaps
-    IRouter public router;
+    IRouter public constant router = IRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
+
+    /// @notice The staking contract to stake the vault shares
+    IStakingRewardsMulti public constant yearnStakingRewards = IStakingRewardsMulti(0x0Ed535037c013c3628512980C169Ed59Eb805B49);
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
@@ -70,9 +73,6 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
     /// @notice The Yearn Vault the strategy interacts with
     IYVaultV3 public yVault;
 
-    /// @notice The staking contract to stake the vault shares
-    IStakingRewardsMulti public yearStakingRewards;
-
     /// @notice The maximum single trade allowed in the strategy
     uint256 public maxSingleTrade;
 
@@ -104,12 +104,11 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
 
         /// Perform needed approvals
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
-        underlyingAsset.safeApprove(address(router), type(uint256).max);
         address(ajna).safeApprove(address(router), type(uint256).max);
-        address(_yVault).safeApprove(address(yearStakingRewards), type(uint256).max);
+        address(_yVault).safeApprove(address(yearnStakingRewards), type(uint256).max);
 
         minSingleTrade = 1e4;
-        minSingleTrade = 1_000e18;
+        maxSingleTrade = 1_000e18;
 
         minSwapAjna = 1e18;
     }
@@ -256,19 +255,28 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
+    function _prepareReturn(uint256 debtOutstanding,uint256 minExpectedBalance, uint256 harvestedProfitBPS)
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
         // unwind extra staking rewards
-        IStakingRewardsMulti rewardPool = yearStakingRewards;
+        IStakingRewardsMulti rewardPool = yearnStakingRewards;
         _unwindRewards(rewardPool);
 
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
         uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
+
+        assembly {
+            // If current underlying balance after swapping does not match swap output expectations, revert
+            if gt(minExpectedBalance, underlyingBalance) {
+                // throw the `MinExpectedBalanceAfterSwapNotReached` error
+                mstore(0x00, 0xf52187c0)
+                revert(0x1c, 0x04)
+            }
+        }
 
         uint256 debt;
         assembly {
@@ -380,7 +388,7 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
         uint256 shares = yVault.deposit(amount, address(this));
-
+        
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
             if lt(shares, minOutputAfterInvestment) {
@@ -391,6 +399,8 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
         }
 
         depositedAmount = _shareValue(shares);
+
+        yearnStakingRewards.stake(shares);
 
         assembly {
             // Emit the `Invested` event
@@ -407,8 +417,9 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
     /// but in terms of yvault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal returns (uint256 withdrawn) {
-        yearStakingRewards.withdraw(shares);
+        yearnStakingRewards.withdraw(shares);
         withdrawn = yVault.redeem(shares, address(this), address(this));
+        emit Divested(address(this), shares, withdrawn);
     }
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
@@ -452,7 +463,7 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
     /// @dev This function is used during emergency exit instead of `_prepareReturn()` to
     /// liquidate all of the Strategy's positions back to the MaxApy Vault.
     function _liquidateAllPositions() internal override returns (uint256 amountFreed) {
-        IStakingRewardsMulti rewardPool = yearStakingRewards;
+        IStakingRewardsMulti rewardPool = yearnStakingRewards;
         _unwindRewards(rewardPool);
         _divest(_shareBalance());
         amountFreed = _underlyingBalance();
@@ -460,9 +471,9 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
 
     /// @notice Claims rewards, converting them to `underlyingAsset`.
     /// @dev MinOutputAmounts are left as 0 and properly asserted globally on `harvest()`.
-    function _unwindRewards(IStakingRewardsMulti _yearStakingRewards) internal {
+    function _unwindRewards(IStakingRewardsMulti _yearnStakingRewards) internal {
         // Claim Ajna rewards
-        _yearStakingRewards.getReward();
+        _yearnStakingRewards.getReward();
 
         // Exchange Ajna <> WETH
         uint256 ajnaBalance = _ajnaBalance();
@@ -508,7 +519,7 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
     /// @notice Returns the current strategy's amount of yearn vault shares
     /// @return _balance balance the strategy's balance of yearn vault shares
     function _shareBalance() internal view returns (uint256 _balance) {
-        return yearStakingRewards.balanceOf(address(this));
+        return yearnStakingRewards.balanceOf(address(this));
     }
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
