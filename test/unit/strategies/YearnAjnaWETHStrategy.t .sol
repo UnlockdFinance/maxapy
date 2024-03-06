@@ -40,7 +40,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
 
     function setUp() public override {
         super.setUp();
-        vm.rollFork(19267583);
+        vm.rollFork(19286475);
 
         TREASURY = makeAddr("treasury");
 
@@ -152,7 +152,6 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST setEmergencyExit()                ///
     ////////////////////////////////////////////////////////////////
-
     function testYearnAjnaWETH__SetEmergencyExit() public {
         /// Test unauthorized access with a user without privileges
         vm.stopPrank();
@@ -172,6 +171,36 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         emit StrategyEmergencyExitUpdated(address(strategy), 2);
         strategy.setEmergencyExit(2);
     }
+
+    ////////////////////////////////////////////////////////////////
+    ///                  TEST setMaxSingleTrade()                ///
+    ////////////////////////////////////////////////////////////////
+    function testYearnAjnaWETH__SetMaxSingleTrade() public {
+        /// Test unauthorized access with a user without privileges
+        vm.stopPrank();
+        vm.startPrank(users.bob);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        strategy.setMaxSingleTrade(1 ether);
+
+        /// Test unauthorized access with a user with `VAULT_ROLE`
+        vm.stopPrank();
+        vm.startPrank(address(vault));
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        strategy.setMaxSingleTrade(1 ether);
+
+        /// Test set 0 amount
+        vm.stopPrank();
+        vm.startPrank(users.alice);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAmount()"));
+        strategy.setMaxSingleTrade(0);
+
+        /// Test proper max single trade setting
+        vm.expectEmit();
+        emit MaxSingleTradeUpdated(1 ether);
+        strategy.setMaxSingleTrade(1 ether);
+        assertEq(strategy.maxSingleTrade(), 1 ether);
+    }
+
 
     ////////////////////////////////////////////////////////////////
     ///                  TEST setMinSingleTrade()                ///
@@ -550,6 +579,28 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     }
 
     ////////////////////////////////////////////////////////////////
+    ///                   TEST _unwindRewards()                  ///
+    ////////////////////////////////////////////////////////////////
+    function testYearnAjnaWETH__UnwindRewards() public {
+        /// Perform 10 ETH investment without rewards
+        deal({token: WETH, to: address(strategy), give: 1000 ether});
+        vm.expectEmit();
+        emit Invested(address(strategy), 1000 ether);
+        strategy.invest(1000 ether, 0);
+
+        strategy.unwindRewards();
+        assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
+
+        /// Expect rewards in AJNA
+        vm.warp(block.timestamp + 10 days);
+
+        assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
+        strategy.unwindRewards();
+        assertEq(IERC20(implementation.ajna()).balanceOf(address(strategy)), 0);
+        assertGt(IERC20(WETH).balanceOf(address(strategy)), 0);
+    }
+
+    ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
     function testYearnAjnaWETH__Harvest_Negatives() public {
@@ -610,7 +661,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
 
         uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         /// 2. Strategy takes 10 ETH profit
 
@@ -649,7 +700,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
         /// the strategy reinvests all the profit
         uint256 shares = strategy.sharesForAmount(10 ether);
-        assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares);
+        assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), expectedStrategyShareBalance + shares);
 
         vm.revertTo(beforeReportSnapshotId);
 
@@ -684,8 +735,8 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         /// vault balance doesnt increase at all                    // 4.52 ether
         assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether + 4.523 ether);
         /// the strategy reinvests the profit partially          // 5.477 ether
-        shares = strategy.sharesForAmount(5.477000000000000001 ether);
-        assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares);
+        shares = strategy.sharesForAmount(5.477 ether);
+        assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), expectedStrategyShareBalance + shares);
 
         vm.revertTo(snapshotId);
 
@@ -829,9 +880,9 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         /// - 30% of 90 ETH = 27 ETH, but strategy still has 30 ETH -> there is a debt outstanding of 3 ETH
         /// Fake loss in strategy
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
-
+        strategy.divest(expectedShares);
         vm.startPrank(address(strategy));
-        IERC20(stakingRewards).transfer(makeAddr("random"), expectedShares);
+        IERC20(WETH).transfer(makeAddr("random"), 10 ether  );
 
         vm.startPrank(users.keeper);
         vm.expectEmit();
@@ -840,24 +891,24 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
             0,
             /// vault gain,
             0,
-            9.999999999999999999 ether,
-            /// vault loss - 9.999999999999999999 ether
+            10 ether,
+            /// vault loss - 10 ether
             0,
             /// vault debtPayment
             0,
             /// strategy gain
-            9.999999999999999999 ether,
+            10 ether,
             /// strategy loss - 10 ETH
-            30 ether + 1,
+            30 ether,
             /// strategy total debt: 10 ETH less than initial debt
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
-            3001
+            3000
         );
         /// debtratio reduced
 
         vm.expectEmit();
-        emit Harvested(0, 9.999999999999999999 ether, 0, 2.991000000000000001 ether);
+        emit Harvested(0, 10 ether, 0, 3 ether);
         /// 10 ETH loss
         /// if we request to harvest only 30% of profit it wont have any effect neither,
         /// since the strategy has loses only
@@ -865,11 +916,11 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
 
         StrategyData memory data = vault.strategies(address(strategy));
 
-        assertEq(vault.debtRatio(), 3001);
-        assertEq(vault.totalDebt(), 30 ether + 1);
-        assertEq(data.strategyDebtRatio, 3001);
-        assertEq(data.strategyTotalDebt, 30 ether + 1);
-        assertEq(data.strategyTotalLoss, 9.999999999999999999 ether);
+        assertEq(vault.debtRatio(), 3000);
+        assertEq(vault.totalDebt(), 30 ether);
+        assertEq(data.strategyDebtRatio, 3000);
+        assertEq(data.strategyTotalDebt, 30 ether);
+        assertEq(data.strategyTotalLoss, 10 ether);
 
         vm.expectEmit();
         emit StrategyReported(
@@ -877,40 +928,40 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
             0,
             /// vault gain,
             0,
-            1,
+            0,
             /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt should be 27 ETH but was 30 ETH), causing 1 wei loss
-            2.991 ether,
+            3 ether,
             /// vault debtPayment (3 ETH - 1 wei loss)
             0,
             /// strategy gain
             10 ether,
             /// strategy loss - 10 ETH previously lost + 1 wei loss
-            27.009 ether,
+            27 ether,
             /// strategy total debt: 27 ETH, back to regular values
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
-            3001
+            3000
         );
         /// debtratio: 30% of funds shared with strategy
 
         vm.expectEmit();
-        emit Harvested(0, 1 wei, 2.991 ether, 0);
+        emit Harvested(0, 0, 3 ether, 0);
         /// 10 ETH loss
 
         uint256 vaultBalanceBefore = IERC20(WETH).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(stakingRewards).balanceOf(address(strategy));
-        uint256 expectedShareDecrease = strategy.sharesForAmount(2.991 ether);
+        uint256 expectedShareDecrease = strategy.sharesForAmount(3 ether);
         // here requesting 20% wont have any effect neither
         strategy.harvest(0, 0, 2000, address(0));
 
         data = vault.strategies(address(strategy));
 
-        assertEq(vault.debtRatio(), 3001);
-        assertEq(vault.totalDebt(), 27.009 ether);
-        assertEq(data.strategyDebtRatio, 3001);
-        assertEq(data.strategyTotalDebt, 27.009 ether);
+        assertEq(vault.debtRatio(), 3000);
+        assertEq(vault.totalDebt(), 27 ether);
+        assertEq(data.strategyDebtRatio, 3000);
+        assertEq(data.strategyTotalDebt, 27 ether);
         assertEq(data.strategyTotalLoss, 10 ether);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), vaultBalanceBefore + 2.991 ether);
+        assertEq(IERC20(WETH).balanceOf(address(vault)), vaultBalanceBefore + 3 ether);
         assertLe(
             IERC20(stakingRewards).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
         );

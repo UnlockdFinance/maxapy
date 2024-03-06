@@ -22,7 +22,7 @@ contract YearnAjnaWETHStrategy is BaseStrategy {
     /// @notice Ethereum mainnet's Ajna Token
     IERC20 public constant ajna = IERC20(0x9a96ec9B57Fb64FbC60B423d1f4da7691Bd35079);
     /// @notice Router to perform AJNA-WETH swaps
-    IRouter public constant router = IRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
+    IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     /// @notice The staking contract to stake the vault shares
     IStakingRewardsMulti public constant yearnStakingRewards = IStakingRewardsMulti(0x0Ed535037c013c3628512980C169Ed59Eb805B49);
