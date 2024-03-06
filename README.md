@@ -33,18 +33,23 @@ src
 ├─ strategies
     ├─ base
         ├─ BaseStrategy — "Base vault strategy implementation"
-    ├─ USDC — "USDC strategies" 
-        ├─ sommelier — "Stratgies interacting with Sommelier Finance"
-            ├─SommelierTurboGHOStrategy
-    ├─ WETH — "Wrapped Ether strategies" 
-        ├─ convex — "Strategies interacting with Convex Finance"
-            ├─ConvexdETHFrxETHStrategy 
-        ├─ sommelier — "Stratgies interacting with Sommelier Finance"
-            ├─SommelierMorphoEthMaximizerStrategy
-            ├─SommelierStEthDepositTurboStEthStrategy
-            ├─SommelierTurboStEthStrategy
-        ├─ yearn — "Strategies interacting with Yearn Finance"
-            ├─YearnWETHStrategy
+    ├─ mainnet — "Mainent chain strategies" 
+        ├─ USDC — "USDC strategies" 
+            ├─ sommelier — "Stratgies interacting with Sommelier Finance"
+                ├─SommelierTurboGHOStrategy
+        ├─ WETH — "Wrapped Ether strategies" 
+            ├─ convex — "Strategies interacting with Convex Finance"
+                ├─ConvexdETHFrxETHStrategy 
+            ├─ sommelier — "Stratgies interacting with Sommelier Finance"
+                ├─SommelierMorphoEthMaximizerStrategy
+                ├─SommelierStEthDepositTurboStEthStrategy
+                ├─SommelierTurboStEthStrategy
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnWETHStrategy
+                ├─YearnAjnaWETHStakingStrategy
+    ├─ polygon — "Polygon chain strategies" 
+        ├─ USDC — "USDC strategies" 
+                ├─YearnMaticUSDCStakingStrategy
 ├─ MaxApyVaultV2 — "Yield farming vault"
 ```
 
