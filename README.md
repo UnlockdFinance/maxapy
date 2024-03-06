@@ -24,6 +24,8 @@ src
     ├─ IUniswap
     ├─ IWrappedTokenGateway
     ├─ IYearnStrategy
+    ├─ IStakingRewardsMulti
+    ├─ IYVaultV3
 ├─ lib
     ├─ ERC20 — "Abstract ERC20 implementation"
     ├─ Initializable — "Base contract for proxy initialization"
