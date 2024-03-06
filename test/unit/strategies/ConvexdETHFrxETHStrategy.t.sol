@@ -15,7 +15,7 @@ import {IUniswapV2Router02 as IRouter} from "src/interfaces/IUniswap.sol";
 
 import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
 import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {ConvexdETHFrxETHStrategy} from "src/strategies/WETH/convex/ConvexdETHFrxETHStrategy.sol";
+import {ConvexdETHFrxETHStrategy} from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
 import {ConvexdETHFrxETHStrategyEvents} from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
 import {ConvexPools} from "../../helpers/ConvexPools.sol";
 import {ConvexdETHFrxETHStrategyWrapper} from "../../mock/ConvexdETHFrxETHStrategyWrapper.sol";
@@ -49,13 +49,13 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     ///                      SETUP                               ///
     ////////////////////////////////////////////////////////////////
 
-    function setUp() public override {
-        super.setUp();
+    function setUp() public {
+        super._setUp("MAINNET");
 
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVaultV2
-        vaultDeployment = new MaxApyVaultV2(WETH, "MaxApyWETHVault", "maxWETH", TREASURY);
+        vaultDeployment = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
 
         vault = IMaxApyVaultV2(address(vaultDeployment));
 
@@ -86,7 +86,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy = IStrategyWrapper(address(_proxy));
 
         /// Alice approves vault for deposits
-        IERC20(WETH).approve(address(vault), type(uint256).max);
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
     }
 
     /*==================INITIALIZATION TESTS==================*/
@@ -97,7 +97,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     function testConvexdETHFrxETH__Initialization() public {
         /// *************** Convex Strategy initialization *************** ///
         /// Deploy MaxApyVaultV2
-        MaxApyVaultV2 _vault = new MaxApyVaultV2(WETH, "MaxApyWETHVault", "maxWETH", TREASURY);
+        MaxApyVaultV2 _vault = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
 
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
@@ -133,9 +133,9 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         /// Assert maxapy vault obtains `VAULT_ROLE`
         assertEq(_strategy.hasAnyRole(address(_vault), _strategy.VAULT_ROLE()), true);
         /// Assert underlying asset is set to WETH
-        assertEq(_strategy.underlyingAsset(), WETH);
+        assertEq(_strategy.underlyingAsset(), WETH_MAINNET);
         /// Assert strategy has approved vault to transfer underlying
-        assertEq(IERC20(WETH).allowance(address(_strategy), address(_vault)), type(uint256).max);
+        assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), address(_vault)), type(uint256).max);
         /// Assert keeper user has `KEEPER_ROLE` granted
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         /// Assert alice (deployer) has `ADMIN_ROLE` granted and is owner
@@ -248,7 +248,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
-        deal(WETH, address(strategy), 1 ether);
+        deal(WETH_MAINNET, address(strategy), 1 ether);
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
@@ -258,10 +258,10 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         strategy.liquidateAllPositions();
         vm.startPrank(address(strategy));
-        IERC20(WETH).transfer(makeAddr("random"), IERC20(WETH).balanceOf(address(strategy)));
+        IERC20(WETH_MAINNET).transfer(makeAddr("random"), IERC20(WETH_MAINNET).balanceOf(address(strategy)));
         assertEq(strategy.isActive(), false);
         /* 
-        deal(WETH, address(strategy), 1 ether);
+        deal(WETH_MAINNET, address(strategy), 1 ether);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         assertEq(strategy.isActive(), true); */
@@ -340,7 +340,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         address[] memory path = new address[](2);
         path[0] = address(crv);
-        path[1] = WETH;
+        path[1] = WETH_MAINNET;
 
         uint256[] memory expectedAmountCrv =
             IRouter(strategy.router()).swapExactTokensForTokens(10 ether, 0, path, users.keeper, block.timestamp);
@@ -381,7 +381,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         address[] memory path = new address[](2);
         path[0] = address(crv);
-        path[1] = WETH;
+        path[1] = WETH_MAINNET;
 
         uint256[] memory expectedAmountCrv =
             IRouter(strategy.router()).swapExactTokensForTokens(10 ether, 0, path, users.keeper, block.timestamp);
@@ -455,7 +455,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         ///     - `loss` -> 0
         ///     - `debtPayment` -> 1 ether (value passed as `debtOutstanding`)
         snapshotId = vm.snapshot();
-        deal({token: WETH, to: address(strategy), give: 60 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 60 ether});
         /// Perform initial investment in convex from the strategy side
         strategy.adjustPosition();
 
@@ -528,7 +528,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         /// `profit` will be > than `underlyingBalance`, setting profit to balance value
         snapshotId = vm.snapshot();
 
-        deal({token: WETH, to: address(strategy), give: 80 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 80 ether});
 
         /// Perform initial investment in Convex from the strategy side
         strategy.adjustPosition();
@@ -565,7 +565,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 snapshotId = vm.snapshot();
 
         /// Perform 10 ETH investment
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         uint256 expectedLp = strategy.lpForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -578,7 +578,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         snapshotId = vm.snapshot();
 
         /// Perform 100 ETH investment
-        deal({token: WETH, to: address(strategy), give: 100 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 100 ether});
         expectedLp = strategy.lpForAmount(100 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 100 ether);
@@ -591,7 +591,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         snapshotId = vm.snapshot();
 
         /// Perform 500 ETH investment
-        deal({token: WETH, to: address(strategy), give: 500 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
         expectedLp = strategy.lpForAmount(500 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 500 ether);
@@ -621,7 +621,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 snapshotId = vm.snapshot();
 
         /// Perform 10 ETH investment
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         uint256 expectedLp = strategy.lpForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -636,7 +636,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         /// Check `maxSingleTrade` is selected as investment
         strategy.setMaxSingleTrade(1 ether);
         /// Perform 10 ETH investment
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         expectedLp = strategy.lpForAmount(1 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 1 ether);
@@ -651,7 +651,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     ////////////////////////////////////////////////////////////////
     function testConvexdETHFrxETH__Divest() public {
         /// Perform 10 ETH investment
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         uint256 expectedLp = strategy.lpForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -660,10 +660,10 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         /// not accurate estimation due to slippage and bonus loses, which will be obtained later in withdrawal
 
         /// Divest
-        uint256 strategyBalanceBefore = IERC20(WETH).balanceOf(address(strategy));
+        uint256 strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(strategy));
         uint256 amountDivested = strategy.divest(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)));
 
-        assertEq(IERC20(WETH).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -673,7 +673,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         /// Liquidate position where underlying balance can cover liquidation
         /// Scenario 1
 
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 ether);
         assertEq(liquidatedAmount, 1 ether);
         assertEq(loss, 0);
@@ -685,17 +685,17 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         /// Liquidate position where underlying balance can't cover liquidation
         /// Scenario 3
-        deal({token: WETH, to: address(strategy), give: 5 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 5 ether});
         uint256 invested = strategy.invest(5 ether, 0);
 
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         (liquidatedAmount, loss) = strategy.liquidatePosition(15 ether);
         assertGt(liquidatedAmount, 14.99 ether);
         /// Small loss expected due to conversion between underlying and LP
         assertLt(loss, 0.2 ether);
 
         /// Scenario 4
-        deal({token: WETH, to: address(strategy), give: 50 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 50 ether});
         invested = strategy.invest(50 ether, 0);
 
         (liquidatedAmount, loss) = strategy.liquidatePosition(50 ether);
@@ -712,7 +712,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 snapshotId = vm.snapshot();
 
         /// Perform 10 ETH investment
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         uint256 expectedLp = strategy.lpForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -721,18 +721,18 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertGt(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), expectedLp - 2 ether);
 
         /// Liquidate
-        uint256 strategyBalanceBefore = IERC20(WETH).balanceOf(address(strategy));
+        uint256 strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(strategy));
         uint256 amountFreed = strategy.liquidateAllPositions();
 
         assertGt(amountFreed, 9 ether);
 
-        assertEq(IERC20(WETH).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
 
         /// Perform 500 ETH investment
-        deal({token: WETH, to: address(strategy), give: 500 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
         expectedLp = strategy.lpForAmount(500 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 500 ether);
@@ -741,12 +741,12 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertGt(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), expectedLp - 50 ether);
 
         /// Liquidate
-        strategyBalanceBefore = IERC20(WETH).balanceOf(address(strategy));
+        strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
 
         assertGt(amountFreed, 9 ether);
 
-        assertEq(IERC20(WETH).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
     }
 
@@ -755,22 +755,22 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     ////////////////////////////////////////////////////////////////
     function testConvexdETHFrxETH__UnwindRewards() public {
         /// Perform 10 ETH investment without rewards
-        deal({token: WETH, to: address(strategy), give: 100 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 100 ether});
         vm.expectEmit();
         emit Invested(address(strategy), 100 ether);
         strategy.invest(100 ether, 0);
 
         strategy.unwindRewards();
-        assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Expect rewards in CVX, CRV
         vm.warp(block.timestamp + 30 days);
 
-        assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         strategy.unwindRewards();
         assertEq(IERC20(cvx).balanceOf(address(strategy)), 0);
         assertEq(IERC20(crv).balanceOf(address(strategy)), 0);
-        assertGt(IERC20(WETH).balanceOf(address(strategy)), 0);
+        assertGt(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -837,30 +837,30 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy.harvest(0, 0, 0, address(0));
 
         uint256 expectedStrategyLpBalance = strategy.lpForAmount(40 ether);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(WETH).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         /// 2. Strategy takes 10 ETH profit + cvx/crv rewards
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains + crv/cvx rewards)
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         vm.warp(block.timestamp + 1 days);
         uint256 beforeReportSnapshotId = vm.snapshot();
 
         /// Case #1: Harvest 100% of the profit
         strategy.harvest(0, 0, 10_000, address(0));
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 70.05469153805125749 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 70.05469153805125749 ether);
 
         vm.revertTo(beforeReportSnapshotId);
 
         /// Case #2: Harvest 50% of the profit
         strategy.harvest(0, 0, 5_000, address(0));
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 65.027345769025628745 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 65.027345769025628745 ether);
 
         vm.revertTo(beforeReportSnapshotId);
         /// Case #3: Harvest 0% of the profit
         strategy.harvest(0, 0, 0, address(0));
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
 
         vm.revertTo(snapshotId);
 
@@ -911,7 +911,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy.harvest(0, 0, 0, address(0));
 
         expectedStrategyLpBalance = strategy.lpForAmount(40 ether);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
 
         /// Step #2
         vm.startPrank(users.alice);
@@ -921,11 +921,11 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         vm.startPrank(users.keeper);
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
-        deal({token: WETH, to: address(strategy), give: 10 ether});
+        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, 2_000, address(0));
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 110.011279484032002561 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 110.011279484032002561 ether);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
@@ -970,7 +970,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         emit Harvested(0, 0, 0, 0);
         strategy.harvest(0, 0, 0, address(0));
 
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 60 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
 
         /// 2. Strategy loses 10 ETH
         /// - Expected a 1000 reduction in debt ratio, 30% of total funds should be in the strategy
@@ -982,7 +982,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         vm.startPrank(address(strategy));
         uint256 withdrawn = strategy.divest(expectedLp);
 
-        IERC20(WETH).transfer(makeAddr("random"), withdrawn);
+        IERC20(WETH_MAINNET).transfer(makeAddr("random"), withdrawn);
         vm.startPrank(users.keeper);
 
         /// 10 USDC loss
@@ -1014,7 +1014,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     /*     function testConvexdETHFrxETH__PreviewWithraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(WETH, users.alice, amount * 2);
+        deal(WETH_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0, address(this));
@@ -1038,9 +1038,9 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewWithdrawRequest(30 ether);
         vm.startPrank(address(vault));
-        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         strategy.requestWithdraw(30 ether);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, 30 ether);
         // losses are equal or fewer than expected
@@ -1050,16 +1050,16 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     /*  function testConvexdETHFrxETH__PreviewWithrawRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(WETH, users.alice, amount * 2);
+        deal(WETH_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);       
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0, address(this));
         vm.stopPrank();                                          
         uint256 requestedAmount = strategy.previewWithdrawRequest(amount);
         vm.startPrank(address(vault));
-        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         uint256 losses = strategy.requestWithdraw(amount);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore ;
         // withdraw exactly what requested 
         assertEq(withdrawn, amount);
         // losses are equal or fewer than expected
@@ -1077,11 +1077,11 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxRequest = strategy.maxRequest();
-        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         uint256 requestedAmount = strategy.previewWithdrawRequest(maxRequest);
         vm.startPrank(address(vault));
         uint256 losses = strategy.requestWithdraw(maxRequest);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, maxRequest);
         // losses are equal or fewer than expected
@@ -1091,17 +1091,17 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     /*     function testConvexdETHFrxETH__MaxRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(WETH, users.alice, amount * 2);
+        deal(WETH_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);       
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0, address(this));
         vm.stopPrank();                                                   
         uint256 maxRequest = strategy.maxRequest();
-        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         uint256 requestedAmount = strategy.previewWithdrawRequest(maxRequest);
         vm.startPrank(address(vault));
         uint256 losses = strategy.requestWithdraw(maxRequest);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore ;
         // withdraw exactly what requested 
         assertEq(withdrawn, maxRequest);
         // losses are equal or fewer than expected
@@ -1118,26 +1118,26 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxWithdraw();
-        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.withdraw(maxWithdraw);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
 
     /*     function testConvexdETHFrxETH__MaxWithdraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.00001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(WETH, users.alice, amount * 2);
+        deal(WETH_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0, address(this));
         vm.stopPrank();                                          
         uint256 maxWithdraw = strategy.maxWithdraw();
-        uint256 balanceBefore = IERC20(WETH).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.withdraw(maxWithdraw);
-        uint256 withdrawn = IERC20(WETH).balanceOf(address(vault)) - balanceBefore ;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore ;
         assertLe(withdrawn, maxWithdraw);
     } */
 }

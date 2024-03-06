@@ -22,9 +22,9 @@ import {ConvexdETHFrxETHStrategyEvents} from "../helpers/ConvexdETHFrxETHStrateg
 
 import {SommelierMorphoEthMaximizerStrategyWrapper} from "../mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
 import {SommelierMorphoEthMaximizerStrategy} from
-    "src/strategies/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
+    "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 
-import {SommelierTurboStEthStrategy} from "src/strategies/WETH/sommelier/SommelierTurboStEthStrategy.sol";
+import {SommelierTurboStEthStrategy} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import {SommelierTurboStEthStrategyWrapper} from "../mock/SommelierTurboStEthStrategyWrapper.sol";
 
 import {SommelierStEthDepositTurboStEthStrategyWrapper} from
@@ -58,7 +58,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     function _dealStEth(address give, uint256 wethIn) internal returns (uint256 stEthOut) {
         vm.deal(give, wethIn);
         stEthOut = ICurve(CURVE_POOL).exchange{value: wethIn}(0, 1, wethIn, 0);
-        IERC20(ST_ETH).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
+        IERC20(ST_ETH_MAINNET).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -78,13 +78,13 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ///                      SETUP                               ///
     ////////////////////////////////////////////////////////////////
 
-    function setUp() public override {
-        super.setUp();
+    function setUp() public {
+        super._setUp("MAINNET");
 
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVaultV2
-        MaxApyVaultV2 vaultDeployment = new MaxApyVaultV2(WETH, "MaxApyWETHVault", "maxApy", TREASURY);
+        MaxApyVaultV2 vaultDeployment = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
 
         vault = IMaxApyVaultV2(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -151,7 +151,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.label(CELLAR_STETH_MAINNET, "Cellar");
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         vm.label(address(proxy), "SommelierStEThDeposiTurbStEthStrategy");
-        vm.label(ST_ETH, "StETH");
+        vm.label(ST_ETH_MAINNET, "StETH");
 
         strategy3 = IStrategyWrapper(address(_proxy));
 
@@ -183,11 +183,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.addStrategy(address(strategy4), 2250, type(uint72).max, 0, 0);
 
         vm.rollFork(19267583);
-        vm.label(address(WETH), "WETH");
+        vm.label(address(WETH_MAINNET), "WETH");
         /// Alice approves vault for deposits
-        IERC20(WETH).approve(address(vault), type(uint256).max);
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
         vm.startPrank(users.bob);
-        IERC20(WETH).approve(address(vault), type(uint256).max);
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
         vm.stopPrank();
         vm.startPrank(users.alice);
     }
@@ -198,14 +198,14 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         uint256 sharesReturn = vault.deposit(20 ether, users.alice);
         assertEq(sharesReturn, expectedShares);
         assertEq(vault.balanceOf(users.alice), expectedShares);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 20 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 20 ether);
 
         /// 2. deposit when the vault has funds
         expectedShares = vault.previewDeposit(20 ether);
         sharesReturn = vault.deposit(20 ether, users.alice);
         assertEq(sharesReturn, expectedShares);
         assertEq(vault.balanceOf(users.alice), expectedShares * 2);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 40 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 40 ether);
     }
 
     function testMaxApyVaultV2_ERC4626__PreviewMint() public {
@@ -214,14 +214,14 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         uint256 assetsReturn = vault.mint(20 ether, users.alice);
         assertEq(assetsReturn, expectedAssets);
         assertEq(vault.balanceOf(users.alice), 20 ether);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), expectedAssets);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), expectedAssets);
 
         /// 2. mint when the vault has funds
         expectedAssets = vault.previewMint(20 ether);
         assetsReturn = vault.mint(20 ether, users.alice);
         assertEq(assetsReturn, expectedAssets);
         assertEq(vault.balanceOf(users.alice), 40 ether);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), expectedAssets * 2);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), expectedAssets * 2);
     }
 
     function testMaxApyVaultV2_ERC4626__PreviewRedeem() public {
@@ -231,7 +231,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         /// - Alice and Bob redeem
         uint256 sharesAlice = vault.deposit(20 ether, users.alice);
         // other uses deposits as well
-        deal(WETH, users.bob, 500 ether);
+        deal(WETH_MAINNET, users.bob, 500 ether);
         vm.startPrank(users.bob);
         uint256 sharesBob = vault.deposit(500 ether, users.bob);
         vm.stopPrank();
@@ -276,7 +276,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategy2.harvest(0, 0, 0, address(0));
         strategy3.harvest(0, 0, 0, address(0));
         strategy4.harvest(0, 0, 0, address(0));
-        deal(WETH, address(strategy1), 50 ether);
+        deal(WETH_MAINNET, address(strategy1), 50 ether);
         // forward time so lastReport timestamp is not the same
         skip(1);
         strategy1.harvest(0, 0, 0, address(0));
@@ -301,27 +301,27 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         /// - Alice and Bob withdraw
         vault.deposit(20 ether, users.alice);
         // other users deposits as well
-        deal(WETH, users.bob, 500 ether);
+        deal(WETH_MAINNET, users.bob, 500 ether);
 
         vm.startPrank(users.bob);
-        IERC20(WETH).approve(address(vault), type(uint256).max);
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
         vault.deposit(500 ether, users.bob);
         vm.stopPrank();
 
         vm.startPrank(users.alice);
         uint256 snapshotId = vm.snapshot();
         uint256 expectedShares = vault.previewWithdraw(20 ether);
-        uint256 balanceBefore = IERC20(WETH).balanceOf(users.alice);
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(users.alice);
         uint256 shares = vault.withdraw(20 ether, users.alice, users.alice);
-        uint256 transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
+        uint256 transferred = IERC20(WETH_MAINNET).balanceOf(users.alice) - balanceBefore;
         assertEq(transferred, 20 ether);
         assertLe(shares, expectedShares);
 
         vm.startPrank(users.bob);
         expectedShares = vault.previewWithdraw(400 ether);
-        balanceBefore = IERC20(WETH).balanceOf(users.bob);
+        balanceBefore = IERC20(WETH_MAINNET).balanceOf(users.bob);
         shares = vault.withdraw(400 ether, users.bob, users.bob);
-        transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
+        transferred = IERC20(WETH_MAINNET).balanceOf(users.bob) - balanceBefore;
         assertEq(transferred, 400 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
@@ -341,17 +341,17 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(18 ether);
-        balanceBefore = IERC20(WETH).balanceOf(users.alice);
+        balanceBefore = IERC20(WETH_MAINNET).balanceOf(users.alice);
         shares = vault.withdraw(18 ether, users.alice, users.alice);
-        transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
+        transferred = IERC20(WETH_MAINNET).balanceOf(users.alice) - balanceBefore;
         assertEq(transferred, 18 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
         expectedShares = vault.previewWithdraw(400 ether);
-        balanceBefore = IERC20(WETH).balanceOf(users.bob);
+        balanceBefore = IERC20(WETH_MAINNET).balanceOf(users.bob);
         shares = vault.withdraw(400 ether, users.bob, users.bob);
-        transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
+        transferred = IERC20(WETH_MAINNET).balanceOf(users.bob) - balanceBefore;
         assertEq(transferred, 400 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
@@ -372,17 +372,17 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(19 ether);
-        balanceBefore = IERC20(WETH).balanceOf(users.alice);
+        balanceBefore = IERC20(WETH_MAINNET).balanceOf(users.alice);
         shares = vault.withdraw(19 ether, users.alice, users.alice);
-        transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
+        transferred = IERC20(WETH_MAINNET).balanceOf(users.alice) - balanceBefore;
         assertEq(transferred, 19 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
         expectedShares = vault.previewWithdraw(400 ether);
-        balanceBefore = IERC20(WETH).balanceOf(users.bob);
+        balanceBefore = IERC20(WETH_MAINNET).balanceOf(users.bob);
         shares = vault.withdraw(400 ether, users.bob, users.bob);
-        transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
+        transferred = IERC20(WETH_MAINNET).balanceOf(users.bob) - balanceBefore;
         assertEq(transferred, 400 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
@@ -394,8 +394,8 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.deposit(20 ether, users.alice);
         // other users deposits as well
         vm.startPrank(users.bob);
-        deal(WETH, users.bob, amount * 2);
-        IERC20(WETH).approve(address(vault), type(uint256).max);
+        deal(WETH_MAINNET, users.bob, amount * 2);
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
         vault.deposit(amount * 2, users.bob);
         vm.stopPrank();
 
@@ -404,22 +404,22 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategy2.harvest(0, 0, 0, address(0));
         strategy3.harvest(0, 0, 0, address(0));
         strategy4.harvest(0, 0, 0, address(0));
-        deal(WETH, address(strategy1), 50 ether);
+        deal(WETH_MAINNET, address(strategy1), 50 ether);
         vm.stopPrank();
 
         vm.startPrank(users.alice);
         uint256 expectedShares = vault.previewWithdraw(19 ether);
-        uint256 balanceBefore = IERC20(WETH).balanceOf(users.alice);
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(users.alice);
         uint256 shares = vault.withdraw(19 ether, users.alice, users.alice);
-        uint256 transferred = IERC20(WETH).balanceOf(users.alice) - balanceBefore;
+        uint256 transferred = IERC20(WETH_MAINNET).balanceOf(users.alice) - balanceBefore;
         assertEq(transferred, 19 ether);
         assertLe(shares, expectedShares);
         vm.stopPrank();
         vm.startPrank(users.bob);
         expectedShares = vault.previewWithdraw(amount);
-        balanceBefore = IERC20(WETH).balanceOf(users.bob);
+        balanceBefore = IERC20(WETH_MAINNET).balanceOf(users.bob);
         shares = vault.withdraw(amount, users.bob, users.bob);
-        transferred = IERC20(WETH).balanceOf(users.bob) - balanceBefore;
+        transferred = IERC20(WETH_MAINNET).balanceOf(users.bob) - balanceBefore;
         assertEq(transferred, amount);
         assertLe(shares, expectedShares);
         vm.stopPrank();
@@ -433,7 +433,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(strategy1.lastEstimatedTotalAssets(), 0);
 
         // sending assets directly to the vault won't work
-        deal(WETH, address(vault), 500 ether);
+        deal(WETH_MAINNET, address(vault), 500 ether);
         assertEq(vault.sharePrice(), 1 ether);
 
         // share price might slightly decrease after investing
@@ -445,7 +445,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
 
         // sending assets directly to the strategy won't work
-        deal(WETH, address(strategy1), 5 ether);
+        deal(WETH_MAINNET, address(strategy1), 5 ether);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         skip(1);
         strategy1.harvest(0, 0, 0, address(0));
@@ -463,7 +463,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     }
 
     function testMaxApyVaultV2_AutoPilot() public {
-        MockRevertingStrategy revertingStrategy = new MockRevertingStrategy(address(vault), WETH);
+        MockRevertingStrategy revertingStrategy = new MockRevertingStrategy(address(vault), WETH_MAINNET);
         vault.addStrategy(address(revertingStrategy), 500, type(uint72).max, 0, 0);
         vault.setAutopilotEnabled(true);
         revertingStrategy.setAutopilot(true);
@@ -475,7 +475,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         emit ForceHarvestFailed(address(revertingStrategy), abi.encodeWithSignature("HarvestFailed()"));
         uint256 expectedShares = vault.previewDeposit(20 ether);
         vault.deposit(20 ether, users.alice);
-        assertEq(IERC20(WETH).balanceOf(address(vault)), 20 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 20 ether);
         assertEq(IERC20(address(vault)).balanceOf(users.alice), expectedShares);
         // the report didnt happen
         assertEq(vault.lastReport(), lastReport);
@@ -486,7 +486,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // simulate fake gains
         uint256 yVaultShares = IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy1));
         uint256 yVaultProfit = strategy1.shareValue(yVaultShares) - strategy1.lastEstimatedTotalAssets();
-        deal(WETH, address(strategy1), 10 ether);
+        deal(WETH_MAINNET, address(strategy1), 10 ether);
         uint256 expectedManagementFee = (10 ether + yVaultProfit) * vault.managementFee() / MAX_BPS;
         expectedShares = vault.convertToShares(expectedManagementFee); // 2% management fee
         expectedShares += vault.previewDeposit(20 ether);

@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {
     YearnAjnaWETHStakingStrategy, SafeTransferLib
-} from "src/strategies/WETH/yearn/YearnAjnaWETHStakingStrategy.sol";
+} from "src/strategies/mainnet/WETH/yearn/YearnAjnaWETHStakingStrategy.sol";
 
 contract YearnAjnaWETHStakingStrategyWrapper is YearnAjnaWETHStakingStrategy {
     using SafeTransferLib for address;

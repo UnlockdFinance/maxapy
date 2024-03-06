@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {
     SommelierMorphoEthMaximizerStrategy,
     SafeTransferLib
-} from "src/strategies/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
+} from "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 
 contract SommelierMorphoEthMaximizerStrategyWrapper is SommelierMorphoEthMaximizerStrategy {
     using SafeTransferLib for address;

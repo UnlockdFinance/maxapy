@@ -14,7 +14,7 @@ import {ICellar} from "src/interfaces/ICellar.sol";
 import {SommelierTurboGHOStrategyWrapper} from "../../mock/SommelierTurboGHOStrategyWrapper.sol";
 import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
 import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {SommelierTurboGHOStrategy} from "src/strategies/USDC/sommelier/SommelierTurboGHOStrategy.sol";
+import {SommelierTurboGHOStrategy} from "src/strategies/mainnet/USDC/sommelier/SommelierTurboGHOStrategy.sol";
 import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
 
 contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
@@ -40,13 +40,13 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     ///                      SETUP                               ///
     ////////////////////////////////////////////////////////////////
 
-    function setUp() public override {
-        super.setUp();
+    function setUp() public {
+        super._setUp("MAINNET");
 
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVaultV2
-        vaultDeployment = new MaxApyVaultV2(USDC, "MaxApyUSDCVault", "maxApy", TREASURY);
+        vaultDeployment = new MaxApyVaultV2(USDC_MAINNET, "MaxApyUSDCVault", "maxApy", TREASURY);
 
         vault = IMaxApyVaultV2(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -72,13 +72,13 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vm.label(CELLAR_USDC_MAINNET, "Cellar");
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         vm.label(address(proxy), "SommelierTurboGHOStrategy");
-        vm.label(address(USDC), "USDC");
+        vm.label(address(USDC_MAINNET), "USDC");
 
         strategy = IStrategyWrapper(address(_proxy));
 
         /// Alice approves vault for deposits
-        IERC20(USDC).approve(address(vault), 0);
-        IERC20(USDC).approve(address(vault), type(uint256).max);
+        IERC20(USDC_MAINNET).approve(address(vault), 0);
+        IERC20(USDC_MAINNET).approve(address(vault), type(uint256).max);
         vm.rollFork(19289445);
     }
 
@@ -91,7 +91,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     function testSommelierTurboGHO__Initialization() public {
         /// *************** sommelier Strategy initialization *************** ///
         /// Deploy MaxApyVaultV2
-        MaxApyVaultV2 _vault = new MaxApyVaultV2(USDC, "MaxApyUSDCVault", "maxUSDC", TREASURY);
+        MaxApyVaultV2 _vault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyUSDCVault", "maxUSDC", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation
@@ -123,9 +123,9 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// Assert maxapy vault obtains `VAULT_ROLE`
         assertEq(_strategy.hasAnyRole(_strategy.vault(), _strategy.VAULT_ROLE()), true);
         /// Assert underlying asset is set to USDC
-        assertEq(_strategy.underlyingAsset(), USDC);
+        assertEq(_strategy.underlyingAsset(), USDC_MAINNET);
         /// Assert strategy has approved vault to transfer underlying
-        assertEq(IERC20(USDC).allowance(address(_strategy), address(_vault)), type(uint256).max);
+        assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), address(_vault)), type(uint256).max);
         /// Assert keeper user has `KEEPER_ROLE` granted
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         /// Assert alice (deployer) has `ADMIN_ROLE` granted
@@ -135,7 +135,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// Assert underlying asset is set to CELLAR_USDC_MAINNET
         assertEq(_strategy.cellar(), CELLAR_USDC_MAINNET);
         /// Assert strategy has approved cellar to transfer underlying
-        assertEq(IERC20(USDC).allowance(address(_strategy), CELLAR_USDC_MAINNET), type(uint256).max);
+        assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), CELLAR_USDC_MAINNET), type(uint256).max);
 
         /// *************** Proxy values *************** ///
         /// Assert proxy admin contract owner is set to deployer (alice)
@@ -181,7 +181,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
-        deal(USDC, address(strategy), 1 * _1_USDC);
+        deal(USDC_MAINNET, address(strategy), 1 * _1_USDC);
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
@@ -191,10 +191,10 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
 
         strategy.divest(ICellar(CELLAR_USDC_MAINNET).balanceOf(address(strategy)));
         vm.startPrank(address(strategy));
-        IERC20(USDC).transfer(makeAddr("random"), IERC20(USDC).balanceOf(address(strategy)));
+        IERC20(USDC_MAINNET).transfer(makeAddr("random"), IERC20(USDC_MAINNET).balanceOf(address(strategy)));
         assertEq(strategy.isActive(), false);
 
-        deal(USDC, address(strategy), 1 * _1_USDC);
+        deal(USDC_MAINNET, address(strategy), 1 * _1_USDC);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         assertEq(strategy.isActive(), true);
@@ -297,7 +297,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         ///     - `debtPayment` -> 1 * _1_USDC (value passed as `debtOutstanding`)
         snapshotId = vm.snapshot();
 
-        deal({token: USDC, to: address(strategy), give: 60 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 60 * _1_USDC});
         /// Perform initial 60 USDC investment in sommelier from the strategy side
         strategy.investSommelier(60 * _1_USDC);
 
@@ -377,7 +377,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Perform 10 USDC investment
-        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         vm.expectEmit();
         emit Invested(address(strategy), 10 * _1_USDC);
@@ -385,7 +385,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)));
 
         /// Perform 100 USDC investment
-        deal({token: USDC, to: address(strategy), give: 100 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 100 * _1_USDC});
         expectedShares += strategy.sharesForAmount(100 * _1_USDC);
         vm.expectEmit();
         emit Invested(address(strategy), 100 * _1_USDC);
@@ -393,7 +393,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)));
 
         /// Perform 500 USDC investment
-        deal({token: USDC, to: address(strategy), give: 500 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 500 * _1_USDC});
         expectedShares += strategy.sharesForAmount(500 * _1_USDC);
         vm.expectEmit();
         emit Invested(address(strategy), 500 * _1_USDC);
@@ -415,7 +415,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         returned = strategy.invest(1, 0);
 
         /// Perform 10 USDC investment
-        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         vm.expectEmit();
         emit Invested(address(strategy), 10 * _1_USDC);
@@ -428,18 +428,18 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboGHO__Divest() public {
         /// Perform 1000 USDC investment
-        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         uint256 amountExpectedFromShares = strategy.shareValue(expectedShares);
         strategy.invest(10 * _1_USDC, 0);
         assertEq(expectedShares, IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)));
 
         /// Divest
-        uint256 strategyBalanceBefore = IERC20(USDC).balanceOf(address(strategy));
+        uint256 strategyBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(strategy));
         uint256 expectedAmountDivested = strategy.previewWithdraw(amountExpectedFromShares);
         uint256 amountDivested = strategy.divest(strategy.sharesForAmount(amountExpectedFromShares));
         assertEq(amountDivested, expectedAmountDivested, "divested");
-        assertEq(IERC20(USDC).balanceOf(address(strategy)) - strategyBalanceBefore, expectedAmountDivested, "balance");
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)) - strategyBalanceBefore, expectedAmountDivested, "balance");
     }
 
     ////////////////////////////////////////////////////////////////
@@ -449,7 +449,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     function testSommelierTurboGHO__LiquidatePosition() public {
         /// Liquidate position where underlying balance can cover liquidation
         /// Scenario 1
-        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
         (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 * _1_USDC);
         assertEq(liquidatedAmount, 1 * _1_USDC);
         assertEq(loss, 0);
@@ -461,10 +461,10 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
 
         /// Liquidate position where underlying balance can't cover liquidation
         /// Scenario 1
-        deal({token: USDC, to: address(strategy), give: 5 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 5 * _1_USDC});
         //
         strategy.invest(5 * _1_USDC, 0);
-        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
 
         (liquidatedAmount, loss) = strategy.liquidatePosition(15 * _1_USDC);
 
@@ -474,9 +474,9 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(loss, 15 * _1_USDC - expectedLiquidatedAmount);
 
         /// Scenario 2
-        deal({token: USDC, to: address(strategy), give: 1000 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 1000 * _1_USDC});
         strategy.invest(1000 * _1_USDC, 0);
-        deal({token: USDC, to: address(strategy), give: 500 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 500 * _1_USDC});
         (liquidatedAmount, loss) = strategy.liquidatePosition(1000 * _1_USDC);
 
         expectedLiquidatedAmount = 500 * _1_USDC + strategy.shareValue(strategy.sharesForAmount(500 * _1_USDC));
@@ -490,35 +490,35 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboGHO__LiquidateAllPositions() public {
         /// Perform 10 USDC investment
-        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         strategy.invest(10 * _1_USDC, 0);
         assertEq(expectedShares, IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)));
 
         /// Liquidate
-        uint256 strategyBalanceBefore = IERC20(USDC).balanceOf(address(strategy));
+        uint256 strategyBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(strategy));
 
         uint256 amountFreed = strategy.liquidateAllPositions();
         uint256 expectedAmountFreed = strategy.shareValue(strategy.sharesForAmount(10 * _1_USDC));
         assertEq(amountFreed, expectedAmountFreed);
         /// 1 wei loss divesting
-        assertEq(IERC20(USDC).balanceOf(address(strategy)), strategyBalanceBefore + expectedAmountFreed);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + expectedAmountFreed);
         /// 1 wei loss divesting
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Perform 500 USDC investment
-        deal({token: USDC, to: address(strategy), give: 500 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 500 * _1_USDC});
         expectedShares = strategy.sharesForAmount(500 * _1_USDC);
         strategy.invest(500 * _1_USDC, 0);
         assertEq(expectedShares, IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)));
 
         /// Liquidate
-        strategyBalanceBefore = IERC20(USDC).balanceOf(address(strategy));
+        strategyBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
         expectedAmountFreed = strategy.shareValue(strategy.sharesForAmount(500 * _1_USDC));
         assertEq(amountFreed, expectedAmountFreed);
         /// 1 wei loss divesting
-        assertEq(IERC20(USDC).balanceOf(address(strategy)), strategyBalanceBefore + expectedAmountFreed);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + expectedAmountFreed);
         /// 1 wei loss divesting
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
     }
@@ -577,15 +577,15 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         strategy.harvest(0, 0, 0, address(0));
 
         // there are 60 USDC left in the vault
-        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
-        assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), 0);
         // strategy has expectedStrategyShareBalance cellar shares
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, "here 1");
 
         /// 2. Strategy takes 10 USDC profit
         /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
         // strategy gets 10 USDC more as profit
-        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
         uint256 beforeReportSnapshotId = vm.snapshot();
         /// Case #1: We harvest 100% of profit
         vm.expectEmit();
@@ -616,8 +616,8 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// 10 USDC harvested
         strategy.harvest(0, 0, 10_000, address(0));
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
-        assertEq(IERC20(USDC).balanceOf(address(vault)), 70 * _1_USDC); // 70 USDC
-        assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 70 * _1_USDC); // 70 USDC
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), 0);
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, "here");
         vm.revertTo(beforeReportSnapshotId);
 
@@ -650,8 +650,8 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// 0 USDC harvested
         strategy.harvest(0, 0, 0, address(0));
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC));
-        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
-        assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 USDC  increase in regarding before
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance - 1);
         vm.revertTo(beforeReportSnapshotId);
@@ -688,8 +688,8 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         strategy.harvest(0, 0, 7_233, address(0));
         expectedStrategyShareBalance =
             strategy.sharesForAmount(40 * _1_USDC + (10 * _1_USDC - (10 * _1_USDC * 7_233 / 10000)));
-        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC + (10 * _1_USDC * 7_233 / 10000));
-        assertEq(IERC20(USDC).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC + (10 * _1_USDC * 7_233 / 10000));
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), 0);
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance - 1);
         vm.revertTo(beforeReportSnapshotId);
 
@@ -740,7 +740,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
         strategy.harvest(0, 0, 0, address(0));
 
-        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         /// Step #2
@@ -751,7 +751,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
 
         /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
-        deal({token: USDC, to: address(strategy), give: 10 * _1_USDC});
+        deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
 
         vm.expectEmit();
         emit StrategyReported(
@@ -781,7 +781,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// 49.99 USDC harvested
         /// no effect since the strategy is in emergency exit
         strategy.harvest(0, 0, 2_000, address(0));
-        assertEq(IERC20(USDC).balanceOf(address(vault)), 109986635); // 109.99 USDC
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109986635); // 109.99 USDC
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
@@ -829,7 +829,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
         strategy.harvest(0, 0, 0, address(0));
 
-        assertEq(IERC20(USDC).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         /// 2. Strategy loses 10 USDC
@@ -901,7 +901,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     /*  function testSommelierTurboGHO__PreviewWithraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(USDC, users.alice, amount * 2);
+        deal(USDC_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
@@ -924,9 +924,9 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewWithdrawRequest(30 * _1_USDC);
         vm.startPrank(address(vault));
-        uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
         strategy.requestWithdraw(30 * _1_USDC);
-        uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, 30 * _1_USDC);
         // losses are equal or fewer than expected
@@ -936,16 +936,16 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     function testSommelierTurboGHO__PreviewWithrawRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(USDC, users.alice, amount * 2);
+        deal(USDC_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewWithdrawRequest(amount);
         vm.startPrank(address(vault));
-        uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
         uint256 losses = strategy.requestWithdraw(amount);
-        uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, amount);
         // losses are equal or fewer than expected
@@ -963,11 +963,11 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxRequest = strategy.maxRequest();
-        uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
         uint256 requestedAmount = strategy.previewWithdrawRequest(maxRequest);
         vm.startPrank(address(vault));
         uint256 losses = strategy.requestWithdraw(maxRequest);
-        uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, maxRequest);
         // losses are equal or fewer than expected
@@ -977,17 +977,17 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     /*   function testSommelierTurboGHO__MaxRequest__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(USDC, users.alice, amount * 2);
+        deal(USDC_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxRequest = strategy.maxRequest();
-        uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
         uint256 requestedAmount = strategy.previewWithdrawRequest(maxRequest);
         vm.startPrank(address(vault));
         uint256 losses = strategy.requestWithdraw(maxRequest);
-        uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, maxRequest);
         // losses are equal or fewer than expected
@@ -1004,26 +1004,26 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxWithdraw();
-        uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.withdraw(maxWithdraw);
-        uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
 
     /*     function testSommelierTurboGHO__MaxWithdraw__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
-        deal(USDC, users.alice, amount * 2);
+        deal(USDC_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxWithdraw();
-        uint256 balanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.withdraw(maxWithdraw);
-        uint256 withdrawn = IERC20(USDC).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     } */
 }
