@@ -10,12 +10,12 @@ import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import {BaseTest, IERC20, Vm, console} from "../../base/BaseTest.t.sol";
 import {IStrategyWrapper} from "../../interfaces/IStrategyWrapper.sol";
 import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {YearnAjnaWETHStrategyWrapper} from "../../mock/YearnAjnaWETHStrategyWrapper.sol";
+import {YearnAjnaWETHStakingStrategyWrapper} from "../../mock/YearnAjnaWETHStakingStrategyWrapper.sol";
 import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
 import {StrategyData} from "src/helpers/VaultTypes.sol";
 import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
 
-contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
+contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                    CONSTANTS                             ///
     ////////////////////////////////////////////////////////////////
@@ -27,7 +27,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
 
     IStrategyWrapper public strategy;
-    YearnAjnaWETHStrategyWrapper public implementation;
+    YearnAjnaWETHStakingStrategyWrapper public implementation;
     MaxApyVaultV2 public vaultDeployment;
     IMaxApyVaultV2 public vault;
     ITransparentUpgradeableProxy public proxy;
@@ -51,7 +51,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation
-        implementation = new YearnAjnaWETHStrategyWrapper();
+        implementation = new YearnAjnaWETHStakingStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
@@ -70,7 +70,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         vm.label(YVAULT_WETH_MAINNET, "yVault");
-        vm.label(address(proxy), "YearnAjnaWETHStrategy");
+        vm.label(address(proxy), "YearnAjnaWETHStakingStrategy");
         vm.label(address(WETH), "WETH");
         vm.label(stakingRewards = address(implementation.yearnStakingRewards()), "YearnStakingRewardsMulti");
         vm.label(0x9a96ec9B57Fb64FbC60B423d1f4da7691Bd35079, "AJNA");
@@ -87,14 +87,14 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ///                  TEST initialize()                       ///
     ////////////////////////////////////////////////////////////////
 
-    function testYearnAjnaWETH__Initialization() public {
+    function testYearnAjnaWETH_Staking__Initialization() public {
         /// *************** Yearn Strategy initialization *************** ///
         /// Deploy MaxApyVaultV2
         MaxApyVaultV2 _vault = new MaxApyVaultV2(WETH, "MaxApyWETHVault", "maxWETH", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation
-        YearnAjnaWETHStrategyWrapper _implementation = new YearnAjnaWETHStrategyWrapper();
+        YearnAjnaWETHStakingStrategyWrapper _implementation = new YearnAjnaWETHStakingStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
@@ -152,7 +152,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST setEmergencyExit()                ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__SetEmergencyExit() public {
+    function testYearnAjnaWETH_Staking__SetEmergencyExit() public {
         /// Test unauthorized access with a user without privileges
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -175,7 +175,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                  TEST setMaxSingleTrade()                ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__SetMaxSingleTrade() public {
+    function testYearnAjnaWETH_Staking__SetMaxSingleTrade() public {
         /// Test unauthorized access with a user without privileges
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -205,7 +205,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                  TEST setMinSingleTrade()                ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__SetMinSingleTrade() public {
+    function testYearnAjnaWETH_Staking__SetMinSingleTrade() public {
         /// Test unauthorized access with a user without privileges
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -230,7 +230,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST isActive()                      ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__IsActive() public {
+    function testYearnAjnaWETH_Staking__IsActive() public {
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
@@ -256,7 +256,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                    TEST setStrategist()                  ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__SetStrategist() public {
+    function testYearnAjnaWETH_Staking__SetStrategist() public {
         // Negatives
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -278,7 +278,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                      TEST slippage                       ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__InvestmentSlippage() public {
+    function testYearnAjnaWETH_Staking__InvestmentSlippage() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
         /// 1. Deposit into vault
@@ -294,7 +294,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST _prepareReturn()                  ///
     ////////////////////////////////////////////////////////////////W
-    function testYearnAjnaWETH__PrepareReturn() public {
+    function testYearnAjnaWETH_Staking__PrepareReturn() public {
         /// ⭕️ SCENARIO 1:
         /// 1. Initial State:
         ///     - `underlyingBalance` = 40 ether
@@ -428,7 +428,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST _adjustPosition()                 ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__AdjustPosition() public {
+    function testYearnAjnaWETH_Staking__AdjustPosition() public {
         /// Test if `_underlyingBalance()` is 0, no investment is performed
         strategy.adjustPosition();
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), 0);
@@ -461,7 +461,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST _invest()                         ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__Invest() public {
+    function testYearnAjnaWETH_Staking__Invest() public {
         /// Test if `amount` is 0, no investment is performed
         uint256 returned = strategy.invest(0, 0);
         assertEq(returned, 0);
@@ -491,7 +491,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST _divest()                         ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__Divest() public {
+    function testYearnAjnaWETH_Staking__Divest() public {
         /// Perform 10 ETH investment
         deal({token: WETH, to: address(strategy), give: 10 ether});
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
@@ -510,7 +510,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///               TEST _liquidatePosition()                  ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__LiquidatePosition() public {
+    function testYearnAjnaWETH_Staking__LiquidatePosition() public {
         /// Liquidate position where underlying balance can cover liquidation
         /// Scenario 1
         deal({token: WETH, to: address(strategy), give: 10 ether});
@@ -546,7 +546,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///               TEST _liquidateAllPositions()              ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__LiquidateAllPositions() public {
+    function testYearnAjnaWETH_Staking__LiquidateAllPositions() public {
         /// Perform 10 ETH investment
         deal({token: WETH, to: address(strategy), give: 10 ether});
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
@@ -581,7 +581,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                   TEST _unwindRewards()                  ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__UnwindRewards() public {
+    function testYearnAjnaWETH_Staking__UnwindRewards() public {
         /// Perform 10 ETH investment without rewards
         deal({token: WETH, to: address(strategy), give: 1000 ether});
         vm.expectEmit();
@@ -603,7 +603,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__Harvest_Negatives() public {
+    function testYearnAjnaWETH_Staking__Harvest_Negatives() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
         /// Deposit into vault
@@ -615,7 +615,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         strategy.harvest(0, 0, 10_001, address(0));
     }
 
-    function testYearnAjnaWETH__Harvest() public {
+    function testYearnAjnaWETH_Staking__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, 10_000, address(0));
@@ -970,7 +970,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewWithdraw()               ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__PreviewWithraw() public {
+    function testYearnAjnaWETH_Staking__PreviewWithraw() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -983,7 +983,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 30 ether - loss);
     }
 
-    /*     function testYearnAjnaWETH__PreviewWithraw__FUZZY(uint256 amount) public {
+    /*     function testYearnAjnaWETH_Staking__PreviewWithraw__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH, users.alice, amount * 2);
@@ -1001,7 +1001,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewWithdrawRequest()        ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__PreviewWithrawRequest() public {
+    function testYearnAjnaWETH_Staking__PreviewWithrawRequest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1018,7 +1018,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn - 30 ether, requestedAmount - 30 ether);
     }
 
-    /*     function testYearnAjnaWETH__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+    /*     function testYearnAjnaWETH_Staking__PreviewWithrawRequest__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH, users.alice, amount * 2);
@@ -1040,7 +1040,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST maxRequest()                    ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaWETH__MaxRequest() public {
+    function testYearnAjnaWETH_Staking__MaxRequest() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1058,7 +1058,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         assertLe(losses, requestedAmount - maxRequest);
     }
     /* 
-    function testYearnAjnaWETH__MaxRequest__FUZZY(uint256 amount) public {
+    function testYearnAjnaWETH_Staking__MaxRequest__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH, users.alice, amount * 2);
@@ -1082,7 +1082,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
     ///                     TEST maxWithdraw()                   ///
     ////////////////////////////////////////////////////////////////
 
-    function testYearnAjnaWETH__MaxWithdraw() public {
+    function testYearnAjnaWETH_Staking__MaxWithdraw() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1096,7 +1096,7 @@ contract YearnAjnaWETHStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
-    /*     function testYearnAjnaWETH__MaxWithdraw__FUZZY(uint256 amount) public {
+    /*     function testYearnAjnaWETH_Staking__MaxWithdraw__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH, users.alice, amount * 2);

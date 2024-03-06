@@ -8,11 +8,11 @@ import {IUniswapV3Router as IRouter} from "src/interfaces/IUniswap.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
-/// @title YearnAjnaWETHStrategy
+/// @title YearnAjnaWETHStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `YearnAjnaWETHStrategy` supplies an underlying token into a generic Yearn V3 Vault,
+/// @notice `YearnAjnaWETHStakingStrategy` supplies an underlying token into a generic Yearn V3 Vault,
 /// and stakes the vault shares for boosted rewards
-contract YearnAjnaWETHStrategy is BaseStrategy {
+contract YearnAjnaWETHStakingStrategy is BaseStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
