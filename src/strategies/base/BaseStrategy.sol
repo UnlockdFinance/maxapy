@@ -160,14 +160,19 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
+    /// NOTE : while in the {withdraw} function the vault gets `amountNeeded` - `loss`
+    /// in {requestWithdraw} the vault always gets `amountNeeded` and `loss` is the amount
+    /// that had to be lost in order to withdraw exactly `amountNeeded`
     function requestWithdraw(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 amountRequested = previewWithdrawRequest(amountNeeded);
         uint256 amountFreed;
-        // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
+        // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountRequested);
         // Send it directly back to vault
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+
         // something didn't work as expected
+        // this should NEVER happen in normal conditions
         else revert();
         // Note: Reinvest anything leftover on next `harvest`
     }
@@ -181,9 +186,9 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param minExpectedBalance minimum balance amount of `underlyingAsset` expected after performing any
     /// @param minOutputAfterInvestment minimum expected output after `_invest()`
     /// strategy unwinding (if applies).
-    /// @param harvestedProfitBPS percentage of the profit to be sent to the vault as net profit
+    /// @param harvestedProfitBPS percentage of the profit realize and send to the vault as net profit
     /// @param harvester only relevant when the harvest is triggered from the vault, is the address of the user that is enduring the harvest gas cost
-    /// from the vault
+    /// from the vault and will receive the managemente fees in return
     function harvest(
         uint256 minExpectedBalance,
         uint256 minOutputAfterInvestment,
@@ -353,7 +358,8 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
     }
 
-    /// @notice Sets the strategy in emergency exit mode
+    /// @notice Sets the strategy in autopilot mode, meaning that it will be automatically
+    /// harvested from the vault using the strategy
     /// @param _autoPilot The new autopilot status: true for active false for inactive
     function setAutopilot(bool _autoPilot) external checkRoles(ADMIN_ROLE) {
         // grante the keeper role to the vault

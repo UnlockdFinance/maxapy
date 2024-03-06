@@ -177,17 +177,22 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
     ///                     TEST isActive()                      ///
     ////////////////////////////////////////////////////////////////
     function testSommelierMorphoEthMaximizer__IsActive() public {
+        // in the beginning the contract is not active
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
+        // if the strategy doesnt make profit it wont be seen as
+        // active till its harvested
         deal(WETH, address(strategy), 1 ether);
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
+        // it becomes active after the harvest
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
+        // if the strategy loses all the funds it will instantly become inactive
         strategy.divest(ICellar(CELLAR_WETH_MAINNET).balanceOf(address(strategy)));
         vm.startPrank(address(strategy));
         IERC20(WETH).transfer(makeAddr("random"), IERC20(WETH).balanceOf(address(strategy)));

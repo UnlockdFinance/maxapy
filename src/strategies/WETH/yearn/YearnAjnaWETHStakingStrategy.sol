@@ -11,7 +11,7 @@ import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 /// @title YearnAjnaWETHStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `YearnAjnaWETHStakingStrategy` supplies an underlying token into a generic Yearn V3 Vault,
-/// and stakes the vault shares for boosted rewards
+/// and stakes the vault shares for boosted AJNA rewards
 contract YearnAjnaWETHStakingStrategy is BaseStrategy {
     using SafeTransferLib for address;
 
