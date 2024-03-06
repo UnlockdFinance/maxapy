@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {YearnAjnaWETHStakingStrategy, SafeTransferLib} from "src/strategies/WETH/yearn/YearnAjnaWETHStakingStrategy.sol";
+import {
+    YearnAjnaWETHStakingStrategy, SafeTransferLib
+} from "src/strategies/WETH/yearn/YearnAjnaWETHStakingStrategy.sol";
 
 contract YearnAjnaWETHStakingStrategyWrapper is YearnAjnaWETHStakingStrategy {
     using SafeTransferLib for address;

@@ -201,7 +201,6 @@ contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(strategy.maxSingleTrade(), 1 ether);
     }
 
-
     ////////////////////////////////////////////////////////////////
     ///                  TEST setMinSingleTrade()                ///
     ////////////////////////////////////////////////////////////////
@@ -882,7 +881,7 @@ contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         strategy.divest(expectedShares);
         vm.startPrank(address(strategy));
-        IERC20(WETH).transfer(makeAddr("random"), 10 ether  );
+        IERC20(WETH).transfer(makeAddr("random"), 10 ether);
 
         vm.startPrank(users.keeper);
         vm.expectEmit();
@@ -962,9 +961,7 @@ contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(data.strategyTotalDebt, 27 ether);
         assertEq(data.strategyTotalLoss, 10 ether);
         assertEq(IERC20(WETH).balanceOf(address(vault)), vaultBalanceBefore + 3 ether);
-        assertLe(
-            IERC20(stakingRewards).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
-        );
+        assertLe(IERC20(stakingRewards).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease);
     }
 
     ////////////////////////////////////////////////////////////////

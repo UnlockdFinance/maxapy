@@ -25,7 +25,8 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
     IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     /// @notice The staking contract to stake the vault shares
-    IStakingRewardsMulti public constant yearnStakingRewards = IStakingRewardsMulti(0x0Ed535037c013c3628512980C169Ed59Eb805B49);
+    IStakingRewardsMulti public constant yearnStakingRewards =
+        IStakingRewardsMulti(0x0Ed535037c013c3628512980C169Ed59Eb805B49);
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
@@ -255,7 +256,7 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding,uint256 minExpectedBalance, uint256 harvestedProfitBPS)
+    function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
@@ -388,7 +389,7 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
         uint256 shares = yVault.deposit(amount, address(this));
-        
+
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
             if lt(shares, minOutputAfterInvestment) {
