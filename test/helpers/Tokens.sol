@@ -13,6 +13,9 @@ contract Tokens {
     /// @notice polygon tokens
     address public constant USDC_POLYGON = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
 
+    /// @notice token tokens
+    uint256 public _1_USDC = 1e6;
+
     /// @notice Getter function for tokens 
     function getTokensList(string memory chain) public pure returns(address[] memory) {
         if(keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("MAINNET"))){

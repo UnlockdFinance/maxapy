@@ -25,7 +25,6 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
 
     IMaxApyVaultV2 public vault;
     address public TREASURY;
-    uint256 public _1_USDC = 1e6;
 
     function setupVault(string memory chain) public {
         super._setUp(chain);

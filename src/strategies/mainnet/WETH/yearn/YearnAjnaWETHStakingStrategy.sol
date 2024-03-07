@@ -114,6 +114,26 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
         minSwapAjna = 1e18;
     }
 
+    /////////////////////////////////////////////////////////////////
+    ///                    CORE LOGIC                             ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < amountNeeded) {
+            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 neededVaultShares = yVault.previewWithdraw(amountNeeded);
+            yearnStakingRewards.withdraw(neededVaultShares);
+            uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
+            loss = _shareValue(burntShares) - amountNeeded;
+        }
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // Note: Reinvest anything leftover on next `harvest`
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                 STRATEGY CONFIGURATION                   ///
     ////////////////////////////////////////////////////////////////

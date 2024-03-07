@@ -8,11 +8,11 @@ import {IUniswapV3Router as IRouter} from "src/interfaces/IUniswap.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
-/// @title YearnMaticWETHStakingStrategy
+/// @title YearnMaticUSDCStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `YearnMaticWETHStakingStrategy` supplies an underlying token into a generic Yearn V3 Vault,
+/// @notice `YearnMaticUSDCStakingStrategy` supplies an underlying token into a generic Yearn V3 Vault,
 /// and stakes the vault shares for boosted WMATIC rewards
-contract YearnMaticWETHStakingStrategy is BaseStrategy {
+contract YearnMaticUSDCStakingStrategy is BaseStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
@@ -21,7 +21,7 @@ contract YearnMaticWETHStakingStrategy is BaseStrategy {
 
     /// @notice Ethereum mainnet's Matic Token
     IERC20 public constant wmatic = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
-    /// @notice Router to perform WMATIC-WETH swaps
+    /// @notice Router to perform WMATIC-USDC swaps
     IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     /// @notice The staking contract to stake the vault shares
@@ -112,6 +112,26 @@ contract YearnMaticWETHStakingStrategy is BaseStrategy {
         maxSingleTrade = 1_000e18;
 
         minSwapMatic = 1e18;
+    }
+
+    /////////////////////////////////////////////////////////////////
+    ///                    CORE LOGIC                             ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < amountNeeded) {
+            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 neededVaultShares = yVault.previewWithdraw(amountNeeded);
+            yearnStakingRewards.withdraw(neededVaultShares);
+            uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
+            loss = _shareValue(burntShares) - amountNeeded;
+        }
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // Note: Reinvest anything leftover on next `harvest`
     }
 
     ////////////////////////////////////////////////////////////////
@@ -476,7 +496,7 @@ contract YearnMaticWETHStakingStrategy is BaseStrategy {
         // Claim Matic rewards
         _yearnStakingRewards.getReward();
 
-        // Exchange Matic <> WETH
+        // Exchange Matic <> USDC
         uint256 wmaticBalance = _wmaticBalance();
         if (wmaticBalance > minSwapMatic) {
             router.exactInputSingle(
