@@ -541,7 +541,9 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
         amountFreed = strategy.liquidateAllPositions();
         assertEq(amountFreed, 499.999999999999999999 ether);
         /// 1 wei loss divesting
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + 499.999999999999999999 ether);
+        assertEq(
+            IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + 499.999999999999999999 ether
+        );
         /// 1 wei loss divesting
         assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), 0);
     }

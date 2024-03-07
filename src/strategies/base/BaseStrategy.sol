@@ -170,7 +170,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         (amountFreed, loss) = _liquidatePosition(amountRequested);
         // Send it directly back to vault
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
-
         // something didn't work as expected
         // this should NEVER happen in normal conditions
         else revert();

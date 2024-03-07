@@ -16,19 +16,19 @@ contract Tokens {
     /// @notice token tokens
     uint256 public _1_USDC = 1e6;
 
-    /// @notice Getter function for tokens 
-    function getTokensList(string memory chain) public pure returns(address[] memory) {
-        if(keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("MAINNET"))){
+    /// @notice Getter function for tokens
+    function getTokensList(string memory chain) public pure returns (address[] memory) {
+        if (keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("MAINNET"))) {
             address[] memory tokens = new address[](2);
             tokens[0] = WETH_MAINNET;
             tokens[1] = USDC_MAINNET;
             return tokens;
-        }
-        else if(keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("POLYGON"))){
+        } else if (keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("POLYGON"))) {
             address[] memory tokens = new address[](1);
             tokens[0] = USDC_POLYGON;
             return tokens;
+        } else {
+            revert("InvalidChain");
         }
-        else revert("InvalidChain");
-    }   
+    }
 }

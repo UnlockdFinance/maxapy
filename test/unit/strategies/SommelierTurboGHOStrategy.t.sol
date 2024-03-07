@@ -438,7 +438,9 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         uint256 expectedAmountDivested = strategy.previewWithdraw(amountExpectedFromShares);
         uint256 amountDivested = strategy.divest(strategy.sharesForAmount(amountExpectedFromShares));
         assertEq(amountDivested, expectedAmountDivested, "divested");
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)) - strategyBalanceBefore, expectedAmountDivested, "balance");
+        assertEq(
+            IERC20(USDC_MAINNET).balanceOf(address(strategy)) - strategyBalanceBefore, expectedAmountDivested, "balance"
+        );
     }
 
     ////////////////////////////////////////////////////////////////

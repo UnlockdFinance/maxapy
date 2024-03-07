@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-
 import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
@@ -958,7 +957,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
         assertEq(vault.debtRatio(), 3000);
         assertEq(vault.totalDebt(), 27 * _1_USDC - 1);
-        assertEq(data.strategyDebtRatio, 3000); 
+        assertEq(data.strategyDebtRatio, 3000);
         assertEq(data.strategyTotalDebt, 27 * _1_USDC - 1);
         assertEq(data.strategyTotalLoss, 10 * _1_USDC + 2);
         assertEq(IERC20(USDC_POLYGON).balanceOf(address(vault)), vaultBalanceBefore + 3 * _1_USDC - 1);

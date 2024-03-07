@@ -576,7 +576,9 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         uint256 amountDivested = strategy.divest(expectedShares * 99 / 100);
         assertApproxEq(amountDivested, expectedAssets, expectedAssets / 100);
         assertApproxEq(
-            IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + expectedAssets, expectedAssets / 100
+            IERC20(WETH_MAINNET).balanceOf(address(strategy)),
+            strategyBalanceBefore + expectedAssets,
+            expectedAssets / 100
         );
     }
 
@@ -648,7 +650,9 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         uint256 expectedAmountFreed = strategy.shareValue(expectedShares);
         uint256 amountFreed = strategy.liquidateAllPositions();
         assertApproxEq(amountFreed, expectedAmountFreed, expectedAmountFreed / 100);
-        assertApproxEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), expectedAmountFreed, expectedAmountFreed / 100);
+        assertApproxEq(
+            IERC20(WETH_MAINNET).balanceOf(address(strategy)), expectedAmountFreed, expectedAmountFreed / 100
+        );
         assertEq(IERC20(CELLAR_STETH_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Perform 500 ETH investment

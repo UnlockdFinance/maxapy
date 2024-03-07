@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {ConvexdETHFrxETHStrategy, SafeTransferLib} from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
+import {
+    ConvexdETHFrxETHStrategy, SafeTransferLib
+} from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
 
 contract ConvexdETHFrxETHStrategyWrapper is ConvexdETHFrxETHStrategy {
     using SafeTransferLib for address;
