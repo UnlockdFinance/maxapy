@@ -135,37 +135,6 @@ contract SommelierTurboGHOStrategy is BaseStrategy {
     /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
-
-    /// @notice Provide an accurate estimate for the total amount of assets
-    /// (principle + return) that this Strategy is currently managing,
-    /// denominated in terms of `underlyingAsset` tokens.
-    /// This total should be "realizable" e.g. the total value that could
-    /// *actually* be obtained from this Strategy if it were to divest its
-    /// entire position based on current on-chain conditions.
-    /// @dev Care must be taken in using this function, since it relies on external
-    /// systems, which could be manipulated by the attacker to give an inflated
-    /// (or reduced) value produced by this function, based on current on-chain
-    /// conditions (e.g. this function is possible to influence through
-    /// flashloan attacks, oracle manipulations, or other DeFi attack
-    /// mechanisms).
-    /// @return The estimated total assets in this Strategy.
-    function estimatedTotalAssets() public view returns (uint256) {
-        // always try to use the value from the last harvest so share price is not updated before the harvest
-        // always be pessimistic, take the lowest between the last harvest assets and assets in that moment
-        return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
-    }
-
-    /**
-     *  @notice Provides an indication of whether this strategy is currently "active"
-     *  in that it is managing an active position, or will manage a position in
-     *  the future. This should correlate to `harvest()` activity, so that Harvest
-     *  events can be tracked externally by indexing agents.
-     *  @return True if the strategy is actively managing a position.
-     */
-    function isActive() public view returns (bool) {
-        return estimatedTotalAssets() != 0;
-    }
-
     /// @notice This function is meant to be called from the vault
     /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`

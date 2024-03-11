@@ -1523,7 +1523,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             _reportLoss(msg.sender, loss);
         }
 
-        uint256 totalFees = _assessFees(msg.sender, uint256(unrealizedGain), managementFeeReceiver);
+        uint256 _totalFees = _assessFees(msg.sender, uint256(unrealizedGain), managementFeeReceiver);
 
         // Set gain returns as realized gains for the vault
         strategies[msg.sender].strategyTotalRealizedGain += realizedGain;
