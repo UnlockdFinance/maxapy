@@ -80,9 +80,7 @@ forge script script/MaxApyV2.s.sol:DeploymentScript --fork-url http://localhost:
 ```
 
 After that interact with the fork freely using `cast`, here some example of what you can do:
-```
-cast rpc anvil_impersonateAccount <address of user to impersonate>
-```
+
 For calling contract performing a transaction:
 ```
 cast send <address of contract to interact with> \
