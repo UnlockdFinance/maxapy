@@ -44,11 +44,13 @@ src
                 ├─SommelierMorphoEthMaximizerStrategy
                 ├─SommelierStEthDepositTurboStEthStrategy
                 ├─SommelierTurboStEthStrategy
+                ├─SommelierTurboSwEthStrategy
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnWETHStrategy
                 ├─YearnAjnaWETHStakingStrategy
     ├─ polygon — "Polygon chain strategies" 
         ├─ USDC — "USDC strategies" 
+            ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnMaticUSDCStakingStrategy
 ├─ MaxApyVaultV2 — "Yield farming vault"
 ```
