@@ -250,7 +250,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
-    
+
     /// @notice This function is meant to be called from the vault
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
