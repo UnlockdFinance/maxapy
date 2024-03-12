@@ -654,6 +654,7 @@ contract SommelierTurboSwEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(10 ether, 0, 0, 0);
         /// 10 ETH harvested
+        // harvest 100%
         strategy.harvest(0, 0, 10_000, address(0));
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 70 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
@@ -684,16 +685,16 @@ contract SommelierTurboSwEthStrategyTest is BaseTest, StrategyEvents {
             4000
         );
         /// debtratio not changed
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 10 ether);
 
         vm.expectEmit();
+        uint256 newExpectedStrategyShareBalance = expectedStrategyShareBalance + strategy.sharesForAmount(10 ether);
         emit Harvested(0, 0, 0, 0);
         /// 10 ETH harvested
         strategy.harvest(0, 0, 0, address(0));
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
-        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), newExpectedStrategyShareBalance);
         vm.revertTo(beforeReportSnapshotId);
 
         /// Case #3: We harvest 50% of profit
@@ -720,6 +721,7 @@ contract SommelierTurboSwEthStrategyTest is BaseTest, StrategyEvents {
         );
         /// debtratio not changed
 
+        newExpectedStrategyShareBalance = expectedStrategyShareBalance + strategy.sharesForAmount(5 ether);
         vm.expectEmit();
         emit Harvested(5 ether, 0, 0, 0);
         /// 9.980 ETH harvested
@@ -727,8 +729,7 @@ contract SommelierTurboSwEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether + 5 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 5 ether);
-        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), newExpectedStrategyShareBalance);
         vm.revertTo(snapshotId);
 
         snapshotId = vm.snapshot();
