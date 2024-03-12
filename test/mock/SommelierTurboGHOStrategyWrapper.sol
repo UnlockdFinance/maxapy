@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {SommelierTurboGHOStrategy, SafeTransferLib} from "src/strategies/USDC/sommelier/SommelierTurboGHOStrategy.sol";
+import {
+    SommelierTurboGHOStrategy,
+    SafeTransferLib
+} from "src/strategies/mainnet/USDC/sommelier/SommelierTurboGHOStrategy.sol";
 
 contract SommelierTurboGHOStrategyWrapper is SommelierTurboGHOStrategy {
     using SafeTransferLib for address;
@@ -15,8 +18,8 @@ contract SommelierTurboGHOStrategyWrapper is SommelierTurboGHOStrategy {
         underlyingAsset.safeTransfer(address(1), amount);
     }
 
-    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {
-        vault.report(gain, gain, loss, debtPayment);
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
+        vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
     function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)

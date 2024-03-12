@@ -2,11 +2,16 @@
 pragma solidity ^0.8.19;
 
 import {
-    ConvexdETHFrxETHStrategy, SafeTransferLib
-} from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
+    SommelierTurboSwEthStrategy,
+    SafeTransferLib
+} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboSwEthStrategy.sol";
 
-contract ConvexdETHFrxETHStrategyWrapper is ConvexdETHFrxETHStrategy {
+contract SommelierTurboSwEthStrategyWrapper is SommelierTurboSwEthStrategy {
     using SafeTransferLib for address;
+
+    function investSommelier(uint256 amount) external returns (uint256) {
+        return cellar.deposit(amount, address(this));
+    }
 
     function triggerLoss(uint256 amount) external {
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
@@ -26,6 +31,7 @@ contract ConvexdETHFrxETHStrategyWrapper is ConvexdETHFrxETHStrategy {
 
     function adjustPosition() external {
         _adjustPosition(0, 0);
+        ///silence warning
     }
 
     function invest(uint256 amount, uint256 minOutputAfterInvestment) external returns (uint256) {
@@ -44,27 +50,15 @@ contract ConvexdETHFrxETHStrategyWrapper is ConvexdETHFrxETHStrategy {
         return _liquidateAllPositions();
     }
 
-    function cvxBalance() external view returns (uint256) {
-        return _cvxBalance();
+    function shareValue(uint256 shares) external view returns (uint256) {
+        return _shareValue(shares);
     }
 
-    function crvBalance() external view returns (uint256) {
-        return _crvBalance();
+    function sharesForAmount(uint256 amount) external view returns (uint256) {
+        return _sharesForAmount(amount);
     }
 
-    function lpValue(uint256 lp) external view returns (uint256) {
-        return _lpValue(lp);
-    }
-
-    function lpForAmount(uint256 amount) external view returns (uint256) {
-        return _lpForAmount(amount);
-    }
-
-    function unwindRewards() external {
-        _unwindRewards(convexRewardPool);
-    }
-
-    function lpPrice() external view returns (uint256) {
-        return _lpPrice();
+    function shareBalance() external view returns (uint256) {
+        return _shareBalance();
     }
 }

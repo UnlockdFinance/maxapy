@@ -4,30 +4,23 @@ pragma solidity ^0.8.19;
 import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
 import {ICellar} from "src/interfaces/ICellar.sol";
-import {ICurve} from "src/interfaces/ICurve.sol";
+
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
-/// @title SommelierStEthDepositTurboStEthStrategy
+/// @title SommelierTurboStEthStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `SommelierStEthDepositTurboStEthStrategy` supplies an underlying token into a generic Sommelier Vault,
+/// @notice `SommelierTurboStEthStrategy` supplies an underlying token into a generic Sommelier Vault,
 /// earning the Sommelier Vault's yield
-contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
+contract SommelierTurboStEthStrategy is BaseStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
-    ///                         CONSTANTS                        ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Ethereum mainnet's StETH Token
-    IERC20 public constant stEth = IERC20(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
-    ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
-
-    error InvalidZeroAddress();
     error NotEnoughFundsToInvest();
     error CellarIsPaused();
     error InvalidHarvestedProfit();
+    error InvalidZeroAddress();
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -39,12 +32,6 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @notice Emitted when the `requestedShares` are divested from the Sommelier Vault
     event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
 
-    /// @notice Emitted when the strategy's max single trade value is updated
-    event MaxSingleTradeUpdated(uint256 maxSingleTrade);
-
-    /// @notice Emitted when the strategy's min single trade value is updated
-    event MinSingleTradeUpdated(uint256 minSingleTrade);
-
     // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
@@ -53,26 +40,12 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
         0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
-    uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
-
-    // @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
-    uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
-
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
 
     /// @notice The Sommelier Vault the strategy interacts with
     ICellar public cellar;
-    /// @notice The Curve pool
-    ICurve public pool;
-    /// @notice The maximum single trade allowed in the strategy
-    uint256 public maxSingleTrade;
-    /// @notice Minimun trade size within the strategy
-    uint256 public minSingleTrade;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -89,98 +62,38 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
-        ICellar _cellar,
-        ICurve _pool
+        ICellar _cellar
     ) public initializer {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         cellar = _cellar;
-        pool = _pool;
-
-        /// Approve pool to perform swaps
-        underlyingAsset.safeApprove(address(_pool), type(uint256).max);
-        address(stEth).safeApprove(address(_pool), type(uint256).max);
         /// Approve Cellar Vault to transfer underlying
-        address(stEth).safeApprove(address(_cellar), type(uint256).max);
-        maxSingleTrade = 1_000 * 1e18;
-        minSingleTrade = 1e4;
+        underlyingAsset.safeApprove(address(_cellar), type(uint256).max);
     }
 
+    /////////////////////////////////////////////////////////////////
+    ///                    CORE LOGIC                             ///
     ////////////////////////////////////////////////////////////////
-    ///                 STRATEGY CONFIGURATION                   ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Sets the maximum single trade amount allowed
-    /// @param _maxSingleTrade The new maximum single trade value
-    function setMaxSingleTrade(uint256 _maxSingleTrade) external checkRoles(ADMIN_ROLE) {
-        assembly ("memory-safe") {
-            // revert if `_maxSingleTrade` is zero
-            if iszero(_maxSingleTrade) {
-                // throw the `InvalidZeroAmount` error
-                mstore(0x00, 0xdd484e70)
-                revert(0x1c, 0x04)
-            }
-
-            sstore(maxSingleTrade.slot, _maxSingleTrade) // set the max single trade value in storage
-
-            // Emit the `MaxSingleTradeUpdated` event
-            mstore(0x00, _maxSingleTrade)
-            log1(0x00, 0x20, _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < amountNeeded) {
+            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
+            loss = _shareValue(burntShares) - amountNeeded;
         }
-    }
-
-    /// @notice Sets the minimum single trade amount allowed
-    /// @param _minSingleTrade The new minimum single trade value
-    function setMinSingleTrade(uint256 _minSingleTrade) external checkRoles(ADMIN_ROLE) {
-        assembly {
-            // if _minSingleTrade == 0 revert()
-            if iszero(_minSingleTrade) {
-                // Throw the `InvalidZeroAmount` error
-                mstore(0x00, 0xdd484e70)
-                revert(0x1c, 0x04)
-            }
-            sstore(minSingleTrade.slot, _minSingleTrade)
-            // Emit the `MinSingleTradeUpdated` event
-            mstore(0x00, _minSingleTrade)
-            log1(0x00, 0x20, _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
-        }
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // Note: Reinvest anything leftover on next `harvest`
     }
 
     /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice Provide an accurate estimate for the total amount of assets
-    /// (principle + return) that this Strategy is currently managing,
-    /// denominated in terms of `underlyingAsset` tokens.
-    /// This total should be "realizable" e.g. the total value that could
-    /// *actually* be obtained from this Strategy if it were to divest its
-    /// entire position based on current on-chain conditions.
-    /// @dev Care must be taken in using this function, since it relies on external
-    /// systems, which could be manipulated by the attacker to give an inflated
-    /// (or reduced) value produced by this function, based on current on-chain
-    /// conditions (e.g. this function is possible to influence through
-    /// flashloan attacks, oracle manipulations, or other DeFi attack
-    /// mechanisms).
-    /// @return The estimated total assets in this Strategy.
-    function estimatedTotalAssets() public view returns (uint256) {
-        // always try to use the value from the last harvest so share price is not updated before the harvest
-        // always be pessimistic, take the lowest between the last harvest assets and assets in that moment
-        return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
-    }
-
-    /**
-     *  @notice Provides an indication of whether this strategy is currently "active"
-     *  in that it is managing an active position, or will manage a position in
-     *  the future. This should correlate to `harvest()` activity, so that Harvest
-     *  events can be tracked externally by indexing agents.
-     *  @return True if the strategy is actively managing a position.
-     */
-    function isActive() public view returns (bool) {
-        return estimatedTotalAssets() != 0;
-    }
-
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
+    /// @dev calculates estunated the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
     function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
@@ -193,21 +106,24 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
-            uint256 shares = cellar.convertToShares(amountToWithdraw);
+            uint256 shares = _sharesForAmount(amountToWithdraw);
             uint256 withdrawn = cellar.previewRedeem(shares);
-            withdrawn = pool.get_dy(1, 0, withdrawn);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
     }
 
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
+    /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
-        // increase 1% to be pessimistic
-        return previewWithdraw(liquidatedAmount) * 101 / 100;
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < liquidatedAmount) {
+            liquidatedAmount = liquidatedAmount - underlyingBalance;
+            requestedAmount = _shareValue(cellar.previewWithdraw(liquidatedAmount));
+        }
+        return requestedAmount + underlyingBalance;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
@@ -217,7 +133,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public view override returns (uint256) {
-        return previewWithdraw(estimatedTotalAssets()) * 99 / 100;
+        return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
 
     ////////////////////////////////////////////////////////////////
@@ -286,7 +202,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Cellar
             if (amountToWithdraw > underlyingBalance) {
-                uint256 expectedAmountToWithdraw = Math.min(maxSingleTrade, amountToWithdraw - underlyingBalance);
+                uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
 
@@ -339,18 +255,15 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
             }
         }
     }
+
     /// @notice Performs any adjustments to the core position(s) of this Strategy given
     /// what change the MaxApy Vault made in the "investable capital" available to the
     /// Strategy.
     /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-
     function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
         uint256 toInvest = _underlyingBalance();
-        if (toInvest > minSingleTrade) {
-            toInvest = Math.min(maxSingleTrade, toInvest);
-            _invest(toInvest, minOutputAfterInvestment);
-        }
+        _invest(toInvest, minOutputAfterInvestment);
     }
 
     /// @notice Invests `amount` of underlying, depositing it in the Cellar Vault
@@ -362,17 +275,10 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
         if (amount == 0) return 0;
         // Dont't do anything if cellar is paused or shutdown
         if (cellar.isShutdown() || cellar.isPaused()) return 0;
-        uint256 maxDeposit = cellar.maxDeposit(address(this));
-        amount = Math.min(amount, maxDeposit);
-
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        IWETH(underlyingAsset).withdraw(amount);
-
-        uint256 stEthReceived = pool.exchange{value: amount}(0, 1, amount, 0);
-
-        uint256 shares = cellar.deposit(stEthReceived, address(this));
+        uint256 shares = cellar.deposit(amount, address(this));
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -402,9 +308,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     function _divest(uint256 shares) internal returns (uint256 withdrawn) {
         // if cellar is paused dont liquidate, skips revert
         if (cellar.isPaused()) return 0;
-        uint256 stEthWithdrawn = cellar.redeem(shares, address(this), address(this));
-        withdrawn = pool.exchange(1, 0, stEthWithdrawn, 0);
-        IWETH(underlyingAsset).deposit{value: withdrawn}();
+        withdrawn = cellar.redeem(shares, address(this), address(this));
         emit Divested(address(this), shares, withdrawn);
     }
 
@@ -418,6 +322,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override
@@ -429,7 +334,6 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
             uint256 amountOut = Math.min(underlyingBalance, amountNeeded);
             return (amountOut, amountNeeded - amountOut);
         }
-
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Cellar Vault
         if (underlyingBalance < amountNeeded) {
@@ -466,15 +370,25 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
-        // convert the shares to stEth amount
-        return cellar.convertToAssets(shares);
+        assembly {
+            // return cellar.convertToAssets(shares);
+            mstore(0x00, 0x07a2d13a)
+            mstore(0x20, shares)
+            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _assets := mload(0x00)
+        }
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
-        // convert to shares
-        return cellar.convertToShares(amount);
+        assembly {
+            // return cellar.convertShares(amount);
+            mstore(0x00, 0xc6e6f592)
+            mstore(0x20, amount)
+            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _shares := mload(0x00)
+        }
     }
 
     /// @notice Returns the current strategy's amount of Cellar vault shares
@@ -494,7 +408,4 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseStrategy {
     function _estimatedTotalAssets() internal view override returns (uint256) {
         return _underlyingBalance() + _shareValue(_shareBalance());
     }
-
-    /// @notice Allow to receive native assets
-    receive() external payable {}
 }

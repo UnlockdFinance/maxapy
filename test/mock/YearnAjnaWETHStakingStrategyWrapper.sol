@@ -2,10 +2,11 @@
 pragma solidity ^0.8.19;
 
 import {
-    ConvexdETHFrxETHStrategy, SafeTransferLib
-} from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
+    YearnAjnaWETHStakingStrategy,
+    SafeTransferLib
+} from "src/strategies/mainnet/WETH/yearn/YearnAjnaWETHStakingStrategy.sol";
 
-contract ConvexdETHFrxETHStrategyWrapper is ConvexdETHFrxETHStrategy {
+contract YearnAjnaWETHStakingStrategyWrapper is YearnAjnaWETHStakingStrategy {
     using SafeTransferLib for address;
 
     function triggerLoss(uint256 amount) external {
@@ -26,6 +27,7 @@ contract ConvexdETHFrxETHStrategyWrapper is ConvexdETHFrxETHStrategy {
 
     function adjustPosition() external {
         _adjustPosition(0, 0);
+        ///silence warning
     }
 
     function invest(uint256 amount, uint256 minOutputAfterInvestment) external returns (uint256) {
@@ -44,27 +46,19 @@ contract ConvexdETHFrxETHStrategyWrapper is ConvexdETHFrxETHStrategy {
         return _liquidateAllPositions();
     }
 
-    function cvxBalance() external view returns (uint256) {
-        return _cvxBalance();
+    function shareValue(uint256 shares) external view returns (uint256) {
+        return _shareValue(shares);
     }
 
-    function crvBalance() external view returns (uint256) {
-        return _crvBalance();
-    }
-
-    function lpValue(uint256 lp) external view returns (uint256) {
-        return _lpValue(lp);
-    }
-
-    function lpForAmount(uint256 amount) external view returns (uint256) {
-        return _lpForAmount(amount);
+    function sharesForAmount(uint256 amount) external view returns (uint256) {
+        return _sharesForAmount(amount);
     }
 
     function unwindRewards() external {
-        _unwindRewards(convexRewardPool);
+        _unwindRewards(yearnStakingRewards);
     }
 
-    function lpPrice() external view returns (uint256) {
-        return _lpPrice();
+    function shareBalance() external view returns (uint256) {
+        return _shareBalance();
     }
 }

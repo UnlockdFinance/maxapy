@@ -71,6 +71,9 @@ contract MaxApyVaultV2Events {
         uint16 strategyDebtRatio
     );
 
+    /// @notice Emitted when a vault's autopilot mode is enabled or disabled
+    event AutopilotEnabled(bool isEnabled);
+
     /// OWNERSHIP
 
     /// @notice The ownership is transferred from `oldOwner` to `newOwner`.

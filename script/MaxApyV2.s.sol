@@ -23,9 +23,9 @@ import {ConvexdETHFrxETHStrategyEvents} from "../test/helpers/ConvexdETHFrxETHSt
 
 import {SommelierMorphoEthMaximizerStrategyWrapper} from "../test/mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
 import {SommelierMorphoEthMaximizerStrategy} from
-    "src/strategies/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
+    "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 
-import {SommelierTurboStEthStrategy} from "src/strategies/WETH/sommelier/SommelierTurboStEthStrategy.sol";
+import {SommelierTurboStEthStrategy} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import {SommelierTurboStEthStrategyWrapper} from "../test/mock/SommelierTurboStEthStrategyWrapper.sol";
 
 import {SommelierStEthDepositTurboStEthStrategyWrapper} from
@@ -71,7 +71,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
     function run() public {
         address [] memory keepers = new address[](3);
         // use another private key here, dont use a keeper account for deployment
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         keepers[0] = vm.envAddress("KEEPER1_ADDRESS");
         keepers[1] = vm.envAddress("KEEPER2_ADDRESS");
         keepers[2] = vm.envAddress("KEEPER3_ADDRESS");
@@ -120,6 +120,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy1 = IStrategyWrapper(address(_proxy));
         strategy1.grantRoles(strategyAdmin, strategy1.ADMIN_ROLE());
+        strategy1.grantRoles(strategyEmergencyAdmin, strategy1.EMERGENCY_ADMIN_ROLE());
 
         console.log("YEARN STRATEGY Deployed to : ",address(strategy1));
 
@@ -144,6 +145,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy2 = IStrategyWrapper(address(_proxy));
         strategy2.grantRoles(strategyAdmin, strategy1.ADMIN_ROLE());
+        strategy2.grantRoles(strategyEmergencyAdmin, strategy2.EMERGENCY_ADMIN_ROLE());
 
         console.log("SOMMELIER TURBO-ST-ETH STRATEGY deployed to: ", address(strategy2));
 
@@ -170,6 +172,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
 
         strategy3 = IStrategyWrapper(address(_proxy));
         strategy3.grantRoles(strategyAdmin, strategy1.ADMIN_ROLE());
+        strategy3.grantRoles(strategyEmergencyAdmin, strategy3.EMERGENCY_ADMIN_ROLE());
 
 
         console.log("SOMMELIER (ST-ETH-DEPOSIT) deployed to : ", address(strategy3));

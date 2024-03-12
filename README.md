@@ -24,6 +24,8 @@ src
     ├─ IUniswap
     ├─ IWrappedTokenGateway
     ├─ IYearnStrategy
+    ├─ IStakingRewardsMulti
+    ├─ IYVaultV3
 ├─ lib
     ├─ ERC20 — "Abstract ERC20 implementation"
     ├─ Initializable — "Base contract for proxy initialization"
@@ -31,18 +33,25 @@ src
 ├─ strategies
     ├─ base
         ├─ BaseStrategy — "Base vault strategy implementation"
-    ├─ USDC — "USDC strategies" 
-        ├─ sommelier — "Stratgies interacting with Sommelier Finance"
-            ├─SommelierTurboGHOStrategy
-    ├─ WETH — "Wrapped Ether strategies" 
-        ├─ convex — "Strategies interacting with Convex Finance"
-            ├─ConvexdETHFrxETHStrategy 
-        ├─ sommelier — "Stratgies interacting with Sommelier Finance"
-            ├─SommelierMorphoEthMaximizerStrategy
-            ├─SommelierStEthDepositTurboStEthStrategy
-            ├─SommelierTurboStEthStrategy
-        ├─ yearn — "Strategies interacting with Yearn Finance"
-            ├─YearnWETHStrategy
+    ├─ mainnet — "Mainent chain strategies" 
+        ├─ USDC — "USDC strategies" 
+            ├─ sommelier — "Strategies interacting with Sommelier Finance"
+                ├─SommelierTurboGHOStrategy
+        ├─ WETH — "Wrapped Ether strategies" 
+            ├─ convex — "Strategies interacting with Convex Finance"
+                ├─ConvexdETHFrxETHStrategy 
+            ├─ sommelier — "Stratgies interacting with Sommelier Finance"
+                ├─SommelierMorphoEthMaximizerStrategy
+                ├─SommelierStEthDepositTurboStEthStrategy
+                ├─SommelierTurboStEthStrategy
+                ├─SommelierTurboSwEthStrategy
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnWETHStrategy
+                ├─YearnAjnaWETHStakingStrategy
+    ├─ polygon — "Polygon chain strategies" 
+        ├─ USDC — "USDC strategies" 
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnMaticUSDCStakingStrategy
 ├─ MaxApyVaultV2 — "Yield farming vault"
 ```
 
@@ -61,7 +70,7 @@ source .env
 ```
 Run the local fork:
 ```
-anvil --fork-url $RPC_MAINNET  --fork-block-number $FORK_BLOCK_NUMBER
+anvil --fork-url $RPC_MAINNET  --fork-block-number $FORK_BLOCK_NUMBER --accounts <number of test accounts to have available>
 ```
 **Note:** It's recommended using one of the private keys provided by anvil for testing 
 
@@ -77,12 +86,11 @@ cast rpc anvil_impersonateAccount <address of user to impersonate>
 For calling contract performing a transaction:
 ```
 cast send <address of contract to interact with> \
---from <address to impersonate> \
+--private-key <private key of sender> \
   <function signature as string> \
   arg1 \
   arg2 \
   ...
-  --unlocked
 ```
 For calling contract view methods:
 ```

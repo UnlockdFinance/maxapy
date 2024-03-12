@@ -2,8 +2,9 @@
 pragma solidity ^0.8.19;
 
 import {
-    SommelierTurboStEthStrategy, SafeTransferLib
-} from "src/strategies/WETH/sommelier/SommelierTurboStEthStrategy.sol";
+    SommelierTurboStEthStrategy,
+    SafeTransferLib
+} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 
 contract SommelierTurboStEthStrategyWrapper is SommelierTurboStEthStrategy {
     using SafeTransferLib for address;
@@ -16,8 +17,8 @@ contract SommelierTurboStEthStrategyWrapper is SommelierTurboStEthStrategy {
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }
 
-    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {
-        vault.report(gain, gain, loss, debtPayment);
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
+        vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
     function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)

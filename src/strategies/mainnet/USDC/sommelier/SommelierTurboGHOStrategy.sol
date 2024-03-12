@@ -4,23 +4,19 @@ pragma solidity ^0.8.19;
 import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
 import {ICellar} from "src/interfaces/ICellar.sol";
-
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-/// @title SommelierMorphoEthMaximizerStrategy
-/// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `SommelierMorphoEthMaximizerStrategy` supplies an underlying token into a generic Sommelier Vault,
-/// earning the Sommelier Vault's yield
 
-contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
+/// @title SommelierTurboGHOStrategy
+/// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/Strategy.sol
+/// @notice `SommelierTurboGHOStrategy` supplies an underlying token into a generic Sommelier Vault,
+/// earning the Sommelier Vault's yield
+contract SommelierTurboGHOStrategy is BaseStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
     error NotEnoughFundsToInvest();
-    error CellarIsPaused();
-    error InvalidHarvestedProfit();
-    error InvalidZeroAddress();
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -46,17 +42,17 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
 
     /// @notice The Sommelier Vault the strategy interacts with
     ICellar public cellar;
-
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
+
     constructor() initializer {}
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _cellar The address of the Sommelier Morpho Eth Maximizer cellar
+    /// @param _cellar The address of the Sommelier Turbo-stETH cellar
     function initialize(
         IMaxApyVaultV2 _vault,
         address[] calldata _keepers,
@@ -67,7 +63,59 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         cellar = _cellar;
         /// Approve Cellar Vault to transfer underlying
+        /// Ensure first approval is 0 to pass USDC race condition
+        underlyingAsset.safeApprove(address(_cellar), 0);
         underlyingAsset.safeApprove(address(_cellar), type(uint256).max);
+    }
+
+    /// @param _vault The address of the MaxApy Vault associated to the strategy
+    /// @param _keepers The addresses of the keepers to be granted the keeper role
+    /// @param _strategyName the name of the strategy
+    function __BaseStrategy_init(
+        IMaxApyVaultV2 _vault,
+        address[] calldata _keepers,
+        bytes32 _strategyName,
+        address _strategist
+    ) internal override onlyInitializing {
+        assembly ("memory-safe") {
+            // Ensure `_strategist` address is != from address(0)
+            if eq(_strategist, 0) {
+                // throw the `InvalidZeroAddress` error
+                mstore(0x00, 0xf6b2911f)
+                revert(0x1c, 0x04)
+            }
+        }
+
+        vault = _vault;
+        _grantRoles(address(_vault), VAULT_ROLE);
+
+        // Cache underlying asset
+        (bool success, bytes memory data) = address(_vault).staticcall(abi.encodeWithSignature("asset()"));
+        require(success, "asset");
+        address _underlyingAsset = abi.decode(data, (address));
+
+        underlyingAsset = _underlyingAsset;
+
+        // Approve MaxApyVault to transfer underlying
+        _underlyingAsset.safeApprove(address(_vault), type(uint256).max);
+
+        // Grant keepers with `KEEPER_ROLE`
+        for (uint256 i; i < _keepers.length;) {
+            _grantRoles(_keepers[i], KEEPER_ROLE);
+            unchecked {
+                ++i;
+            }
+        }
+
+        // Set caller as admin and owner
+        _initializeOwner(msg.sender);
+        _grantRoles(msg.sender, ADMIN_ROLE);
+
+        strategyName = _strategyName;
+
+        emergencyExit = 1;
+
+        strategist = _strategist;
     }
 
     /////////////////////////////////////////////////////////////////
@@ -78,12 +126,8 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
     function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
-        uint256 underlyingBalance = _underlyingBalance();
-        if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
-            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
-            loss = _shareValue(burntShares) - amountNeeded;
-        }
+        uint256 burntShares = cellar.withdraw(amountNeeded, address(this), address(this));
+        loss = _shareValue(burntShares) - amountNeeded;
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
     }
@@ -91,37 +135,6 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
     /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
-
-    /// @notice Provide an accurate estimate for the total amount of assets
-    /// (principle + return) that this Strategy is currently managing,
-    /// denominated in terms of `underlyingAsset` tokens.
-    /// This total should be "realizable" e.g. the total value that could
-    /// *actually* be obtained from this Strategy if it were to divest its
-    /// entire position based on current on-chain conditions.
-    /// @dev Care must be taken in using this function, since it relies on external
-    /// systems, which could be manipulated by the attacker to give an inflated
-    /// (or reduced) value produced by this function, based on current on-chain
-    /// conditions (e.g. this function is possible to influence through
-    /// flashloan attacks, oracle manipulations, or other DeFi attack
-    /// mechanisms).
-    /// @return The estimated total assets in this Strategy.
-    function estimatedTotalAssets() public view returns (uint256) {
-        // always try to use the value from the last harvest so share price is not updated before the harvest
-        // always be pessimistic, take the lowest between the last harvest assets and assets in that moment
-        return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
-    }
-
-    /**
-     *  @notice Provides an indication of whether this strategy is currently "active"
-     *  in that it is managing an active position, or will manage a position in
-     *  the future. This should correlate to `harvest()` activity, so that Harvest
-     *  events can be tracked externally by indexing agents.
-     *  @return True if the strategy is actively managing a position.
-     */
-    function isActive() public view returns (bool) {
-        return estimatedTotalAssets() != 0;
-    }
-
     /// @notice This function is meant to be called from the vault
     /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
@@ -149,19 +162,23 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
+        // If underlying balance currently held by strategy is not enough to cover
+        // the requested amount, we divest from the Cellar Vault
         if (underlyingBalance < liquidatedAmount) {
-            liquidatedAmount = liquidatedAmount - underlyingBalance;
-            requestedAmount = _shareValue(cellar.previewWithdraw(liquidatedAmount));
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = liquidatedAmount - underlyingBalance;
+            }
+            uint256 requestedShares = cellar.previewMint(amountToWithdraw);
+            requestedAmount = _shareValue(requestedShares);
         }
-        return requestedAmount + underlyingBalance;
+        requestedAmount = underlyingBalance + requestedAmount;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
     function maxWithdraw() public view override returns (uint256) {
         return estimatedTotalAssets();
     }
-
-    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public view override returns (uint256) {
@@ -190,13 +207,12 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
     ///       should only be used as a guide for how much is left to pay back.
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
-    /// See `MaxApy.debtOutstanding()`.
+    /// See `MaxApcellar.debtOutstanding()`.
     function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        if (cellar.isPaused()) return (0, 0, 0, 0);
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
@@ -227,7 +243,7 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
             // considering the current debt
 
             // we will report harvestedProfitBPS % of the profits only so we can compound the rest
-            realizedProfit = unrealizedProfit * harvestedProfitBPS / MAX_BPS;
+            realizedProfit = Math.fullMulDiv(unrealizedProfit, harvestedProfitBPS, MAX_BPS);
 
             uint256 amountToWithdraw = realizedProfit + debtOutstanding;
 
@@ -305,8 +321,7 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
     function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal returns (uint256 depositedAmount) {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
-        // Dont't do anything if cellar is paused or shutdown
-        if (cellar.isShutdown() || cellar.isPaused()) return 0;
+
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
@@ -338,8 +353,6 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
     /// but in terms of cellar shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal returns (uint256 withdrawn) {
-        // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) return 0;
         withdrawn = cellar.redeem(shares, address(this), address(this));
         emit Divested(address(this), shares, withdrawn);
     }
@@ -361,11 +374,6 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
         returns (uint256 liquidatedAmount, uint256 loss)
     {
         uint256 underlyingBalance = _underlyingBalance();
-        // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) {
-            uint256 amountOut = Math.min(underlyingBalance, amountNeeded);
-            return (amountOut, amountNeeded - amountOut);
-        }
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Cellar Vault
         if (underlyingBalance < amountNeeded) {
@@ -390,7 +398,6 @@ contract SommelierMorphoEthMaximizerStrategy is BaseStrategy {
     /// @dev This function is used during emergency exit instead of `_prepareReturn()` to
     /// liquidate all of the Strategy's positions back to the MaxApy Vault.
     function _liquidateAllPositions() internal override returns (uint256 amountFreed) {
-        if (cellar.isPaused()) revert CellarIsPaused();
         _divest(_shareBalance());
         amountFreed = _underlyingBalance();
     }

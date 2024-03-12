@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {
     SommelierMorphoEthMaximizerStrategy,
     SafeTransferLib
-} from "src/strategies/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
+} from "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 
 contract SommelierMorphoEthMaximizerStrategyWrapper is SommelierMorphoEthMaximizerStrategy {
     using SafeTransferLib for address;
@@ -17,8 +17,8 @@ contract SommelierMorphoEthMaximizerStrategyWrapper is SommelierMorphoEthMaximiz
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }
 
-    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {
-        vault.report(gain, gain, loss, debtPayment);
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
+        vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
     function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)
