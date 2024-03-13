@@ -383,7 +383,7 @@ contract SommelierTurboStEthStrategy is BaseStrategy {
     /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
         assembly {
-            // return cellar.convertShares(amount);
+            // return cellar.convertToShares(amount);
             mstore(0x00, 0xc6e6f592)
             mstore(0x20, amount)
             if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }

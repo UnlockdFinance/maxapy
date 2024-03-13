@@ -7,11 +7,11 @@ import {ICellar} from "src/interfaces/ICellar.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
-/// @title SommelierTurboSwEthStrategy
+/// @title SommelierTurboRsEthStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `SommelierTurboSwEthStrategy` supplies an underlying token into a generic Sommelier Vault,
+/// @notice `SommelierTurboRsEthStrategy` supplies an underlying token into a generic Sommelier Vault,
 /// earning the Sommelier Vault's yield
-contract SommelierTurboSwEthStrategy is BaseStrategy {
+contract SommelierTurboRsEthStrategy is BaseStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
