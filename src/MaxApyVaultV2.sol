@@ -102,7 +102,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     );
 
     /// @notice Emitted when a strategy is removed from the protocol
-    event StrategyAdded(address indexed strategy);
+    event StrategyRemoved(address indexed strategy);
 
     /// @notice Emitted when a vault's emergency shutdown state is switched
     event EmergencyShutdownUpdated(bool emergencyShutdown);
@@ -136,12 +136,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Emitted when the vault's treasury addresss is updated
     event TreasuryUpdated(address treasury);
-
-    /// @notice Emitted on vault deposits
-    event Deposit(address indexed recipient, uint256 shares, uint256 amount);
-
-    /// @notice Emitted on vault withdrawals
-    event Withdraw(address indexed recipient, uint256 shares, uint256 amount);
 
     /// @notice Emitted on withdrawal strategy withdrawals
     event WithdrawFromStrategy(address indexed strategy, uint128 strategyTotalDebt, uint128 loss);
