@@ -493,4 +493,14 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxWithdraw() public view virtual returns (uint256);
+
+    ////////////////////////////////////////////////////////////////
+    ///                      HELPER FUNCTIONS                    ///
+    ////////////////////////////////////////////////////////////////
+    /// @dev Private helper to substract a - b or return 0 if it underflows
+    function _sub0(uint256 a, uint256 b) internal pure virtual returns (uint256) {
+        unchecked {
+            return a - b > a ? 0 : a - b;
+        }
+    }
 }

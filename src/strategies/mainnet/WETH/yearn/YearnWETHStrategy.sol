@@ -192,7 +192,7 @@ contract YearnWETHStrategy is BaseStrategy {
         uint256 debt;
         assembly {
             // debt = vault.strategies(address(this)).strategyTotalDebt;
-            mstore(0x00, 0xbdb9f8b3)
+            mstore(0x00, 0xd81d5e87)
             mstore(0x20, address())
             if iszero(call(gas(), sload(vault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             debt := mload(0x00)

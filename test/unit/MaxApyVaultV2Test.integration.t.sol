@@ -139,13 +139,12 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
             address(implementation3),
             address(proxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
+                "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
                 bytes32(abi.encode("MaxApy Sommelier Strategy")),
                 users.alice,
-                CELLAR_STETH_MAINNET,
-                CURVE_POOL
+                CELLAR_STETH_MAINNET
             )
         );
         vm.label(CELLAR_STETH_MAINNET, "Cellar");
