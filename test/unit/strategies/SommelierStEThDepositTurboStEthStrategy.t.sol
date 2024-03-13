@@ -20,7 +20,7 @@ import {SommelierTurboStEthStrategy} from "src/strategies/mainnet/WETH/sommelier
 import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
-contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
+contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                    CONSTANTS                             ///
     ////////////////////////////////////////////////////////////////
@@ -74,13 +74,12 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
             address(implementation),
             address(proxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
+                "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
                 bytes32(abi.encode("MaxApy Sommelier Strategy")),
                 users.alice,
-                CELLAR_STETH_MAINNET,
-                CURVE_POOL
+                CELLAR_STETH_MAINNET
             )
         );
         vm.label(CELLAR_STETH_MAINNET, "Cellar");
@@ -88,7 +87,7 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
         vm.label(address(proxy), "SommelierStEThDeposiTurbStEthStrategy");
         vm.label(WETH_MAINNET, "WETH");
         vm.label(ST_ETH_MAINNET, "StETH");
-        vm.label(CURVE_POOL, "CurvePool");
+        vm.label(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022, "CurvePool");
 
         strategy = IStrategyWrapper(address(_proxy));
 
@@ -120,13 +119,12 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
             address(_implementation),
             address(_proxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
+                "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
                 bytes32(abi.encode("MaxApy Sommelier Strategy")),
                 users.alice,
-                CELLAR_STETH_MAINNET,
-                CURVE_POOL
+                CELLAR_STETH_MAINNET
             )
         );
         ITransparentUpgradeableProxy proxyInit = ITransparentUpgradeableProxy(address(_proxy));
