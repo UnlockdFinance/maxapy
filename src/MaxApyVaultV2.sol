@@ -2105,7 +2105,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice returns stratetegyTotalDebt, saves gas, no need to return the whole struct
     /// @param strategy The Strategy to check
     /// @return strategyTotalDebt The strategy's total debt
-    function getStratetegyTotalDebt(address strategy) external view returns (uint256 strategyTotalDebt) {
+    function getStrategyTotalDebt(address strategy) external view returns (uint256 strategyTotalDebt) {
         assembly ("memory-safe") {
             // Store data necessary to compute strategies[newStrategy] slot
             mstore(0x00, strategy)
