@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseSommelierStrategy, IERC20,ICellar, IWETH, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseSommelierStrategy.sol";
+import {
+    BaseSommelierStrategy,
+    IERC20,
+    ICellar,
+    IWETH,
+    IMaxApyVaultV2,
+    SafeTransferLib
+} from "src/strategies/base/BaseSommelierStrategy.sol";
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ICurve} from "src/interfaces/ICurve.sol";
 
@@ -298,7 +305,11 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Cellar receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal override returns (uint256 depositedAmount) {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+        internal
+        override
+        returns (uint256 depositedAmount)
+    {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
         // Dont't do anything if cellar is paused or shutdown
@@ -390,7 +401,6 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
             liquidatedAmount := sub(amountNeeded, loss)
         }
     }
-
 
     /// @notice Allow to receive native assets
     receive() external payable {}

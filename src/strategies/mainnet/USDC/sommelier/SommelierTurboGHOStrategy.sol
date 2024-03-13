@@ -8,4 +8,3 @@ import {BaseSommelierStrategy, SafeTransferLib} from "src/strategies/base/BaseSo
 /// @notice `SommelierTurboGHOStrategy` supplies an underlying token into a generic Sommelier Vault,
 /// earning the Sommelier Vault's yield
 contract SommelierTurboGHOStrategy is BaseSommelierStrategy {}
-   

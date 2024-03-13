@@ -144,8 +144,8 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
                 keepers,
                 bytes32(abi.encode("MaxApy Sommelier Strategy")),
                 users.alice,
-                CELLAR_STETH_MAINNET            
-            )    
+                CELLAR_STETH_MAINNET
+            )
         );
         vm.label(CELLAR_STETH_MAINNET, "Cellar");
         proxy = ITransparentUpgradeableProxy(address(_proxy));

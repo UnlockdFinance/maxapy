@@ -454,7 +454,7 @@ contract SommelierTurboRsEthStrategyTest is BaseTest, StrategyEvents {
         uint256 strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(strategy));
         vm.expectEmit();
         // it should divest amount expected or more, so its fine
-        emit Divested(address(strategy), expectedShares, amountExpectedFromShares + 1); 
+        emit Divested(address(strategy), expectedShares, amountExpectedFromShares + 1);
         uint256 amountDivested = strategy.divest(expectedShares);
         assertEq(amountDivested, amountExpectedFromShares + 1);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
@@ -539,7 +539,7 @@ contract SommelierTurboRsEthStrategyTest is BaseTest, StrategyEvents {
         deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
         expectedShares = strategy.sharesForAmount(500 ether);
         strategy.invest(500 ether, 0);
-        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)),  expectedShares); 
+        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedShares);
 
         /// Liquidate
         strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(strategy));
@@ -1347,14 +1347,24 @@ contract SommelierTurboRsEthStrategyTest is BaseTest, StrategyEvents {
         );
     }
 
-    uint32 constant holdingPosition = uint32(uint256(26959946667150639794667015087019630673637144422540572481103610249216));
+    uint32 constant holdingPosition =
+        uint32(uint256(26959946667150639794667015087019630673637144422540572481103610249216));
 
     function _shutDownCellar() internal {
         // keep the other values of the slot the same
         vm.store(
             CELLAR_WETH_MAINNET,
             bytes32(uint256(7)),
-            bytes32(abi.encodePacked(uint192(6277101735386680763835789423207666416102355444464034512895), false, true, false, false, holdingPosition))
+            bytes32(
+                abi.encodePacked(
+                    uint192(6277101735386680763835789423207666416102355444464034512895),
+                    false,
+                    true,
+                    false,
+                    false,
+                    holdingPosition
+                )
+            )
         );
     }
 }

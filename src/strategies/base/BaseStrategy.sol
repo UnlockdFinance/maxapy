@@ -494,7 +494,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxWithdraw() public view virtual returns (uint256);
 
-    
     ////////////////////////////////////////////////////////////////
     ///                      HELPER FUNCTIONS                    ///
     ////////////////////////////////////////////////////////////////

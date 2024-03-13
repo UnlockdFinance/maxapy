@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
+
 import {BaseSommelierStrategy, SafeTransferLib} from "src/strategies/base/BaseSommelierStrategy.sol";
 
 /// @title SommelierTurboStEthStrategy

@@ -888,13 +888,13 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
             // vault realized gain
             0,
             // vault unrealized gain
-            9.991061851995029472  ether,
+            9.991061851995029472 ether,
             /// vault loss - 9.991061851995029472  ether
             0,
             /// vault debtPayment
             0,
             /// strategy realized gain
-            9.991061851995029472  ether,
+            9.991061851995029472 ether,
             /// strategy loss - 10 ETH
             30.008938148004970528 ether,
             /// strategy total debt: 10 ETH less than initial debt
@@ -905,7 +905,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         /// debtratio reduced
 
         vm.expectEmit();
-        emit Harvested(0, 9.991061851995029472  ether, 0, 2997255809788678873);
+        emit Harvested(0, 9.991061851995029472 ether, 0, 2997255809788678873);
         /// 10 ETH loss
         // only losses , no effect
         strategy.harvest(0, 0, 10_000, address(0));
@@ -1345,14 +1345,24 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         );
     }
 
-    uint32 constant holdingPosition = uint32(uint256(26959946667150639794667015087019630673637144422540572481103610249216   ));
+    uint32 constant holdingPosition =
+        uint32(uint256(26959946667150639794667015087019630673637144422540572481103610249216));
 
     function _shutDownCellar() internal {
         // keep the other values of the slot the same
         vm.store(
             CELLAR_WETH_MAINNET,
             bytes32(uint256(7)),
-            bytes32(abi.encodePacked(uint192(6277101735386680763835789423207666416102355444464034512895), false, true, false, false, holdingPosition))
+            bytes32(
+                abi.encodePacked(
+                    uint192(6277101735386680763835789423207666416102355444464034512895),
+                    false,
+                    true,
+                    false,
+                    false,
+                    holdingPosition
+                )
+            )
         );
     }
 }

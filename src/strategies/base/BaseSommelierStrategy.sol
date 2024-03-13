@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
+
 import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
 import {ICellar} from "src/interfaces/ICellar.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-
 
 /// @title BaseSommelierStrategy
 /// @author MaxApy
@@ -79,13 +79,19 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function requestWithdraw(uint256 amountNeeded) external virtual override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+    function requestWithdraw(uint256 amountNeeded)
+        external
+        virtual
+        override
+        checkRoles(VAULT_ROLE)
+        returns (uint256 loss)
+    {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
             // use sub zero because shares could be fewer than expected and underflow
-            loss = _sub0(_shareValue(burntShares) , amountNeeded);
+            loss = _sub0(_shareValue(burntShares), amountNeeded);
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
@@ -120,7 +126,13 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view virtual override returns (uint256 requestedAmount) {
+    function previewWithdrawRequest(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < liquidatedAmount) {
             liquidatedAmount = liquidatedAmount - underlyingBalance;
@@ -274,7 +286,11 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Cellar receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal virtual returns (uint256 depositedAmount) {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+        internal
+        virtual
+        returns (uint256 depositedAmount)
+    {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
         // Dont't do anything if cellar is paused or shutdown
@@ -410,7 +426,7 @@ contract BaseSommelierStrategy is BaseStrategy {
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
-    function _estimatedTotalAssets() internal virtual view override returns (uint256) {
+    function _estimatedTotalAssets() internal view virtual override returns (uint256) {
         return _underlyingBalance() + _shareValue(_shareBalance());
     }
 }
