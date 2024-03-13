@@ -82,7 +82,8 @@ contract SommelierTurboStEthStrategy is BaseStrategy {
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
-            loss = _shareValue(burntShares) - amountNeeded;
+            // use sub zero because shares could be fewer than expected and underflow
+            loss = _sub0(_shareValue(burntShares) , amountNeeded);
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
