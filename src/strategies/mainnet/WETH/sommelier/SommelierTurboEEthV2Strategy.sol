@@ -6,12 +6,13 @@ import {IWETH} from "src/interfaces/IWETH.sol";
 import {ICellar} from "src/interfaces/ICellar.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import "forge-std/console.sol";
 
-/// @title SommelierTurboSwEthStrategy
+/// @title SommelierTurboEEthV2Strategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `SommelierTurboSwEthStrategy` supplies an underlying token into a generic Sommelier Vault,
+/// @notice `SommelierTurboEEthV2Strategy` supplies an underlying token into a generic Sommelier Vault,
 /// earning the Sommelier Vault's yield
-contract SommelierTurboSwEthStrategy is BaseStrategy {
+contract SommelierTurboEEthV2Strategy is BaseStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
