@@ -388,6 +388,40 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.revertTo(snapshotId);
     }
 
+    function testMaxApyVaultV2_ERC4626_RedeemMax() public {
+        deal(WETH_MAINNET, users.alice, 500 ether);
+
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
+        vault.deposit(500 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(users.alice);
+        vault.redeem(type(uint256).max, users.alice, users.alice);
+    }
+
+    function testMaxApyVaultV2_ERC4626_WithdrawMax() public {
+        deal(WETH_MAINNET, users.alice, 500 ether);
+
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
+        vault.deposit(500 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(users.alice);
+        vault.withdraw(type(uint256).max, users.alice, users.alice);
+    }
+
     /*     function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
         vm.assume(amount > 1 ether / 10 && amount < 10_000 ether);
         vault.deposit(20 ether, users.alice);

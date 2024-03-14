@@ -443,6 +443,11 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @return the strategy's total assets(idle + investment positions)
     function _estimatedTotalAssets() internal view virtual returns (uint256);
 
+    /// @notice Returns the real gain/loss from the last harvest
+    function unharvestedAmount() external view virtual returns (int256) {
+        return int256(_estimatedTotalAssets()) - int256(lastEstimatedTotalAssets);
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                    EXTERNAL VIEW FUNCTIONS               ///
     ////////////////////////////////////////////////////////////////

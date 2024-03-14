@@ -98,12 +98,18 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function requestWithdraw(uint256 amountNeeded) external virtual override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+    function requestWithdraw(uint256 amountNeeded)
+        external
+        virtual
+        override
+        checkRoles(VAULT_ROLE)
+        returns (uint256 loss)
+    {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
-            loss = _sub0(_shareValue(burntShares) , amountNeeded);
+            loss = _sub0(_shareValue(burntShares), amountNeeded);
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
@@ -178,7 +184,13 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view virtual override returns (uint256 requestedAmount) {
+    function previewWithdrawRequest(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < liquidatedAmount) {
             liquidatedAmount = liquidatedAmount - underlyingBalance;
@@ -189,11 +201,12 @@ contract BaseYearnV3Strategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
     function maxWithdraw() public view virtual override returns (uint256) {
-        return estimatedTotalAssets();
+        return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public view virtual override returns (uint256) {
+        // only can request harvested assets
         return _underlyingBalance() + yVault.maxWithdraw(address(this));
     }
 
@@ -223,7 +236,8 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// See `MaxApy.debtOutstanding()`.
     function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
         internal
-        virtual override
+        virtual
+        override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
         // Fetch initial strategy state
@@ -342,7 +356,11 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal virtual returns (uint256 depositedAmount) {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+        internal
+        virtual
+        returns (uint256 depositedAmount)
+    {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
 
@@ -394,7 +412,8 @@ contract BaseYearnV3Strategy is BaseStrategy {
 
     function _liquidatePosition(uint256 amountNeeded)
         internal
-        virtual override
+        virtual
+        override
         returns (uint256 liquidatedAmount, uint256 loss)
     {
         uint256 underlyingBalance = _underlyingBalance();
@@ -433,25 +452,25 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @notice Determines the current value of `shares`.
     /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal virtual view returns (uint256) {
+    function _shareValue(uint256 shares) internal view virtual returns (uint256) {
         return yVault.previewRedeem(shares);
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal virtual view returns (uint256 shares) {
+    function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
         return yVault.convertToShares(amount);
     }
 
     /// @notice Returns the current strategy's amount of yearn vault shares
     /// @return _balance balance the strategy's balance of yearn vault shares
-    function _shareBalance() internal virtual view returns (uint256 _balance) {
+    function _shareBalance() internal view virtual returns (uint256 _balance) {
         return yVault.balanceOf(address(this));
     }
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
-    function _estimatedTotalAssets() internal virtual override view  returns (uint256) {
+    function _estimatedTotalAssets() internal view virtual override returns (uint256) {
         return _underlyingBalance() + _shareValue(_shareBalance());
     }
 }

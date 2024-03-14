@@ -74,7 +74,7 @@ contract BaseSommelierStrategy is BaseStrategy {
 
     /////////////////////////////////////////////////////////////////
     ///                    CORE LOGIC                             ///
-    ////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
     /// @notice Withdraws exactly `amountNeeded` to `vault`.
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
@@ -143,11 +143,12 @@ contract BaseSommelierStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
     function maxWithdraw() public view virtual override returns (uint256) {
-        return estimatedTotalAssets();
+        return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public view virtual override returns (uint256) {
+        // only can request harvested assets
         return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
 

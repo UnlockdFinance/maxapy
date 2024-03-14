@@ -10,6 +10,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {ReentrancyGuard} from "./lib/ReentrancyGuard.sol";
 import {ERC4626, ERC20} from "solady/tokens/ERC4626.sol";
 import {IERC20Permit} from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
+import "forge-std/console.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
@@ -833,22 +834,37 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     function totalAssets() public view override returns (uint256) {
         return _totalAssets();
     }
-    /// @notice Returns the total amount of accoutned idle and strategy debt assets
 
+    /// @notice Returns the total amount of accounted idle and strategy debt assets
     function totalAccountedAssets() public view returns (uint256) {
         return _totalAccountedAssets();
     }
 
     /// @notice Returns the maximum amount of the underlying asset that can be deposited
     /// into the Vault for `to`, via a deposit call.
-    function maxDeposit(address /*to*/ ) public view override returns (uint256) {
+    function maxDeposit(address /*to*/ ) public view override returns (uint256 maxAssets) {
         return depositLimit - totalAssets();
     }
 
     /// @notice Returns the maximum amount of the Vault shares that can be minter for `to`,
     /// via a mint call.
-    function maxMint(address /*to*/ ) public view override returns (uint256) {
+    function maxMint(address /*to*/ ) public view override returns (uint256 maxShares) {
         return convertToShares(maxDeposit(address(0)));
+    }
+
+    /// @notice Returns the maximum amount of the underlying asset that can be withdrawn
+    /// from the `owner`'s balance in the Vault, via a withdraw call.
+    function maxWithdraw(address owner) public view override returns (uint256 maxAssets) {
+        uint256 maxRequestableAssets = totalIdle;
+        for (uint256 i; i < MAXIMUM_STRATEGIES; i++) {
+            address strategy = withdrawalQueue[i];
+            if (strategy == address(0)) break;
+            maxRequestableAssets += IStrategy(strategy).maxRequest();
+        }
+        uint256 totalSupply = totalSupply();
+        // prevent division by zero
+        if (totalSupply == 0) return 0;
+        maxAssets = Math.fullMulDiv(maxRequestableAssets, maxRedeem(owner), totalSupply);
     }
 
     /// @notice Returns the estimate price of 1 vault share
@@ -887,11 +903,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (assets == 0) return 0;
         if (assets == type(uint256).max) assets = convertToAssets(balanceOf(msg.sender));
 
+        uint256 _totalAssets_ = _totalAssets();
         uint256 vaultBalance = totalIdle;
         uint256 o = _decimalsOffset();
         // convert the assets to shares without any losses
         // very important: ROUND UP
-        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_totalAssets()));
+        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_totalAssets_));
 
         // in case the vault's balance doesn't cover the requested `assets`
         if (assets > vaultBalance) {
@@ -943,14 +960,14 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
             }
             // Increase the shares if there are any losses
-            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_totalAssets()));
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_totalAssets_));
         }
 
         // if there are more assets to cover(when requesting more assets then total)
         // we add the extra shares needed, even though it would revert if someone tries
         // to withdraw that much since they wouln't have the needed shares
         if (vaultBalance < assets) {
-            shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_totalAssets()));
+            shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_totalAssets_));
         }
     }
 
@@ -1348,12 +1365,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
 
+        uint256 _totalAssets_ = _totalAssets();
         uint256 vaultBalance = totalIdle;
         uint256 o = _decimalsOffset();
         address underlying = asset();
         // convert the assets to shares without any losses
         // very important: ROUND UP
-        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_totalAssets()));
+        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_totalAssets_));
 
         // in case the vault's balance doesn't cover the requested `assets`
         if (assets > vaultBalance) {
@@ -1431,16 +1449,16 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
             }
 
-            // Increase the shares if there are any losses
-            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_totalAssets()));
             // Update total idle with the actual vault balance that considers the total withdrawn amount
             totalIdle = vaultBalance;
+            // Increase the shares if there are any losses
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_totalAssets_));
 
             // if there are more assets to cover(when requesting more assets then total)
             // we add the extra shares needed, even though it would revert if someone tries
             // to withdraw that much since they wouln't have the needed shares
             if (vaultBalance < assets) {
-                shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_totalAssets()));
+                shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_totalAssets_));
             }
         }
 

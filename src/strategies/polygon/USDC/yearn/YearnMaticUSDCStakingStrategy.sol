@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseYearnV3Strategy, SafeTransferLib, IERC20,IMaxApyVaultV2, IYVaultV3} from "src/strategies/base/BaseYearnV3Strategy.sol";
+import {
+    BaseYearnV3Strategy,
+    SafeTransferLib,
+    IERC20,
+    IMaxApyVaultV2,
+    IYVaultV3
+} from "src/strategies/base/BaseYearnV3Strategy.sol";
 import {IStakingRewardsMulti} from "src/interfaces/IStakingRewardsMulti.sol";
 import {IUniswapV3Router as IRouter} from "src/interfaces/IUniswap.sol";
 
@@ -81,7 +87,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
-    }  
+    }
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
@@ -232,7 +238,11 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal override returns (uint256 depositedAmount) {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+        internal
+        override
+        returns (uint256 depositedAmount)
+    {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
 
@@ -357,7 +367,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
 
     /// @notice Returns the current strategy's amount of yearn vault shares
     /// @return _balance balance the strategy's balance of yearn vault shares
-    function _shareBalance() internal override view returns (uint256 _balance) {
+    function _shareBalance() internal view override returns (uint256 _balance) {
         return yearnStakingRewards.balanceOf(address(this));
     }
 }
