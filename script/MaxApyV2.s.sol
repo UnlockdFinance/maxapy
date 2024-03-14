@@ -158,13 +158,12 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
             address(implementation3),
             address(proxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
+                "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
                 bytes32(abi.encode("MaxApy Sommelier Strategy")),
                 strategyAdmin,
-                CELLAR_STETH_MAINNET,
-                CURVE_POOL
+                CELLAR_STETH_MAINNET
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
