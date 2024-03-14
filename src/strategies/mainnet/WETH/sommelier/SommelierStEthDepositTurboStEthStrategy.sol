@@ -83,6 +83,42 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         minSingleTrade = 1e4;
     }
 
+     ////////////////////////////////////////////////////////////////
+    ///                STRATEGY CORE LOGIC                       ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Tries to withdraw `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    function withdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 amountFreed;
+        // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
+        (amountFreed, loss) = _liquidatePosition(amountNeeded);
+        // Send it directly back to vault
+        if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountFreed);
+        // Note: Reinvest anything leftover on next `harvest`
+    }
+
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    /// NOTE : while in the {withdraw} function the vault gets `amountNeeded` - `loss`
+    /// in {requestWithdraw} the vault always gets `amountNeeded` and `loss` is the amount
+    /// that had to be lost in order to withdraw exactly `amountNeeded`
+    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 amountRequested = previewWithdrawRequest(amountNeeded);
+        uint256 amountFreed;
+        // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
+        (amountFreed, loss) = _liquidatePosition(amountRequested);
+        // Send it directly back to vault
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // something didn't work as expected
+        // this should NEVER happen in normal conditions
+        else revert();
+        // Note: Reinvest anything leftover on next `harvest`
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                 STRATEGY CONFIGURATION                   ///
     ////////////////////////////////////////////////////////////////
