@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
-import {IYVaultV3} from "src/interfaces/IYVaultV3.sol";
+import {BaseYearnV3Strategy, SafeTransferLib, IERC20,IMaxApyVaultV2, IYVaultV3} from "src/strategies/base/BaseYearnV3Strategy.sol";
 import {IStakingRewardsMulti} from "src/interfaces/IStakingRewardsMulti.sol";
 import {IUniswapV3Router as IRouter} from "src/interfaces/IUniswap.sol";
-
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 /// @title YearnAjnaWETHStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `YearnAjnaWETHStakingStrategy` supplies an underlying token into a generic Yearn V3 Vault,
 /// and stakes the vault shares for boosted AJNA rewards
-contract YearnAjnaWETHStakingStrategy is BaseStrategy {
+contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
@@ -27,61 +24,13 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
     /// @notice The staking contract to stake the vault shares
     IStakingRewardsMulti public constant yearnStakingRewards =
         IStakingRewardsMulti(0x0Ed535037c013c3628512980C169Ed59Eb805B49);
-    ////////////////////////////////////////////////////////////////
-    ///                         ERRORS                           ///
-    ////////////////////////////////////////////////////////////////
-
-    error NotEnoughFundsToInvest();
-    error InvalidZeroAddress();
-    error InvalidHarvestedProfit();
-
-    ////////////////////////////////////////////////////////////////
-    ///                         EVENTS                           ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Emitted when underlying asset is deposited into the Yearn Vault
-    event Invested(address indexed strategy, uint256 amountInvested);
-
-    /// @notice Emitted when the `requestedShares` are divested from the Yearn Vault
-    event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
-
-    /// @notice Emitted when the strategy's max single trade value is updated
-    event MaxSingleTradeUpdated(uint256 maxSingleTrade);
-
-    /// @notice Emitted when the strategy's min single trade value is updated
-    event MinSingleTradeUpdated(uint256 minSingleTrade);
-
-    // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
-    uint256 internal constant _INVESTED_EVENT_SIGNATURE =
-        0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
-
-    // @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
-    uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
-        0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
-
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
-    uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
-
-    // @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
-    uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
-
+   
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
-
-    /// @notice The Yearn Vault the strategy interacts with
-    IYVaultV3 public yVault;
-
-    /// @notice The maximum single trade allowed in the strategy
-    uint256 public maxSingleTrade;
-
-    /// @notice Minimun trade size within the strategy
-    uint256 public minSingleTrade;
-
     /// @notice Minimun trade size for AJNA token
     uint256 public minSwapAjna;
+
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
@@ -99,7 +48,7 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
         bytes32 _strategyName,
         address _strategist,
         IYVaultV3 _yVault
-    ) public initializer {
+    ) public override initializer {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
@@ -134,93 +83,6 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
         // Note: Reinvest anything leftover on next `harvest`
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                 STRATEGY CONFIGURATION                   ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Sets the maximum single trade amount allowed
-    /// @param _maxSingleTrade The new maximum single trade value
-    function setMaxSingleTrade(uint256 _maxSingleTrade) external checkRoles(ADMIN_ROLE) {
-        assembly ("memory-safe") {
-            // revert if `_maxSingleTrade` is zero
-            if iszero(_maxSingleTrade) {
-                // throw the `InvalidZeroAmount` error
-                mstore(0x00, 0xdd484e70)
-                revert(0x1c, 0x04)
-            }
-
-            sstore(maxSingleTrade.slot, _maxSingleTrade) // set the max single trade value in storage
-
-            // Emit the `MaxSingleTradeUpdated` event
-            mstore(0x00, _maxSingleTrade)
-            log1(0x00, 0x20, _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
-        }
-    }
-
-    /// @notice Sets the minimum single trade amount allowed
-    /// @param _minSingleTrade The new minimum single trade value
-    function setMinSingleTrade(uint256 _minSingleTrade) external checkRoles(ADMIN_ROLE) {
-        assembly {
-            // if _minSingleTrade == 0 revert()
-            if iszero(_minSingleTrade) {
-                // Throw the `InvalidZeroAmount` error
-                mstore(0x00, 0xdd484e70)
-                revert(0x1c, 0x04)
-            }
-            sstore(minSingleTrade.slot, _minSingleTrade)
-            // Emit the `MinSingleTradeUpdated` event
-            mstore(0x00, _minSingleTrade)
-            log1(0x00, 0x20, _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
-        }
-    }
-
-    ////////////////////////////////////////////////////////////////
-    ///                    VIEW FUNCTIONS                        ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice This function is meant to be called from the vault
-    /// @dev calculates estunated the real output of a withdrawal(including losses) for a @param requestedAmount
-    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
-    /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
-        uint256 loss;
-        uint256 underlyingBalance = _underlyingBalance();
-        // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Cellar Vault
-        if (underlyingBalance < requestedAmount) {
-            uint256 amountToWithdraw;
-            unchecked {
-                amountToWithdraw = requestedAmount - underlyingBalance;
-            }
-            uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = _shareValue(shares);
-            if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
-        }
-        liquidatedAmount = requestedAmount - loss;
-    }
-
-    /// @notice This function is meant to be called from the vault
-    /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
-    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
-    /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
-        uint256 underlyingBalance = _underlyingBalance();
-        if (underlyingBalance < liquidatedAmount) {
-            liquidatedAmount = liquidatedAmount - underlyingBalance;
-            requestedAmount = _shareValue(yVault.previewWithdraw(liquidatedAmount));
-        }
-        return requestedAmount + underlyingBalance;
-    }
-
-    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public view override returns (uint256) {
-        return estimatedTotalAssets();
-    }
-
-    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public view override returns (uint256) {
-        return _underlyingBalance() + yVault.maxWithdraw(address(this));
-    }
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
@@ -355,23 +217,12 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
         }
     }
 
-    /// @notice Performs any adjustments to the core position(s) of this Strategy given
-    /// what change the MaxApy Vault made in the "investable capital" available to the
-    /// Strategy.
-    /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
-    /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
-        uint256 toInvest = _underlyingBalance();
-        if (toInvest > minSingleTrade) {
-            _invest(toInvest, minOutputAfterInvestment);
-        }
-    }
 
     /// @notice Invests `amount` of underlying, depositing it in the Yearn Vault
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal returns (uint256 depositedAmount) {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal override returns (uint256 depositedAmount) {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
 
@@ -407,7 +258,7 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
     /// but in terms of yvault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
-    function _divest(uint256 shares) internal returns (uint256 withdrawn) {
+    function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         yearnStakingRewards.withdraw(shares);
         withdrawn = yVault.redeem(shares, address(this), address(this));
         emit Divested(address(this), shares, withdrawn);
@@ -486,36 +337,18 @@ contract YearnAjnaWETHStakingStrategy is BaseStrategy {
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
-
     ////////////////////////////////////////////////////////////////
-    /// @notice Returns the CVX token balane of the strategy
-    /// @return The amount of CVX tokens held by the current contract
+
+    /// @notice Returns the AJNA token balane of the strategy
+    /// @return The amount of AJNA tokens held by the current contract
     function _ajnaBalance() internal view returns (uint256) {
         return ajna.balanceOf(address(this));
     }
 
-    /// @notice Determines the current value of `shares`.
-    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
-    /// @return returns the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view returns (uint256) {
-        return yVault.previewRedeem(shares);
-    }
-
-    /// @notice Determines how many shares depositor of `amount` of underlying would receive.
-    /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view returns (uint256 shares) {
-        return yVault.convertToShares(amount);
-    }
-
     /// @notice Returns the current strategy's amount of yearn vault shares
     /// @return _balance balance the strategy's balance of yearn vault shares
-    function _shareBalance() internal view returns (uint256 _balance) {
+    function _shareBalance() internal override view returns (uint256 _balance) {
         return yearnStakingRewards.balanceOf(address(this));
     }
 
-    /// @notice Returns the real time estimation of the value in assets held by the strategy
-    /// @return the strategy's total assets(idle + investment positions)
-    function _estimatedTotalAssets() internal view override returns (uint256) {
-        return _underlyingBalance() + _shareValue(_shareBalance());
-    }
 }
