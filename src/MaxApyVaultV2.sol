@@ -102,7 +102,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     );
 
     /// @notice Emitted when a strategy is removed from the protocol
-    event StrategyAdded(address indexed strategy);
+    event StrategyRemoved(address indexed strategy);
 
     /// @notice Emitted when a vault's emergency shutdown state is switched
     event EmergencyShutdownUpdated(bool emergencyShutdown);
@@ -137,12 +137,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Emitted when the vault's treasury addresss is updated
     event TreasuryUpdated(address treasury);
 
-    /// @notice Emitted on vault deposits
-    event Deposit(address indexed recipient, uint256 shares, uint256 amount);
-
-    /// @notice Emitted on vault withdrawals
-    event Withdraw(address indexed recipient, uint256 shares, uint256 amount);
-
     /// @notice Emitted on withdrawal strategy withdrawals
     event WithdrawFromStrategy(address indexed strategy, uint128 strategyTotalDebt, uint128 loss);
 
@@ -171,7 +165,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         0x66277e61c003f7703009ad857a4c4900f9cd3ee44535afe5905f98d53922e0f4;
 
     uint256 internal constant _STRATEGY_REMOVED_EVENT_SIGNATURE =
-        0x3f008fd510eae7a9e7bee13513d7b83bef8003d488b5a3d0b0da4de71d6846f1;
+        0x09a1db4b80c32706328728508c941a6b954f31eb5affd32f236c1fd405f8fea4;
 
     uint256 internal constant _EMERGENCY_SHUTDOWN_UPDATED_EVENT_SIGNATURE =
         0xa63137c77816d51f856c11ffb11e84757ac9db0ce2569f94edd04c91fe2250a1;
@@ -2105,7 +2099,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice returns stratetegyTotalDebt, saves gas, no need to return the whole struct
     /// @param strategy The Strategy to check
     /// @return strategyTotalDebt The strategy's total debt
-    function getStratetegyTotalDebt(address strategy) external view returns (uint256 strategyTotalDebt) {
+    function getStrategyTotalDebt(address strategy) external view returns (uint256 strategyTotalDebt) {
         assembly ("memory-safe") {
             // Store data necessary to compute strategies[newStrategy] slot
             mstore(0x00, strategy)
