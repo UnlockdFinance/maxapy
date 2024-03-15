@@ -9,7 +9,6 @@ amount=$1
 
 # 1.- Deposit WETH to the contract
 deposit=$(cast send $WETH --private-key $DEPLOYER_PRIVATE_KEY "deposit()" --value $amount)
-echo "WETH Balance of Deployer:" $(cast call $WETH "balanceOf(address)(uint256)" $DEPLOYER_ADDRESS)
 
 # 2.- Approve in WETH contract the maxapyvault
 approve=$(cast send $WETH --private-key $DEPLOYER_PRIVATE_KEY "approve(address,uint256)" $VAULT $amount)

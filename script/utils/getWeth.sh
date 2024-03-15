@@ -6,6 +6,6 @@ if [ $# -ne 1 ]; then
 fi
 
 source .env
-cast send $WETH --private-key $DEPLOYER_PRIVATE_KEY "deposit()" --value $1
-echo "Wrapped $1 WETH for $DEPLOYER_ADDRESS"
+deposit=$(cast send $WETH --private-key $DEPLOYER_PRIVATE_KEY "deposit()" --value $1)
+echo "Wrapped $(cast --from-wei $1) WETH for $DEPLOYER_ADDRESS"
 exit 0
