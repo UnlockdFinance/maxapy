@@ -109,7 +109,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
 
     /*==================CURVE-RELATED STORAGE VARIABLES==================*/
     /// @notice Main Curve pool for this Strategy
-    ICurve public curveDEthFrxEthPool;
+    ICurve public curveLpPool;
     /// @notice Curve's ETH-frxETH pool
     ICurve public curveEthFrxEthPool;
 
@@ -131,7 +131,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _curveDEthFrxEthPool The address of the strategy's main Curve pool, dETH-frxETH pool
+    /// @param _curveLpPool The address of the strategy's main Curve pool, dETH-frxETH pool
     /// @param _curveEthFrxEthPool The address of Curve's ETH-frxETH pool
     /// @param _router The router address to perform swaps
     function initialize(
@@ -139,7 +139,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
-        ICurve _curveDEthFrxEthPool,
+        ICurve _curveLpPool,
         ICurve _curveEthFrxEthPool,
         IRouter _router
     ) public initializer {
@@ -162,18 +162,18 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         rewardToken = IERC20(IConvexRewards(_crvRewards).rewardToken());
 
         // Curve init
-        curveDEthFrxEthPool = _curveDEthFrxEthPool;
+        curveLpPool = _curveLpPool;
         curveEthFrxEthPool = _curveEthFrxEthPool;
 
         // Approve pools
-        address(_curveDEthFrxEthPool).safeApprove(address(convexBooster), type(uint256).max);
+        address(_curveLpPool).safeApprove(address(convexBooster), type(uint256).max);
 
         // Set router
         router = _router;
 
         address(crv).safeApprove(address(_router), type(uint256).max);
         address(cvx).safeApprove(address(cvxWethPool), type(uint256).max);
-        address(frxETH).safeApprove(address(curveDEthFrxEthPool), type(uint256).max);
+        address(frxETH).safeApprove(address(curveLpPool), type(uint256).max);
         address(frxETH).safeApprove(address(curveEthFrxEthPool), type(uint256).max);
 
         maxSingleTrade = 1_000 * 1e18;
@@ -266,7 +266,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 value = _lpForAmount(amountToWithdraw);
-            uint256 withdrawn = curveDEthFrxEthPool.calc_withdraw_one_coin(value, 1);
+            uint256 withdrawn = curveLpPool.calc_withdraw_one_coin(value, 1);
             withdrawn = curveEthFrxEthPool.get_dy(1, 0, withdrawn);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
@@ -489,7 +489,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         uint256 frxEthReceivedAmount = curveEthFrxEthPool.exchange{value: amount}(0, 1, amount, 0);
 
         // Add liquidity to the dETH-frxETH pool in frxETH [coin1 -> frxETH]
-        uint256 lpReceived = curveDEthFrxEthPool.add_liquidity([0, frxEthReceivedAmount], 0);
+        uint256 lpReceived = curveLpPool.add_liquidity([0, frxEthReceivedAmount], 0);
 
         assembly ("memory-safe") {
             // if (lpReceived < minOutputAfterInvestment)
@@ -521,7 +521,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         convexRewardPool.withdrawAndUnwrap(amount, false);
 
         // Remove liquidity and obtain frxETH
-        uint256 amountWithdrawn = curveDEthFrxEthPool.remove_liquidity_one_coin(
+        uint256 amountWithdrawn = curveLpPool.remove_liquidity_one_coin(
             amount,
             1,
             //frxETH
@@ -659,8 +659,8 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     function _lpPrice() internal view returns (uint256) {
         return (
             (
-                curveDEthFrxEthPool.get_virtual_price()
-                    * Math.min(curveDEthFrxEthPool.get_dy(1, 0, 1 ether), curveDEthFrxEthPool.get_dy(0, 1, 1 ether))
+                curveLpPool.get_virtual_price()
+                    * Math.min(curveLpPool.get_dy(1, 0, 1 ether), curveLpPool.get_dy(0, 1, 1 ether))
             ) / 1e18
         );
     }

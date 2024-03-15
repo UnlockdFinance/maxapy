@@ -154,11 +154,11 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertNotEq(_strategy.rewardToken(), address(0)); */
 
         /// Assert crvWethPool and cvxWethPool are properly initialized
-        assertEq(_strategy.curveDEthFrxEthPool(), DETH_FRXETH_CURVE_POOL);
+        assertEq(_strategy.curveLpPool(), DETH_FRXETH_CURVE_POOL);
         assertEq(_strategy.curveEthFrxEthPool(), ETH_FRXETH_CURVE_POOL);
         /// Assert pools are approved
         assertEq(
-            IERC20(_strategy.curveDEthFrxEthPool()).allowance(address(_strategy), address(_strategy.convexBooster())),
+            IERC20(_strategy.curveLpPool()).allowance(address(_strategy), address(_strategy.convexBooster())),
             type(uint256).max
         );
         assertEq(IERC20(crv).allowance(address(_strategy), address(_strategy.router())), type(uint256).max);
