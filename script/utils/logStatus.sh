@@ -37,6 +37,12 @@ convertToAssets=$(cast call $VAULT "convertToAssets(uint256)(uint256)" $balanceU
 # 6.- [Vault] previewRedeem(#4: shares_user)
 previewRedeem=$(cast call $VAULT "previewRedeem(uint256)(uint256)" $balanceUser)
 
+# 7.- [Vault] totalIdle
+totalIdle=$(cast call $VAULT "totalIdle()(uint256)")
+
+# 8.- [Vault] totalDebt
+totalDebt=$(cast call $VAULT "totalDebt()(uint256)")
+
 echo ""
 echo "[VAULT] sharePrice:" $sharePrice
 echo "----------------------------------------------------------------"
@@ -56,8 +62,11 @@ echo "[SSTRAT2] Total Assets: (rewards included)" $estimatedTotalAssetsSommelier
 echo "[SSTRAT2] Principal:" $getStrategyTotalDebtSommelier2
 echo "[SSTRAT2] unharvestedAmount: $unharvestedAmountSommelier2"
 echo "----------------------------------------------------------------"
-echo "[VAULT] totalAssets (rewards included):" $totalAssets
+echo "[VAULT] totalIdle:" $totalIdle
+echo "[VAULT] totalDebt:" $totalDebt
 echo "[VAULT] totalAccountedAssets:" $totalAccountedAssets
+echo "----------------------------------------------------------------"
+echo "[VAULT] totalAssets (rewards included):" $totalAssets
 echo "[VAULT] balanceOf(user) (shares):" $balanceUser
 echo "[VAULT] convertToAssets:" $convertToAssets
 echo "[VAULT] previewRedeem:" $previewRedeem

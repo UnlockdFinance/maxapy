@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
+TransparentUpgradeableProxy,
+ITransparentUpgradeableProxy
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
@@ -22,13 +22,13 @@ import {ConvexdETHFrxETHStrategyEvents} from "../helpers/ConvexdETHFrxETHStrateg
 
 import {SommelierMorphoEthMaximizerStrategyWrapper} from "../mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
 import {SommelierMorphoEthMaximizerStrategy} from
-    "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
+"src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 
 import {SommelierTurboStEthStrategy} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import {SommelierTurboStEthStrategyWrapper} from "../mock/SommelierTurboStEthStrategyWrapper.sol";
 
 import {SommelierStEthDepositTurboStEthStrategyWrapper} from
-    "../mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
+"../mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
 
 import {YearnWETHStrategyWrapper} from "../mock/YearnWETHStrategyWrapper.sol";
 import {MockRevertingStrategy} from "../mock/MockRevertingStrategy.sol";
@@ -134,7 +134,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         // Deploy strategy3
         SommelierStEthDepositTurboStEthStrategyWrapper implementation3 =
-            new SommelierStEthDepositTurboStEthStrategyWrapper();
+                    new SommelierStEthDepositTurboStEthStrategyWrapper();
         _proxy = new TransparentUpgradeableProxy(
             address(implementation3),
             address(proxyAdmin),
@@ -585,11 +585,77 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
             0
         );
         vm.startPrank(users.keeper);
-        strategy2.harvest(0,0,0,address(0));
-        strategy3.harvest(0,0,0,address(0));
-        strategy4.harvest(0,0,0,address(0));
-        strategy1.harvest(0,0,0,address(0));
-        console.log("idle : ",vault.totalIdle());
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0));
+        console.log("idle : ", vault.totalIdle());
+        console.log("yearn:", strategy1.estimatedTotalAssets());
+    }
+
+    // Remove strategy test
+    function testRemoveStrategy() public {
+        deal(WETH_MAINNET, users.alice, 100 ether);
+
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
+        vault.deposit(100 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
+        vm.stopPrank();
+
+        // ------------------------------------------------------------------------
+
+        // removeStrategy.sh
+        vm.startPrank(users.alice);
+        vault.updateStrategyData(address(strategy1), 0, type(uint256).max, 0, 0);
+        vm.stopPrank();
+
+        vm.startPrank(users.keeper);
+        strategy1.harvest(0, 0, 0, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(users.alice);
+        vault.removeStrategy(address(strategy1));
+        vm.stopPrank();
+        // eof
+
+        console.log('[YEARN] DEBT_RATIO: ',vault.strategies(address(strategy1)).strategyDebtRatio);
+        console.log('[SOM1] DEBT_RATIO: ',vault.strategies(address(strategy2)).strategyDebtRatio);
+        console.log('[SOM2] DEBT_RATIO: ',vault.strategies(address(strategy3)).strategyDebtRatio);
+        console.log('[CONVEX] DEBT_RATIO: ',vault.strategies(address(strategy4)).strategyDebtRatio);
+
+        // Now do a reallocation
+        /**
+         '0x59c7d03d2e9893fb7baa89da50a9452e1e9b8b90' => { allocation: 425, apr: 0.1251496531527067 },
+         '0x6ffa22292b86d678ff6621eedc9b15e68dc44dcd' => { allocation: 8124, apr: 0.1224751938642816 },
+         '0x8cea85ec7f3d314c4d144e34f2206c8ac0bbada1' => { allocation: 451, apr: 0.10859648210667133 }
+        */
+
+        // script TypeScript
+        vm.startPrank(users.alice);
+        vault.updateStrategyData(address(strategy4), 425, type(uint256).max, 0, 0);
+        vault.updateStrategyData(address(strategy3), 451, type(uint256).max, 0, 0);
+        vault.updateStrategyData(address(strategy2), 8124, type(uint256).max, 0, 0);
+        vm.stopPrank();
+
+        vm.startPrank(users.keeper);
+        strategy4.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        vm.stopPrank();
+
+        console.log('----------------------------------------------------------------');
+        console.log('[YEARN] DEBT_RATIO: ',vault.strategies(address(strategy1)).strategyDebtRatio);
+        console.log('[SOM1] DEBT_RATIO: ',vault.strategies(address(strategy2)).strategyDebtRatio);
+        console.log('[SOM2] DEBT_RATIO: ',vault.strategies(address(strategy3)).strategyDebtRatio);
+        console.log('[CONVEX] DEBT_RATIO: ',vault.strategies(address(strategy4)).strategyDebtRatio);
+        console.log('----------------------------------------------------------------');
+
+        console.log("idle : ", vault.totalIdle());
         console.log("yearn:", strategy1.estimatedTotalAssets());
     }
 }
