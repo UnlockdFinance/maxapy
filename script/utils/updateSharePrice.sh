@@ -2,6 +2,7 @@
 
 if [ $# -ne 1 ]; then
 	echo "Usage: ./updateSharePrice.sh <strategy_address>"
+	exit 1
 fi
 
 source .env
