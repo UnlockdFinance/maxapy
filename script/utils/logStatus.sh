@@ -16,6 +16,12 @@ getStrategyTotalDebtConvex=$(cast call $VAULT "getStrategyTotalDebt(address)(uin
 getStrategyTotalDebtSommelier1=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $YEARN_ST_ETH_STRATEGY)
 getStrategyTotalDebtSommelier2=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $YEARN_ST_ETH_DEPOSIT_ST_ETH_STRATEGY)
 
+# 4.- [4eStrategy] unharvestedAmount
+unharvestedAmountYearn=$(cast call $YEARN_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
+unharvestedAmountConvex=$(cast call $CONVEX_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
+unharvestedAmountSommelier1=$(cast call $YEARN_ST_ETH_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
+unharvestedAmountSommelier2=$(cast call $YEARN_ST_ETH_DEPOSIT_ST_ETH_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
+
 # 3.- [Vault] totalAssets
 totalAssets=$(cast call $VAULT "totalAssets()(uint256)")
 
@@ -31,22 +37,28 @@ convertToAssets=$(cast call $VAULT "convertToAssets(uint256)(uint256)" $balanceU
 # 6.- [Vault] previewRedeem(#4: shares_user)
 previewRedeem=$(cast call $VAULT "previewRedeem(uint256)(uint256)" $balanceUser)
 
+echo ""
 echo "[VAULT] sharePrice:" $sharePrice
 echo "----------------------------------------------------------------"
 echo "[YSTRAT] Total Assets: (rewards included)" $estimatedTotalAssetsYearn
 echo "[YSTRAT] Principal:" $getStrategyTotalDebtYearn
+echo "[YSTRAT] unharvestedAmount:" $unharvestedAmountYearn
 echo "----------------------------------------------------------------"
 echo "[CSTRAT] Total Assets: (rewards included)" $estimatedTotalAssetsConvex
 echo "[CSTRAT] Principal:" $getStrategyTotalDebtConvex
+echo "[CSTRAT] unharvestedAmount:" $unharvestedAmountConvex
 echo "----------------------------------------------------------------"
 echo "[SSTRAT1] Total Assets: (rewards included)" $estimatedTotalAssetsSommelier1
 echo "[SSTRAT1] Principal:" $getStrategyTotalDebtSommelier1
+echo "[SSTRAT1] unharvestedAmount:" $unharvestedAmountSommelier1
 echo "----------------------------------------------------------------"
-echo "[SSTRAT] Total Assets: (rewards included)" $estimatedTotalAssetsSommelier2
-echo "[SSTRAT] Principal:" $getStrategyTotalDebtSommelier2
+echo "[SSTRAT2] Total Assets: (rewards included)" $estimatedTotalAssetsSommelier2
+echo "[SSTRAT2] Principal:" $getStrategyTotalDebtSommelier2
+echo "[SSTRAT2] unharvestedAmount: $unharvestedAmountSommelier2"
 echo "----------------------------------------------------------------"
 echo "[VAULT] totalAssets (rewards included):" $totalAssets
 echo "[VAULT] totalAccountedAssets:" $totalAccountedAssets
 echo "[VAULT] balanceOf(user) (shares):" $balanceUser
 echo "[VAULT] convertToAssets:" $convertToAssets
 echo "[VAULT] previewRedeem:" $previewRedeem
+echo ""

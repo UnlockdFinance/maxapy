@@ -5,5 +5,5 @@ if [ $# -ne 2 ]; then
 fi
 
 source .env
-cast send $WETH --private-key $DEPLOYER_PRIVATE_KEY "transfer(address,uint256)" $1 $2
+weth=$(cast send $WETH --private-key $DEPLOYER_PRIVATE_KEY "transfer(address,uint256)" $1 $2)
 echo "WETH Balance of Strategy:" $(cast call $WETH "balanceOf(address)(uint256)" $1)

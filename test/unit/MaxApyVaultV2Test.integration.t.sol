@@ -538,4 +538,58 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // now it should success because it wont trigger the reverting strategy
         vault.deposit(20 ether, users.bob);
     }
+
+    function testIntegrationHarvest() public {
+        deal(WETH_MAINNET, users.alice, 100 ether);
+
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
+        vault.deposit(100 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(users.alice);
+        vault.updateStrategyData(
+            address(strategy2),
+            0,
+            type(uint256).max,
+            0,
+            0
+        );
+
+        vault.updateStrategyData(
+            address(strategy3),
+            0,
+            type(uint256).max,
+            0,
+            0
+        );
+
+        vault.updateStrategyData(
+            address(strategy4),
+            0,
+            type(uint256).max,
+            0,
+            0
+        );
+
+        vault.updateStrategyData(
+            address(strategy1),
+            8999,
+            type(uint256).max,
+            0,
+            0
+        );
+        vm.startPrank(users.keeper);
+        strategy2.harvest(0,0,0,address(0));
+        strategy3.harvest(0,0,0,address(0));
+        strategy4.harvest(0,0,0,address(0));
+        strategy1.harvest(0,0,0,address(0));
+        console.log("idle : ",vault.totalIdle());
+        console.log("yearn:", strategy1.estimatedTotalAssets());
+    }
 }
