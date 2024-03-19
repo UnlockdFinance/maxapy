@@ -289,7 +289,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
     function maxWithdraw() public view override returns (uint256) {
-        return estimatedTotalAssets();
+        return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses

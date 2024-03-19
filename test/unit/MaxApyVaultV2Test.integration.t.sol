@@ -559,7 +559,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ///                  TEST exitStrategy()                     ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2_ExitStrategy() public {
+    function testMaxApyVaultV2__ExitStrategy() public {
         uint256 snapshotId = vm.snapshot();
         /// ⭕️ SCENARIO 1: exit empty strategies
 
