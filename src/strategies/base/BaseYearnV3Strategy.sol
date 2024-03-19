@@ -113,6 +113,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
+        _snapshotEstimatedTotalAssets();
     }
 
     ////////////////////////////////////////////////////////////////

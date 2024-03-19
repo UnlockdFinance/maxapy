@@ -87,6 +87,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
+        _snapshotEstimatedTotalAssets();
     }
 
     ////////////////////////////////////////////////////////////////

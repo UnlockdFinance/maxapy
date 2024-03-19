@@ -154,7 +154,8 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         (amountFreed, loss) = _liquidatePosition(amountNeeded);
         // Send it directly back to vault
         if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountFreed);
-        // Note: Reinvest anything leftover on next `harvest`
+        // Note: update estimatedTotalAssets
+        _snapshotEstimatedTotalAssets();
     }
 
     /// @notice Withdraws exactly `amountNeeded` to `vault`.
@@ -174,7 +175,8 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         // something didn't work as expected
         // this should NEVER happen in normal conditions
         else revert();
-        // Note: Reinvest anything leftover on next `harvest`
+        // Note: update esteimated totalAssets
+        _snapshotEstimatedTotalAssets();
     }
 
     /// @notice Harvests the Strategy, but in this case a percentage of the profit(if there's any) is reinvested
@@ -307,8 +309,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
 
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, minOutputAfterInvestment);
-        // snapshot of the estimated total assets
-        lastEstimatedTotalAssets = _estimatedTotalAssets();
+        _snapshotEstimatedTotalAssets();
 
         assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
@@ -507,5 +508,10 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         unchecked {
             return a - b > a ? 0 : a - b;
         }
+    }
+
+    function _snapshotEstimatedTotalAssets() internal {
+        // snapshot of the estimated total assets
+        lastEstimatedTotalAssets = _estimatedTotalAssets();
     }
 }

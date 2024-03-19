@@ -16,7 +16,7 @@ import {ICurve} from "src/interfaces/ICurve.sol";
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `SommelierStEthDepositTurboStEthStrategy` supplies an underlying token into a generic Sommelier Vault,
 /// earning the Sommelier Vault's yield
-contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
+contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy 
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
@@ -86,18 +86,6 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ////////////////////////////////////////////////////////////////
     ///                STRATEGY CORE LOGIC                       ///
     ////////////////////////////////////////////////////////////////
-    /// @notice Tries to withdraw `amountNeeded` to `vault`.
-    /// @dev This may only be called by the respective Vault.
-    /// @param amountNeeded How much `underlyingAsset` to withdraw.
-    /// @return loss Any realized losses
-    function withdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
-        uint256 amountFreed;
-        // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
-        (amountFreed, loss) = _liquidatePosition(amountNeeded);
-        // Send it directly back to vault
-        if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountFreed);
-        // Note: Reinvest anything leftover on next `harvest`
-    }
 
     /// @notice Withdraws exactly `amountNeeded` to `vault`.
     /// @dev This may only be called by the respective Vault.
@@ -117,6 +105,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         // this should NEVER happen in normal conditions
         else revert();
         // Note: Reinvest anything leftover on next `harvest`
+        _snapshotEstimatedTotalAssets();
     }
 
     ////////////////////////////////////////////////////////////////
