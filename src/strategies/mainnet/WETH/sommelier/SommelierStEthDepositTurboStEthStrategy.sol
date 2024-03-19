@@ -16,7 +16,7 @@ import {ICurve} from "src/interfaces/ICurve.sol";
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `SommelierStEthDepositTurboStEthStrategy` supplies an underlying token into a generic Sommelier Vault,
 /// earning the Sommelier Vault's yield
-contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy 
+contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
