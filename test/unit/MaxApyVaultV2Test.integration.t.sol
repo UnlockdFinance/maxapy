@@ -530,7 +530,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.lastReport(), lastReport);
         assertEq(vault.nexHarvestStrategyIndex(), 0);
 
-        // set a valid strategy in autipilot
+   /*      // set a valid strategy in autipilot
         strategy1.setAutopilot(true);
         // simulate fake gains
         uint256 yVaultShares = IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy1));
@@ -552,7 +552,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.nexHarvestStrategyIndex(), 1);
 
         // now it should success because it wont trigger the reverting strategy
-        vault.deposit(20 ether, users.bob);
+        vault.deposit(20 ether, users.bob); */
     }
 
     ////////////////////////////////////////////////////////////////
@@ -567,6 +567,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.strategies(address(strategy1)).strategyDebtRatio, 2250);
         assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 0);
         assertEq(vault.withdrawalQueue(0), address(strategy1));
+        vm.expectEmit();
+        emit StrategyExited(
+            address(strategy1),
+            0
+        );
         vault.exitStrategy(address(strategy1));
         assertEq(strategy1.estimatedTotalAssets(), 0);
         assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 0);

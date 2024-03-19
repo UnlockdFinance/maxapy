@@ -122,6 +122,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint16 newPerformanceFee
     );
 
+    /// @notice Emitted when a strategy is exited
+    event StrategyExited(
+        address indexed strategy,
+        uint256 withdrawn
+    );
+
     /// @notice Emitted when the withdrawal queue is updated
     event WithdrawalQueueUpdated(address[MAXIMUM_STRATEGIES] withdrawalQueue);
 
@@ -208,6 +214,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     uint256 private constant _WITHDRAW_EVENT_SIGNATURE =
         0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db;
+
+    uint256 private constant _STRATEGY_EXITED_EVENT_SIGNATURE =
+        0x2e8aac9e73a32a1b5926e2c5a2820a51deb01ed40212b6346d96db2a178cf433;
+
 
     ////////////////////////////////////////////////////////////////
     ///               VAULT GLOBAL STATE VARIABLES               ///
@@ -1831,17 +1841,21 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         IStrategy _strategy = IStrategy(strategy);
         uint256 _maxWithdraw = _strategy.maxWithdraw();
         uint256 loss = _strategy.withdraw(_maxWithdraw);
+        uint256 withdrawn = _maxWithdraw - loss;
         uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
         uint256 strategyDebtRatio = strategies[strategy].strategyDebtRatio;
+        totalIdle += withdrawn;
+        // Cannot undeflow
+        unchecked {
+            totalDebt -= strategyTotalDebt;
+            debtRatio -= strategyDebtRatio;
+        }
         // Clear debt of strategy
-        totalIdle += (_maxWithdraw - loss);
-        totalDebt -= strategyTotalDebt;
-        debtRatio -= strategyDebtRatio;
-        // Clear strategy data
         strategies[strategy].autoPilot = false;
         strategies[strategy].strategyActivation = 0;
         strategies[strategy].strategyTotalDebt = 0;
         strategies[strategy].strategyDebtRatio = 0;
+
         // Remove `STRATEGY_ROLE` from strategy
         _removeRoles(strategy, STRATEGY_ROLE);
 
@@ -1857,10 +1871,15 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Update withdrawal queue
                 _organizeWithdrawalQueue();
 
-                // Emit the `StrategyRemoved` event
                 assembly {
+                    // Emit the `StrategyRemoved` event
                     log2(0x00, 0x00, _STRATEGY_REMOVED_EVENT_SIGNATURE, strategy)
+
+                    // Emit the `StrategyRemoved` event
+                    mstore(0x00,withdrawn)
+                    log2(0x00, 0x20, _STRATEGY_EXITED_EVENT_SIGNATURE, strategy)
                 }
+                
                 return;
             }
 
