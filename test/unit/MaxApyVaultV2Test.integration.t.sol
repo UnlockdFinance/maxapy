@@ -530,7 +530,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.lastReport(), lastReport);
         assertEq(vault.nexHarvestStrategyIndex(), 0);
 
-   /*      // set a valid strategy in autipilot
+        // set a valid strategy in autipilot
         strategy1.setAutopilot(true);
         // simulate fake gains
         uint256 yVaultShares = IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy1));
@@ -552,7 +552,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.nexHarvestStrategyIndex(), 1);
 
         // now it should success because it wont trigger the reverting strategy
-        vault.deposit(20 ether, users.bob); */
+        vault.deposit(20 ether, users.bob);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -585,6 +585,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.strategies(address(strategy2)).strategyDebtRatio, 2250);
         assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 0);
         assertEq(vault.withdrawalQueue(0), address(strategy2));
+        vm.expectEmit();
+        emit StrategyExited(
+            address(strategy2),
+            0
+        );
         vault.exitStrategy(address(strategy2));
         assertEq(strategy2.estimatedTotalAssets(), 0);
         assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 0);
@@ -598,6 +603,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.strategies(address(strategy3)).strategyDebtRatio, 2250);
         assertEq(vault.strategies(address(strategy3)).strategyTotalDebt, 0);
         assertEq(vault.withdrawalQueue(0), address(strategy3));
+        vm.expectEmit();
+        emit StrategyExited(
+            address(strategy3),
+            0
+        );
         vault.exitStrategy(address(strategy3));
         assertEq(strategy3.estimatedTotalAssets(), 0);
         assertEq(vault.strategies(address(strategy3)).strategyTotalDebt, 0);
@@ -611,6 +621,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.strategies(address(strategy4)).strategyDebtRatio, 2250);
         assertEq(vault.strategies(address(strategy4)).strategyTotalDebt, 0);
         assertEq(vault.withdrawalQueue(0), address(strategy4));
+        vm.expectEmit();
+        emit StrategyExited(
+            address(strategy4),
+            0
+        );
         vault.exitStrategy(address(strategy4));
         assertEq(strategy4.estimatedTotalAssets(), 0);
         assertEq(vault.strategies(address(strategy4)).strategyTotalDebt, 0);
@@ -646,6 +661,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 2.25 ether);
         assertEq(vault.withdrawalQueue(0), address(strategy1));
 
+        vm.expectEmit();
+        emit StrategyExited(
+            address(strategy1),
+            2.249999999999999998 ether
+        );
         vault.exitStrategy(address(strategy1));
         assertApproxEq(strategy1.estimatedTotalAssets(), 0, 1);
         assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 0);
@@ -665,7 +685,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.strategies(address(strategy2)).strategyDebtRatio, 2250);
         assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 2.25 ether);
         assertEq(vault.withdrawalQueue(0), address(strategy2));
-
+        
+        emit StrategyExited(
+            address(strategy1),
+            2.249999999999999998 ether
+        );
         vault.exitStrategy(address(strategy2));
         // some dust could be left
         assertApproxEq(strategy2.estimatedTotalAssets(), 0, 0.01 ether);
@@ -687,6 +711,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.strategies(address(strategy3)).strategyTotalDebt, 2.25 ether);
         assertEq(vault.withdrawalQueue(0), address(strategy3));
 
+        emit StrategyExited(
+            address(strategy1),
+            2.249999999999999998 ether
+        );
         vault.exitStrategy(address(strategy3));
         // some dust could be left
         assertApproxEq(strategy3.estimatedTotalAssets(), 0, 0.01 ether);
@@ -697,11 +725,21 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // The strategy should no longer be in the queue
         assertNotEq(vault.withdrawalQueue(0), address(strategy3));
 
+        // check vault data
+        assertEq(vault.debtRatio(), 2250);
+        assertEq(vault.totalDebt(), 2.25 ether);
+        assertEq(vault.totalAccountedAssets(), 9.996511336157465263 ether); // slight losses from withdraw
+        assertEq(vault.totalIdle(), 7.746511336157465263 ether);
+
         // Strategy 4: Sommelier
         assertEq(vault.strategies(address(strategy4)).strategyDebtRatio, 2250);
         assertEq(vault.strategies(address(strategy4)).strategyTotalDebt, 2.25 ether);
         assertEq(vault.withdrawalQueue(0), address(strategy4));
 
+        emit StrategyExited(
+            address(strategy1),
+            2.249999999999999998 ether
+        );
         vault.exitStrategy(address(strategy4));
         // some dust could be left
         assertApproxEq(strategy4.estimatedTotalAssets(), 0, 0.01 ether);
@@ -711,5 +749,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.strategies(address(strategy4)).strategyActivation, 0);
         // The strategy should no longer be in the queue
         assertNotEq(vault.withdrawalQueue(0), address(strategy4));
+
+        // check vault data
+        assertEq(vault.debtRatio(), 0);
+        assertEq(vault.totalDebt(), 0);
+        assertEq(vault.totalAccountedAssets(), 9.990466618247177147 ether); // slight losses from withdraw
+        assertEq(vault.totalIdle(), 9.990466618247177147 ether);
     }
 }
