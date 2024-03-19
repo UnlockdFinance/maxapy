@@ -1821,8 +1821,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _revokeStrategy(strategy, cachedStrategyDebtRatio);
     }
 
-
-    /// @notice Fully exit a strategy 
+    /// @notice Fully exit a strategy
     /// @dev This is the most aggressive strategy exit plan, it liquidates all the positions
     /// from the strategy, revoke the strategy role, and remove it from the withdrawal queue
     /// as well
@@ -1834,7 +1833,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 loss = _strategy.withdraw(_maxWithdraw);
         uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
         uint256 strategyDebtRatio = strategies[strategy].strategyDebtRatio;
-        // Clear debt of strategy 
+        // Clear debt of strategy
         totalIdle += (_maxWithdraw - loss);
         totalDebt -= strategyTotalDebt;
         debtRatio -= strategyDebtRatio;
@@ -1869,7 +1868,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 ++i;
             }
         }
-        
     }
 
     /// @notice Updates a given strategy configured data

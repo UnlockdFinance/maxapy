@@ -387,13 +387,11 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
 
                 uint256 stakedBalance = _stakedBalance(convexRewardPool);
 
-                if(lpToWithdraw > stakedBalance) {
+                if (lpToWithdraw > stakedBalance) {
                     lpToWithdraw = stakedBalance;
                 }
 
                 uint256 withdrawn = _divest(lpToWithdraw);
-
-
 
                 // Account for loss occured on withdrawal from Convex
                 if (withdrawn < expectedAmountToWithdraw) {
