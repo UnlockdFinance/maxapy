@@ -48,7 +48,7 @@ interface IStrategyWrapper is IYearnStrategy {
 
     function convexBooster() external view returns (address);
 
-    function curveDEthFrxEthPool() external view returns (address);
+    function curveLpPool() external view returns (address);
 
     function curveEthFrxEthPool() external view returns (address);
 
