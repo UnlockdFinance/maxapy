@@ -1821,6 +1821,55 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _revokeStrategy(strategy, cachedStrategyDebtRatio);
     }
 
+    /// @notice Fully exit a strategy
+    /// @dev This is the most aggressive strategy exit plan, it liquidates all the positions
+    /// from the strategy, revoke the strategy role, and remove it from the withdrawal queue
+    /// as well
+    /// @param strategy The strategy to revoke
+    function exitStrategy(address strategy) external checkRoles(ADMIN_ROLE) {
+        // Liquidate the strategy fully
+        IStrategy _strategy = IStrategy(strategy);
+        uint256 _maxWithdraw = _strategy.maxWithdraw();
+        uint256 loss = _strategy.withdraw(_maxWithdraw);
+        uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
+        uint256 strategyDebtRatio = strategies[strategy].strategyDebtRatio;
+        // Clear debt of strategy
+        totalIdle += (_maxWithdraw - loss);
+        totalDebt -= strategyTotalDebt;
+        debtRatio -= strategyDebtRatio;
+        // Clear strategy data
+        strategies[strategy].autoPilot = false;
+        strategies[strategy].strategyActivation = 0;
+        strategies[strategy].strategyTotalDebt = 0;
+        strategies[strategy].strategyDebtRatio = 0;
+        // Remove `STRATEGY_ROLE` from strategy
+        _removeRoles(strategy, STRATEGY_ROLE);
+
+        // Remove the strategy from the queue
+        address[MAXIMUM_STRATEGIES] memory cachedWithdrawalQueue = withdrawalQueue;
+        for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+            if (cachedWithdrawalQueue[i] == strategy) {
+                // The strategy was found and can be removed
+                withdrawalQueue[i] = address(0);
+
+                _removeRoles(strategy, STRATEGY_ROLE);
+
+                // Update withdrawal queue
+                _organizeWithdrawalQueue();
+
+                // Emit the `StrategyRemoved` event
+                assembly {
+                    log2(0x00, 0x00, _STRATEGY_REMOVED_EVENT_SIGNATURE, strategy)
+                }
+                return;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     /// @notice Updates a given strategy configured data
     /// @param strategy The strategy to change the data to
     /// @param newDebtRatio The new percentage of the total assets in the vault that `strategy` has access to

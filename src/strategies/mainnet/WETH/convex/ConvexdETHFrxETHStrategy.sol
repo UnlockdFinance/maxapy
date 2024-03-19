@@ -289,7 +289,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
     function maxWithdraw() public view override returns (uint256) {
-        return estimatedTotalAssets();
+        return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
@@ -387,13 +387,11 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
 
                 uint256 stakedBalance = _stakedBalance(convexRewardPool);
 
-                if(lpToWithdraw > stakedBalance) {
+                if (lpToWithdraw > stakedBalance) {
                     lpToWithdraw = stakedBalance;
                 }
 
                 uint256 withdrawn = _divest(lpToWithdraw);
-
-
 
                 // Account for loss occured on withdrawal from Convex
                 if (withdrawn < expectedAmountToWithdraw) {
