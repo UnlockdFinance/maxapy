@@ -34,6 +34,9 @@ src
     ├─ base
         ├─ BaseStrategy — "Base vault strategy implementation"
     ├─ mainnet — "Mainent chain strategies" 
+        ├─ DAI — "DAI strategies" 
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnAjnaDAIStakingStrategy
         ├─ USDC — "USDC strategies" 
             ├─ sommelier — "Strategies interacting with Sommelier Finance"
                 ├─SommelierTurboGHOStrategy
@@ -45,6 +48,8 @@ src
                 ├─SommelierStEthDepositTurboStEthStrategy
                 ├─SommelierTurboStEthStrategy
                 ├─SommelierTurboSwEthStrategy
+                ├─SommelierTurboEzEthStrategy
+                ├─SommelierTurboEthXStrategy
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnWETHStrategy
                 ├─YearnAjnaWETHStakingStrategy
