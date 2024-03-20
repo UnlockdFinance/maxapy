@@ -123,10 +123,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     );
 
     /// @notice Emitted when a strategy is exited
-    event StrategyExited(
-        address indexed strategy,
-        uint256 withdrawn
-    );
+    event StrategyExited(address indexed strategy, uint256 withdrawn);
 
     /// @notice Emitted when the withdrawal queue is updated
     event WithdrawalQueueUpdated(address[MAXIMUM_STRATEGIES] withdrawalQueue);
@@ -217,7 +214,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     uint256 private constant _STRATEGY_EXITED_EVENT_SIGNATURE =
         0x2e8aac9e73a32a1b5926e2c5a2820a51deb01ed40212b6346d96db2a178cf433;
-
 
     ////////////////////////////////////////////////////////////////
     ///               VAULT GLOBAL STATE VARIABLES               ///
@@ -1876,10 +1872,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     log2(0x00, 0x00, _STRATEGY_REMOVED_EVENT_SIGNATURE, strategy)
 
                     // Emit the `StrategyRemoved` event
-                    mstore(0x00,withdrawn)
+                    mstore(0x00, withdrawn)
                     log2(0x00, 0x20, _STRATEGY_EXITED_EVENT_SIGNATURE, strategy)
                 }
-                
+
                 return;
             }
 
