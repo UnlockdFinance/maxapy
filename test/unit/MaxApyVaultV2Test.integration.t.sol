@@ -576,7 +576,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.strategies(address(strategy1)).autoPilot);
         assertEq(vault.strategies(address(strategy1)).strategyActivation, 0);
         // The strategy should no longer be in the queue
-        assertNotEq(vault.withdrawalQueue(0), address(strategy1));
+        assertFalse(vault.withdrawalQueue(0) == address(strategy1));
 
         // Strategy 2: Sommelier
         assertEq(vault.strategies(address(strategy2)).strategyDebtRatio, 2250);
@@ -591,7 +591,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.strategies(address(strategy2)).autoPilot);
         assertEq(vault.strategies(address(strategy2)).strategyActivation, 0);
         // The strategy should no longer be in the queue
-        assertNotEq(vault.withdrawalQueue(0), address(strategy2));
+        assertFalse(vault.withdrawalQueue(0) == address(strategy2));
 
         // Strategy 3: Sommelier
         assertEq(vault.strategies(address(strategy3)).strategyDebtRatio, 2250);
@@ -606,7 +606,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.strategies(address(strategy3)).autoPilot);
         assertEq(vault.strategies(address(strategy3)).strategyActivation, 0);
         // The strategy should no longer be in the queue
-        assertNotEq(vault.withdrawalQueue(0), address(strategy3));
+        assertFalse(vault.withdrawalQueue(0) == address(strategy3));
 
         // Strategy 4: Sommelier
         assertEq(vault.strategies(address(strategy4)).strategyDebtRatio, 2250);
@@ -621,7 +621,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.strategies(address(strategy4)).autoPilot);
         assertEq(vault.strategies(address(strategy4)).strategyActivation, 0);
         // The strategy should no longer be in the queue
-        assertNotEq(vault.withdrawalQueue(0), address(strategy4));
+        assertFalse(vault.withdrawalQueue(0) == address(strategy4));
         vm.revertTo(snapshotId);
 
         /// ⭕️ SCENARIO 2: exit a strategy with funds
@@ -658,7 +658,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.strategies(address(strategy1)).autoPilot);
         assertEq(vault.strategies(address(strategy1)).strategyActivation, 0);
         // The strategy should no longer be in the queue
-        assertNotEq(vault.withdrawalQueue(0), address(strategy1));
+        assertFalse(vault.withdrawalQueue(0) == address(strategy1));
 
         // check vault data
         assertEq(vault.debtRatio(), 6750);
@@ -680,7 +680,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.strategies(address(strategy2)).autoPilot);
         assertEq(vault.strategies(address(strategy2)).strategyActivation, 0);
         // The strategy should no longer be in the queue
-        assertNotEq(vault.withdrawalQueue(0), address(strategy2));
+        assertFalse(vault.withdrawalQueue(0) == address(strategy2));
 
         // check vault data
         assertEq(vault.debtRatio(), 4500);
@@ -702,7 +702,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.strategies(address(strategy3)).autoPilot);
         assertEq(vault.strategies(address(strategy3)).strategyActivation, 0);
         // The strategy should no longer be in the queue
-        assertNotEq(vault.withdrawalQueue(0), address(strategy3));
+        assertFalse(vault.withdrawalQueue(0) == address(strategy3));
 
         // check vault data
         assertEq(vault.debtRatio(), 2250);
@@ -724,7 +724,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.strategies(address(strategy4)).autoPilot);
         assertEq(vault.strategies(address(strategy4)).strategyActivation, 0);
         // The strategy should no longer be in the queue
-        assertNotEq(vault.withdrawalQueue(0), address(strategy4));
+        assertFalse(vault.withdrawalQueue(0) == address(strategy4));
 
         // check vault data
         assertEq(vault.debtRatio(), 0);
