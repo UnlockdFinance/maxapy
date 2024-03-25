@@ -1345,12 +1345,16 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         );
     }
 
+    uint32 constant holdingPosition = uint32(7000003);
+
     function _shutDownCellar() internal {
         // keep the other values of the slot the same
         vm.store(
             CELLAR_BAL_MAINNET,
-            bytes32(uint256(6)),
-            bytes32(abi.encodePacked(0x69592e6f9d21989a043646fE8225da2600e5A0f7, false, true, false, false, uint32(10)))
+            bytes32(uint256(7)),
+            bytes32(abi.encodePacked(
+                uint192(6277101735386680763835789423207666416102355444464034512895), false, true, false, false, holdingPosition)
+            )
         );
     }
 }
