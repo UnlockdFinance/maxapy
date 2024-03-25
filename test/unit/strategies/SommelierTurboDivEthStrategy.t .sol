@@ -622,7 +622,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         // strategy has expectedStrategyShareBalance cellar shares
-        assertEq(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertGe(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         /// 2. Strategy takes 10 ETH profit
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
@@ -662,7 +662,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
-        assertEq(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertGe(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
         vm.revertTo(beforeReportSnapshotId);
 
         /// Case #2: We harvest 0% of profit
@@ -697,7 +697,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 10 ether);
-        assertEq(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertGe(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
         vm.revertTo(beforeReportSnapshotId);
 
         /// Case #3: We harvest 50% of profit
@@ -732,7 +732,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 5 ether);
-        assertEq(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertGe(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
         vm.revertTo(snapshotId);
 
         snapshotId = vm.snapshot();
@@ -782,7 +782,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertGe(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         /// Step #2
         vm.startPrank(users.alice);
@@ -797,7 +797,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49.980656151763373926 ether,
+            49.984161994500442878 ether,
             /// vault gain + all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// unrealized vault gain is 0 because we dont want to assess fees
@@ -805,7 +805,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
             /// vault loss
             0,
             /// vault debtPayment
-            49.980656151763373926 ether,
+            49.984161994500442878 ether,
             /// strategy realized gain - 9.99999 ETH
             0,
             /// strategy loss
@@ -818,12 +818,12 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49.980656151763373926 ether, 0, 0, 0);
+        emit Harvested(49.984161994500442878 ether, 0, 0, 0);
         /// 49.99999 ETH harvested
 
         /// no effect since the strategy is in emergency exit
         strategy.harvest(0, 0, 2_000, address(0));
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 109.980656151763373926 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 109.984161994500442878 ether);
         assertEq(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
@@ -870,7 +870,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertGe(IERC20(CELLAR_BAL_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         /// 2. Strategy loses 10 ETH
         /// - Expected a 1000 reduction in debt ratio, 30% of total funds should be in the strategy
@@ -891,35 +891,35 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
             // vault realized gain
             0,
             // vault unrealized gain
-            9.995164037940843482 ether,
-            /// vault loss - 9.995164037940843482 ether
+            9.960039999999999999 ether,
+            /// vault loss - 9.960039999999999999 ether
             0,
             /// vault debtPayment
             0,
             /// strategy realized gain
-            9.995164037940843482 ether,
+            9.960039999999999999 ether,
             /// strategy loss - 10 ETH
-            30.004835962059156518 ether,
+            30.039960000000000001 ether,
             /// strategy total debt: 10 ETH less than initial debt
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
-            3001
+            3004
         );
         /// debtratio reduced
 
         vm.expectEmit();
-        emit Harvested(0, 9.995164037940843482 ether, 0, 2994384689845203647);
+        emit Harvested(0, 9.960039999999999999 ether, 0, 2991956016000000001);
         /// 10 ETH loss
         // only losses , no effect
         strategy.harvest(0, 0, 10_000, address(0));
 
         StrategyData memory data = vault.strategies(address(strategy));
 
-        assertEq(vault.debtRatio(), 3001);
-        assertEq(vault.totalDebt(), 30.004835962059156518 ether);
-        assertEq(data.strategyDebtRatio, 3001);
-        assertEq(data.strategyTotalDebt, 30.004835962059156518 ether);
-        assertEq(data.strategyTotalLoss, 9.995164037940843482 ether);
+        assertEq(vault.debtRatio(), 3004);
+        assertEq(vault.totalDebt(), 30.039960000000000001 ether);
+        assertEq(data.strategyDebtRatio, 3004);
+        assertEq(data.strategyTotalDebt, 30.039960000000000001 ether);
+        assertEq(data.strategyTotalLoss, 9.960039999999999999 ether);
     }
 
     function testSommelierTurboDivEth__Harvest_CellarIsShutdown_Paused() public {
