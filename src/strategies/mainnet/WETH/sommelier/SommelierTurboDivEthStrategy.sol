@@ -81,7 +81,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
     IERC20 public constant balancerLpPool = IERC20(0x1E19CF2D73a72Ef1332C882F20534B6519Be0276);
 
-    bytes32 public constant rETHStablePoolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
+    bytes32 public constant balancerPoolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
 
     IBalancerVault public constant balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -388,7 +388,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
         uint256 lpBalalanceBefore = _lpBalance();
 
-        balancerVault.joinPool(rETHStablePoolId, address(this), address(this), joinParams);
+        balancerVault.joinPool(balancerPoolId, address(this), address(this), joinParams);
 
         uint256 mintedLpTokens = _lpBalance() - lpBalalanceBefore;
 
@@ -432,11 +432,11 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         ExitPoolRequest memory exitRequest = ExitPoolRequest({
             assets: _assets,
             minAmountsOut: _minAmountsOut,
-            userData: abi.encode(abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,lpWithdrawn,1)),
+            userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,lpWithdrawn,1),
             toInternalBalance: false
         });
         uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
-        balancerVault.exitPool(rETHStablePoolId, address(this), address(this), exitRequest);
+        balancerVault.exitPool(balancerPoolId, address(this), address(this), exitRequest);
         withdrawn = underlyingAsset.balanceOf(address(this)) - balanceBefore;
         emit Divested(address(this), shares, withdrawn);
     }
@@ -499,7 +499,8 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
         uint256 lpTokens = cellar.convertToAssets(shares);
-        _assets = _lpValue(lpTokens);
+        // account pessimistically
+        _assets = _lpValue(lpTokens) * 998 / 1000;
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
@@ -513,6 +514,8 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
             if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _shares := mload(0x00)
         }
+        // account pessimistically
+        _shares = _shares * 998 / 1000;
     }
 
     /// @notice Returns the current strategy's amount of Cellar vault shares
@@ -543,7 +546,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
     function _estimatedTotalAssets() internal view virtual override returns (uint256) {
-        return _underlyingBalance() + _lpValue(_shareValue(_shareBalance()));
+        return _underlyingBalance() + _shareValue(_shareBalance());
     }
 
     function _getAssets() internal view returns (IAsset[] memory) {

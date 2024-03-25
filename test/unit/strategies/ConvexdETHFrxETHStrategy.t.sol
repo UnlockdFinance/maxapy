@@ -1007,7 +1007,6 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 expected = strategy.previewWithdraw(30 ether);
         vm.startPrank(address(vault));
         uint256 loss = strategy.withdraw(30 ether);
-        // expect the Sommelier's {previewRedeem} to be fully precise
         assertEq(expected, 30 ether - loss);
     }
 
@@ -1022,7 +1021,6 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 expected = strategy.previewWithdraw(amount);
         vm.startPrank(address(vault));
         uint256 loss = strategy.withdraw(amount);
-        // expect the Sommelier's {previewRedeem} to be fully precise
         assertEq(expected, amount - loss);
     }
     */
