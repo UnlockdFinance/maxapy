@@ -130,7 +130,8 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
             uint256 withdrawn = _exitPool(amountToWithdraw);
             // use sub zero because shares could be fewer than expected and underflow
-            loss = _sub0(_shareValue(burntShares), amountNeeded);
+            uint256 lpTokens = cellar.convertToAssets(burntShares);
+            loss = _sub0(_lpValue(lpTokens), amountNeeded);
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
@@ -208,12 +209,16 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
-        requestedAmount = liquidatedAmount;
+        uint256 loss;
         if (underlyingBalance < liquidatedAmount) {
-            // increase 1% to be pessimistic
-            requestedAmount = previewWithdraw(liquidatedAmount) * 101 / 100;
+            uint256 amountToWithdraw = liquidatedAmount - underlyingBalance;
+            uint256 burntShares = cellar.previewWithdraw(amountToWithdraw);
+            // use sub zero because shares could be fewer than expected and underflow
+            uint256 lpTokens = cellar.convertToAssets(burntShares);
+            // account losses pessimistically so real losses are never greater
+            loss = _sub0(_lpValue(lpTokens), liquidatedAmount) * 101 / 100;
         }
-        return requestedAmount + underlyingBalance;
+        requestedAmount = liquidatedAmount + loss;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
@@ -223,7 +228,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public view override returns (uint256) {
-        return _underlyingBalance() + (_lpValue(cellar.maxWithdraw(address(this))) * 998 / 1000);
+        return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
 
     ////////////////////////////////////////////////////////////////
@@ -345,7 +350,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
             }
         }
     }
-    
+
     /// @notice Performs any adjustments to the core position(s) of this Strategy given
     /// what change the MaxApy Vault made in the "investable capital" available to the
     /// Strategy.
@@ -479,7 +484,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares){
+    function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
         amount = amount * 1e18 / _lpPrice();
         assembly {
             // return cellar.convertToShares(amount);
@@ -509,8 +514,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// the actual assets, and profit will be later accounted for.
     /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
     function _lpValue(uint256 amount) internal view returns (uint256) {
-       return amount * _lpPrice()  / 1e18;
-
+        return amount * _lpPrice() / 1e18;
     }
 
     /// @notice Returns the estimated price for the strategy's Convex's LP token
@@ -544,7 +548,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
     /// @notice Add liqudity to the Balancer stable LP pool with a single token deposit(WETH)
     /// @return the minted LP tokens after adding the liquidity
-    function _joinPool(uint256 _wethIn) internal returns (uint256){
+    function _joinPool(uint256 _wethIn) internal returns (uint256) {
         IAsset[] memory _assets = _getAssets();
 
         uint256[] memory amountsIn = new uint256[](2);
@@ -563,18 +567,18 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         balancerVault.joinPool(balancerPoolId, address(this), address(this), joinParams);
 
         return _lpBalance() - lpBalalanceBefore;
-    }   
+    }
 
     /// @notice Remove liqudity from the Balancer stable LP pool as single token(WETH)
     /// @return the amount of withdrawn WETH
-    function _exitPool(uint256 _lpTokens) internal returns(uint256) {
+    function _exitPool(uint256 _lpTokens) internal returns (uint256) {
         IAsset[] memory _assets = _getAssets();
         uint256[] memory _minAmountsOut = new uint256[](2);
-        
+
         ExitPoolRequest memory exitRequest = ExitPoolRequest({
             assets: _assets,
             minAmountsOut: _minAmountsOut,
-            userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,_lpTokens,1),
+            userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _lpTokens, 1),
             toInternalBalance: false
         });
         uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
