@@ -50,6 +50,7 @@ src
                 ├─SommelierTurboSwEthStrategy
                 ├─SommelierTurboEzEthStrategy
                 ├─SommelierTurboEthXStrategy
+                ├─SommelierTurboDivEthStrategy
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnWETHStrategy
                 ├─YearnAjnaWETHStakingStrategy
