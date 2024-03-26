@@ -294,7 +294,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public view override returns (uint256) {
-        return previewWithdraw(estimatedTotalAssets()) * 99 / 100;
+        return previewWithdraw(_estimatedTotalAssets()) * 99 / 100;
     }
     /// @notice Returns the amount of Curve LP tokens staked in Convex
     /// @return the amount of staked LP tokens
