@@ -394,8 +394,8 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
         assembly {
-            // return cellar.convertToAssets(shares);
-            mstore(0x00, 0x07a2d13a)
+            // return cellar.previewRedeem(shares);
+            mstore(0x00, 0x4cdad506)
             mstore(0x20, shares)
             if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _assets := mload(0x00)

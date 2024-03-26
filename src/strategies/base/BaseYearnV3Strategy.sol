@@ -451,22 +451,39 @@ contract BaseYearnV3Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Determines the current value of `shares`.
-    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
-    /// @return returns the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view virtual returns (uint256) {
-        return yVault.previewRedeem(shares);
+    /// @return _assets the estimated amount of underlying computed from shares `shares`
+    function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
+        assembly {
+            // return yVault.previewRedeem(shares);
+            mstore(0x00, 0x4cdad506)
+            mstore(0x20, shares)
+            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _assets := mload(0x00)
+        }
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
-    /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
-        return yVault.convertToShares(amount);
+    /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
+    function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
+        assembly {
+            // return yVault.convertToShares(amount);
+            mstore(0x00, 0xc6e6f592)
+            mstore(0x20, amount)
+            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _shares := mload(0x00)
+        }
     }
 
-    /// @notice Returns the current strategy's amount of yearn vault shares
-    /// @return _balance balance the strategy's balance of yearn vault shares
-    function _shareBalance() internal view virtual returns (uint256 _balance) {
-        return yVault.balanceOf(address(this));
+    /// @notice Returns the current strategy's amount of yVault vault shares
+    /// @return _balance balance the strategy's balance of yVault vault shares
+    function _shareBalance() internal virtual view returns (uint256 _balance) {
+        assembly {
+            // return yVault.balanceOf(address(this));
+            mstore(0x00, 0x70a08231)
+            mstore(0x20, address())
+            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _balance := mload(0x00)
+        }
     }
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
