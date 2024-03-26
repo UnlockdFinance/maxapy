@@ -9,7 +9,6 @@ import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {
     IBalancerVault,
     IBalancerStablePool,
-    IBalancerQueries,
     FundManagement,
     SingleSwap,
     JoinPoolRequest,
@@ -79,15 +78,14 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @notice Ethereum mainnet's rEth Token
     IERC20 public constant rEth = IERC20(0xae78736Cd615f374D3085123A210448E74Fc6393);
 
+    /// @notice Ethereum mainnet's Balancer rEth-WETH pool
     IERC20 public constant balancerLpPool = IERC20(0x1E19CF2D73a72Ef1332C882F20534B6519Be0276);
 
+    /// @notice Balancer pool id
     bytes32 public constant balancerPoolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
 
+    /// @notice Univarsal Balancer Vault
     IBalancerVault public constant balancerVault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-
-    IBalancerQueries public constant balancerQueries = IBalancerQueries(0xE39B5e3B6D74016b2F6A9673D7d7493B6DF549d5);
-
-
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -126,15 +124,15 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// in {requestWithdraw} the vault always gets `amountNeeded` and `loss` is the amount
     /// that had to be lost in order to withdraw exactly `amountNeeded`
     function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
-        uint256 amountRequested = previewWithdrawRequest(amountNeeded);
-        uint256 amountFreed;
-        // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
-        (amountFreed, loss) = _liquidatePosition(amountRequested);
-        // Send it directly back to vault
-        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
-        // something didn't work as expected
-        // this should NEVER happen in normal conditions
-        else revert();
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < amountNeeded) {
+            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
+            uint256 withdrawn = _exitPool(amountToWithdraw);
+            // use sub zero because shares could be fewer than expected and underflow
+            loss = _sub0(_shareValue(burntShares), amountNeeded);
+        }
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }
@@ -198,7 +196,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = cellar.previewRedeem(shares);
+            uint256 withdrawn = _shareValue(shares);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
@@ -209,8 +207,13 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
-        // increase 1% to be pessimistic
-        return previewWithdraw(liquidatedAmount) * 101 / 100;
+        uint256 underlyingBalance = _underlyingBalance();
+        requestedAmount = liquidatedAmount;
+        if (underlyingBalance < liquidatedAmount) {
+            // increase 1% to be pessimistic
+            requestedAmount = previewWithdraw(liquidatedAmount) * 101 / 100;
+        }
+        return requestedAmount + underlyingBalance;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
@@ -220,7 +223,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxRequest() public view override returns (uint256) {
-        return previewWithdraw(estimatedTotalAssets()) * 99 / 100;
+        return _underlyingBalance() + (_lpValue(cellar.maxWithdraw(address(this))) * 998 / 1000);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -291,7 +294,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = Math.min(maxSingleTrade, amountToWithdraw - underlyingBalance);
 
-                uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
+                uint256 sharesToWithdraw = (expectedAmountToWithdraw);
 
                 uint256 withdrawn = _divest(sharesToWithdraw);
 
@@ -342,12 +345,12 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
             }
         }
     }
+    
     /// @notice Performs any adjustments to the core position(s) of this Strategy given
     /// what change the MaxApy Vault made in the "investable capital" available to the
     /// Strategy.
     /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-
     function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
         uint256 toInvest = _underlyingBalance();
         if (toInvest > minSingleTrade) {
@@ -372,25 +375,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
         // 1. Add liquidity to the Balancer pool
-        IAsset[] memory _assets = _getAssets();
-
-        uint256[] memory amountsIn = new uint256[](2);
-        amountsIn[0] = 0;
-        amountsIn[1] = amount;
-
-
-        JoinPoolRequest memory joinParams = JoinPoolRequest({
-            assets: _assets,
-            maxAmountsIn: amountsIn,
-            userData: abi.encode(JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, amountsIn, 0),
-            fromInternalBalance: false
-        });
-
-        uint256 lpBalalanceBefore = _lpBalance();
-
-        balancerVault.joinPool(balancerPoolId, address(this), address(this), joinParams);
-
-        uint256 mintedLpTokens = _lpBalance() - lpBalalanceBefore;
+        uint256 mintedLpTokens = _joinPool(amount);
 
         // 2. Deposit into the Sommelier cellar
         uint256 shares = cellar.deposit(mintedLpTokens, address(this));
@@ -426,18 +411,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         // 1. Exit cellar
         uint256 lpWithdrawn = cellar.redeem(shares, address(this), address(this));
         // 2. Withdraw from Balancer LP pool
-        IAsset[] memory _assets = _getAssets();
-        uint256[] memory _minAmountsOut = new uint256[](2);
-        
-        ExitPoolRequest memory exitRequest = ExitPoolRequest({
-            assets: _assets,
-            minAmountsOut: _minAmountsOut,
-            userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,lpWithdrawn,1),
-            toInternalBalance: false
-        });
-        uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
-        balancerVault.exitPool(balancerPoolId, address(this), address(this), exitRequest);
-        withdrawn = underlyingAsset.balanceOf(address(this)) - balanceBefore;
+        withdrawn = _exitPool(lpWithdrawn);
         emit Divested(address(this), shares, withdrawn);
     }
 
@@ -505,7 +479,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
+    function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares){
         amount = amount * 1e18 / _lpPrice();
         assembly {
             // return cellar.convertToShares(amount);
@@ -530,15 +504,22 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         }
     }
 
+    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
+    /// @dev Some loss of precision is occured, but it is not critical as this is only an underestimation of
+    /// the actual assets, and profit will be later accounted for.
+    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
     function _lpValue(uint256 amount) internal view returns (uint256) {
        return amount * _lpPrice()  / 1e18;
 
     }
 
+    /// @notice Returns the estimated price for the strategy's Convex's LP token
+    /// @return returns the estimated lp token price
     function _lpPrice() internal view returns (uint256) {
         return IBalancerStablePool(address(balancerLpPool)).getRate();
     }
 
+    /// @notice returns the Balancer LP token balance of the contract
     function _lpBalance() internal view returns (uint256) {
         return balancerLpPool.balanceOf(address(this));
     }
@@ -549,10 +530,55 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         return _underlyingBalance() + _shareValue(_shareBalance());
     }
 
+    /// @notice Get the underlying Balancer stable pair pool's tokens in the right order
     function _getAssets() internal view returns (IAsset[] memory) {
         IAsset[] memory _assets = new IAsset[](2);
         _assets[0] = IAsset(address(rEth));
         _assets[1] = IAsset(underlyingAsset);
         return _assets;
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                 INTERNAL HELPER FUNCTIONS                ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice Add liqudity to the Balancer stable LP pool with a single token deposit(WETH)
+    /// @return the minted LP tokens after adding the liquidity
+    function _joinPool(uint256 _wethIn) internal returns (uint256){
+        IAsset[] memory _assets = _getAssets();
+
+        uint256[] memory amountsIn = new uint256[](2);
+        amountsIn[0] = 0;
+        amountsIn[1] = _wethIn;
+
+        JoinPoolRequest memory joinParams = JoinPoolRequest({
+            assets: _assets,
+            maxAmountsIn: amountsIn,
+            userData: abi.encode(JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, amountsIn, 0),
+            fromInternalBalance: false
+        });
+
+        uint256 lpBalalanceBefore = _lpBalance();
+
+        balancerVault.joinPool(balancerPoolId, address(this), address(this), joinParams);
+
+        return _lpBalance() - lpBalalanceBefore;
+    }   
+
+    /// @notice Remove liqudity from the Balancer stable LP pool as single token(WETH)
+    /// @return the amount of withdrawn WETH
+    function _exitPool(uint256 _lpTokens) internal returns(uint256) {
+        IAsset[] memory _assets = _getAssets();
+        uint256[] memory _minAmountsOut = new uint256[](2);
+        
+        ExitPoolRequest memory exitRequest = ExitPoolRequest({
+            assets: _assets,
+            minAmountsOut: _minAmountsOut,
+            userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT,_lpTokens,1),
+            toInternalBalance: false
+        });
+        uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
+        balancerVault.exitPool(balancerPoolId, address(this), address(this), exitRequest);
+        return underlyingAsset.balanceOf(address(this)) - balanceBefore;
     }
 }
