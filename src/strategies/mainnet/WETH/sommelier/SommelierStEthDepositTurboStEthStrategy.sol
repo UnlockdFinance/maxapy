@@ -3,7 +3,6 @@ pragma solidity ^0.8.19;
 
 import {
     BaseSommelierStrategy,
-    IERC20,
     ICellar,
     IWETH,
     IMaxApyVaultV2,
@@ -24,7 +23,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Ethereum mainnet's StETH Token
-    IERC20 public constant stEth = IERC20(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    address public constant stEth = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -76,9 +75,9 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
 
         /// Approve pool to perform swaps
         underlyingAsset.safeApprove(address(pool), type(uint256).max);
-        address(stEth).safeApprove(address(pool), type(uint256).max);
+        stEth.safeApprove(address(pool), type(uint256).max);
         /// Approve Cellar Vault to transfer underlying
-        address(stEth).safeApprove(address(_cellar), type(uint256).max);
+        stEth.safeApprove(address(_cellar), type(uint256).max);
         maxSingleTrade = 1_000 * 1e18;
         minSingleTrade = 1e4;
     }

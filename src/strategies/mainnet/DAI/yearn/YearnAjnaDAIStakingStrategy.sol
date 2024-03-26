@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 import {
     BaseYearnV3Strategy,
     SafeTransferLib,
-    IERC20,
     IMaxApyVaultV2,
     IYVaultV3
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
@@ -23,7 +22,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Ethereum mainnet's Ajna Token
-    IERC20 public constant ajna = IERC20(0x9a96ec9B57Fb64FbC60B423d1f4da7691Bd35079);
+    address public constant ajna = 0x9a96ec9B57Fb64FbC60B423d1f4da7691Bd35079;
     /// @notice Ethereum mainnet's WETHToken
     address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     /// @notice Router to perform AJNA-WETH-DAI swaps
@@ -62,7 +61,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
 
         /// Perform needed approvals
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
-        address(ajna).safeApprove(address(router), type(uint256).max);
+        ajna.safeApprove(address(router), type(uint256).max);
         address(_yVault).safeApprove(address(yearnStakingRewards), type(uint256).max);
 
         minSingleTrade = 1e4;
@@ -333,7 +332,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
         if (ajnaBalance > minSwapAjna) {
             router.exactInputSingle(
                 IRouter.ExactInputSingleParams({
-                    tokenIn: address(ajna),
+                    tokenIn: ajna,
                     tokenOut: underlyingAsset,
                     fee: 3000,
                     recipient: address(this),

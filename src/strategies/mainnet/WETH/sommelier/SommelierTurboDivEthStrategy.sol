@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
+import {BaseStrategy, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
 import {IWETH} from "src/interfaces/IWETH.sol";
 import {ICellar} from "src/interfaces/ICellar.sol";
 
@@ -76,10 +76,10 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Ethereum mainnet's rEth Token
-    IERC20 public constant rEth = IERC20(0xae78736Cd615f374D3085123A210448E74Fc6393);
+    address public constant rEth = 0xae78736Cd615f374D3085123A210448E74Fc6393;
 
     /// @notice Ethereum mainnet's Balancer rEth-WETH pool
-    IERC20 public constant balancerLpPool = IERC20(0x1E19CF2D73a72Ef1332C882F20534B6519Be0276);
+    address public constant balancerLpPool = 0x1E19CF2D73a72Ef1332C882F20534B6519Be0276;
 
     /// @notice Balancer pool id
     bytes32 public constant balancerPoolId = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
@@ -105,9 +105,9 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
         /// Approve pool to perform swaps
         underlyingAsset.safeApprove(address(balancerVault), type(uint256).max);
-        address(rEth).safeApprove(address(balancerVault), type(uint256).max);
+        rEth.safeApprove(address(balancerVault), type(uint256).max);
         /// Approve Cellar Vault to transfer underlying
-        address(balancerLpPool).safeApprove(address(_cellar), type(uint256).max);
+        balancerLpPool.safeApprove(address(_cellar), type(uint256).max);
         maxSingleTrade = 1_000 * 1e18;
         minSingleTrade = 1e4;
     }
@@ -520,7 +520,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @notice Returns the estimated price for the strategy's Convex's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view returns (uint256) {
-        return IBalancerStablePool(address(balancerLpPool)).getRate();
+        return IBalancerStablePool(balancerLpPool).getRate();
     }
 
     /// @notice returns the Balancer LP token balance of the contract
@@ -537,7 +537,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @notice Get the underlying Balancer stable pair pool's tokens in the right order
     function _getAssets() internal view returns (IAsset[] memory) {
         IAsset[] memory _assets = new IAsset[](2);
-        _assets[0] = IAsset(address(rEth));
+        _assets[0] = IAsset(rEth);
         _assets[1] = IAsset(underlyingAsset);
         return _assets;
     }
