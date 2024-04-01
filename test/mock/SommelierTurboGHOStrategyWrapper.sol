@@ -2,8 +2,9 @@
 pragma solidity ^0.8.19;
 
 import {
-    SommelierTurboGHOStrategy, SafeTransferLib
-} from "../../src/strategies/sommelier/SommelierTurboGHOStrategy.sol";
+    SommelierTurboGHOStrategy,
+    SafeTransferLib
+} from "src/strategies/mainnet/USDC/sommelier/SommelierTurboGHOStrategy.sol";
 
 contract SommelierTurboGHOStrategyWrapper is SommelierTurboGHOStrategy {
     using SafeTransferLib for address;
@@ -17,15 +18,16 @@ contract SommelierTurboGHOStrategyWrapper is SommelierTurboGHOStrategy {
         underlyingAsset.safeTransfer(address(1), amount);
     }
 
-    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {
-        vault.report(gain, loss, debtPayment);
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
+        vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
-    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance)
+    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)
         external
-        returns (uint256 profit, uint256 loss, uint256 debtPayment)
+        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        (profit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
+        (realizedProfit, unrealizedProfit, loss, debtPayment) =
+            _prepareReturn(debtOutstanding, minExpectedBalance, harvestedProvitBPS);
     }
 
     function adjustPosition() external {

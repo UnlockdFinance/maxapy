@@ -1,26 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "../base/BaseStrategy.sol";
-import {IWETH} from "../../interfaces/IWETH.sol";
-import {ICellar} from "../../interfaces/ICellar.sol";
+import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
+import {IWETH} from "src/interfaces/IWETH.sol";
+import {ICellar} from "src/interfaces/ICellar.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
-/// @title GenericYVaultStrategy
-/// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/Strategy.sol
-/// @notice `SommelierStrategy` supplies an underlying token into a generic Sommelier Vault,
-/// earning the Sommelier Vault's yield
-contract SommelierRealYieldUSDStrategy is BaseStrategy {
+/// @title BaseSommelierStrategy
+/// @author MaxApy
+/// @notice `BaseSommelierStrategy` sets the base functionality to be implemented by MaxApy Sommelier strategies.
+/// @dev Some functions can be overriden if needed
+contract BaseSommelierStrategy is BaseStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
     error NotEnoughFundsToInvest();
-    error MinOutputAmountNotReached();
-    error SharesLocked();
-    error HarvestTimeNotElapsed();
+    error CellarIsPaused();
+    error InvalidHarvestedProfit();
+    error InvalidZeroAddress();
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -46,67 +46,13 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
 
     /// @notice The Sommelier Vault the strategy interacts with
     ICellar public cellar;
-    /// @notice Timestamp of the last harvest
-    uint256 public lastHarvest;
-    /// @notice 3 days delay between harvests
-    uint256 public constant HARVEST_INTERVAL = 259200; // 3 days
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
     constructor() initializer {}
 
-    /// @notice Initialize a new Strategy
-    /// @param _vault The address of the MaxApy Vault associated to the strategy
-    /// @param _keepers The addresses of the keepers to be granted the keeper role
-    /// @param _strategyName the name of the strategy
-    function __BaseStrategy_init(
-        IMaxApyVaultV2 _vault,
-        address[] calldata _keepers,
-        bytes32 _strategyName,
-        address _strategist
-    ) internal override onlyInitializing {
-        assembly ("memory-safe") {
-            // Ensure `_strategist` address is != from address(0)
-            if eq(_strategist, 0) {
-                // throw the `InvalidZeroAddress` error
-                mstore(0x00, 0xf6b2911f)
-                revert(0x1c, 0x04)
-            }
-        }
-
-        vault = _vault;
-        _grantRoles(address(_vault), VAULT_ROLE);
-
-        // Cache underlying asset
-        (bool success, bytes memory data) = address(_vault).staticcall(abi.encodeWithSignature("asset()"));
-        require(success, "asset");
-        address _underlyingAsset = abi.decode(data, (address));
-
-        underlyingAsset = _underlyingAsset;
-
-        // Approve MaxApyVault to transfer underlying
-        _underlyingAsset.safeApprove(address(_vault), type(uint256).max);
-
-        // Grant keepers with `KEEPER_ROLE`
-        for (uint256 i; i < _keepers.length;) {
-            _grantRoles(_keepers[i], KEEPER_ROLE);
-            unchecked {
-                ++i;
-            }
-        }
-
-        // Set caller as admin and owner
-        _initializeOwner(msg.sender);
-        _grantRoles(msg.sender, ADMIN_ROLE);
-
-        strategyName = _strategyName;
-
-        emergencyExit = 1;
-
-        strategist = _strategist;
-        lastHarvest = block.timestamp;
-    }
+    /// @dev the initialization function must be defined in each strategy
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -119,54 +65,48 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
         bytes32 _strategyName,
         address _strategist,
         ICellar _cellar
-    ) public initializer {
+    ) public virtual initializer {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         cellar = _cellar;
         /// Approve Cellar Vault to transfer underlying
-        /// Ensure first approval is 0 to pass USDC race condition
-        underlyingAsset.safeApprove(address(_cellar), 0);
         underlyingAsset.safeApprove(address(_cellar), type(uint256).max);
+    }
+
+    /////////////////////////////////////////////////////////////////
+    ///                    CORE LOGIC                             ///
+    /////////////////////////////////////////////////////////////////
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    function requestWithdraw(uint256 amountNeeded)
+        external
+        virtual
+        override
+        checkRoles(VAULT_ROLE)
+        returns (uint256 loss)
+    {
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < amountNeeded) {
+            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
+            // use sub zero because shares could be fewer than expected and underflow
+            loss = _sub0(_shareValue(burntShares), amountNeeded);
+        }
+        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // Note: Reinvest anything leftover on next `harvest`
+        _snapshotEstimatedTotalAssets();
     }
 
     /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice Provide an accurate estimate for the total amount of assets
-    /// (principle + return) that this Strategy is currently managing,
-    /// denominated in terms of `underlyingAsset` tokens.
-    /// This total should be "realizable" e.g. the total value that could
-    /// *actually* be obtained from this Strategy if it were to divest its
-    /// entire position based on current on-chain conditions.
-    /// @dev Care must be taken in using this function, since it relies on external
-    /// systems, which could be manipulated by the attacker to give an inflated
-    /// (or reduced) value produced by this function, based on current on-chain
-    /// conditions (e.g. this function is possible to influence through
-    /// flashloan attacks, oracle manipulations, or other DeFi attack
-    /// mechanisms).
-    /// @return The estimated total assets in this Strategy.
-    function estimatedTotalAssets() public view returns (uint256) {
-        return _underlyingBalance() + _shareValue(_shareBalance());
-    }
-
-    /// @notice Provides an indication of whether this strategy is currently "active"
-    /// in that it is managing an active position, or will manage a position in
-    /// the future. This should correlate to `harvest()` activity, so that Harvest
-    /// events can be tracked externally by indexing agents.
-    /// @return True if the strategy is actively managing a position.
-    function isActive() public view returns (bool) {
-        return estimatedTotalAssets() != 0;
-    }
-
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
-    /// for the vault to be able to provide an accurate amount when calling either
-    ///`previewWithdraw` or `previewRedeem`
+    /// @dev calculates estunated the real output of a withdrawal(including losses) for a @param requestedAmount
+    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view returns (uint256 liquidatedAmount) {
-        if (cellar.userShareLockStartTime(address(this)) + cellar.shareLockPeriod() > block.timestamp) {
-            return 0;
-        }
+    function previewWithdraw(uint256 requestedAmount) public view virtual override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -183,21 +123,39 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
         liquidatedAmount = requestedAmount - loss;
     }
 
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewWithdrawRequest(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < liquidatedAmount) {
+            liquidatedAmount = liquidatedAmount - underlyingBalance;
+            requestedAmount = _shareValue(cellar.previewWithdraw(liquidatedAmount));
+        }
+        return requestedAmount + underlyingBalance;
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
+    function maxWithdraw() public view virtual override returns (uint256) {
+        return _estimatedTotalAssets();
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxRequest() public view virtual override returns (uint256) {
+        // only can request harvested assets
+        return _underlyingBalance() + cellar.maxWithdraw(address(this));
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
-
-    /// @notice The Sommelier `Real Yield USD` strategy requires that 24h have elapsed
-    /// since the last deposit. This function ensures the condition is met before performin
-    /// any other action
-
-    function _checkIfSharesLocked() internal view {
-        uint256 sharesUnlockedTimestamp = cellar.userShareLockStartTime(address(this)) + cellar.shareLockPeriod();
-        if (sharesUnlockedTimestamp > block.timestamp) {
-            revert SharesLocked();
-        }
-    }
-
     /// @notice Perform any Strategy unwinding or other calls necessary to capture the
     /// "free return" this Strategy has generated since the last time its core
     /// position(s) were adjusted. Examples include unwrapping extra rewards.
@@ -217,38 +175,47 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     ///       should only be used as a guide for how much is left to pay back.
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
-    /// NOTE: It must check shareas are unlocked before liquidation the positions
-    /// See `MaxApcellar.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256)
+    /// See `MaxApy.debtOutstanding()`.
+    function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
         internal
+        virtual
         override
-        returns (uint256 profit, uint256 loss, uint256 debtPayment)
+        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        _checkIfSharesLocked();
-        if (block.timestamp < lastHarvest + HARVEST_INTERVAL) {
-            revert HarvestTimeNotElapsed();
-        }
-        lastHarvest = block.timestamp;
+        if (cellar.isPaused()) return (0, 0, 0, 0);
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
-        uint256 shares = _shareBalance();
-        uint256 totalAssets = underlyingBalance + _shareValue(shares);
+        uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
+        uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
 
         uint256 debt;
         assembly {
             // debt = vault.strategies(address(this)).strategyTotalDebt;
-            mstore(0x00, 0xbdb9f8b3)
+            mstore(0x00, 0xd81d5e87)
             mstore(0x20, address())
             if iszero(call(gas(), sload(vault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             debt := mload(0x00)
         }
 
-        if (totalAssets >= debt) {
+        // initialize the lastEstimatedTotalAssets in case it is not
+        if (_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
+
+        assembly {
+            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
+            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
+            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
+            // else
+            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
+        }
+
+        if (_estimatedTotalAssets_ >= _lastEstimatedTotalAssets) {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
-            profit = totalAssets - debt;
 
-            uint256 amountToWithdraw = profit + debtOutstanding;
+            // we will report harvestedProfitBPS % of the profits only so we can compound the rest
+            realizedProfit = unrealizedProfit * harvestedProfitBPS / MAX_BPS;
+
+            uint256 amountToWithdraw = realizedProfit + debtOutstanding;
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Cellar
@@ -270,34 +237,39 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
             }
 
             assembly {
-                // Net off profit and loss
-                switch lt(profit, loss)
-                // if (profit < loss)
+                // Net off realized profit and loss
+                switch lt(realizedProfit, loss)
+                // if (realizedProfit < loss)
                 case true {
-                    loss := sub(loss, profit)
-                    profit := 0
+                    loss := sub(loss, realizedProfit)
+                    realizedProfit := 0
                 }
                 case false {
-                    profit := sub(profit, loss)
+                    realizedProfit := sub(realizedProfit, loss)
+                    loss := 0
+                }
+
+                // Net off unrealized profit and loss
+                switch lt(unrealizedProfit, loss)
+                // if (unrealizedProfit < loss)
+                case true { realizedProfit := 0 }
+                case false {
+                    unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
                 }
             }
             // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
-            if (profit > underlyingBalance) {
+            if (realizedProfit > underlyingBalance) {
                 // Profit is prioritised. In this case, no `debtPayment` will be reported
-                profit = underlyingBalance;
+                realizedProfit = underlyingBalance;
             } else if (amountToWithdraw > underlyingBalance) {
                 // same as `profit` + `debtOutstanding` > `underlyingBalance`
                 // Extract debt payment from divested amount
                 unchecked {
-                    debtPayment = underlyingBalance - profit;
+                    debtPayment = underlyingBalance - realizedProfit;
                 }
             } else {
                 debtPayment = debtOutstanding;
-            }
-        } else {
-            assembly {
-                loss := sub(debt, totalAssets)
             }
         }
     }
@@ -307,7 +279,7 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     /// Strategy.
     /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
+    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal virtual override {
         uint256 toInvest = _underlyingBalance();
         _invest(toInvest, minOutputAfterInvestment);
     }
@@ -316,10 +288,15 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Cellar receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal returns (uint256 depositedAmount) {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+        internal
+        virtual
+        returns (uint256 depositedAmount)
+    {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
-
+        // Dont't do anything if cellar is paused or shutdown
+        if (cellar.isShutdown() || cellar.isPaused()) return 0;
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
@@ -350,7 +327,9 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
     /// but in terms of cellar shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
-    function _divest(uint256 shares) internal returns (uint256 withdrawn) {
+    function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
+        // if cellar is paused dont liquidate, skips revert
+        if (cellar.isPaused()) return 0;
         withdrawn = cellar.redeem(shares, address(this), address(this));
         emit Divested(address(this), shares, withdrawn);
     }
@@ -365,15 +344,19 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+
     function _liquidatePosition(uint256 amountNeeded)
         internal
+        virtual
         override
         returns (uint256 liquidatedAmount, uint256 loss)
     {
-        if (cellar.userShareLockStartTime(address(this)) + cellar.shareLockPeriod() > block.timestamp) {
-            return (0, 0);
-        }
         uint256 underlyingBalance = _underlyingBalance();
+        // if cellar is paused dont liquidate, skips revert
+        if (cellar.isPaused()) {
+            uint256 amountOut = Math.min(underlyingBalance, amountNeeded);
+            return (amountOut, amountNeeded - amountOut);
+        }
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Cellar Vault
         if (underlyingBalance < amountNeeded) {
@@ -397,9 +380,8 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     /// @notice Liquidates everything and returns the amount that got freed.
     /// @dev This function is used during emergency exit instead of `_prepareReturn()` to
     /// liquidate all of the Strategy's positions back to the MaxApy Vault.
-    /// NOTE: It must check shareas are unlocked before liquidation the positions
-    function _liquidateAllPositions() internal override returns (uint256 amountFreed) {
-        _checkIfSharesLocked();
+    function _liquidateAllPositions() internal virtual override returns (uint256 amountFreed) {
+        if (cellar.isPaused()) revert CellarIsPaused();
         _divest(_shareBalance());
         amountFreed = _underlyingBalance();
     }
@@ -408,23 +390,45 @@ contract SommelierRealYieldUSDStrategy is BaseStrategy {
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice Determines value in assets of a amount of @param shares
-    /// @dev fetches directly from ERC4626 `convertToAssets` of Sommelier `Cellar` vault
-    /// @return returns the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view returns (uint256) {
-        return cellar.convertToAssets(shares);
+    /// @notice Determines the current value of `shares`.
+    /// @return _assets the estimated amount of underlying computed from shares `shares`
+    function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
+        assembly {
+            // return cellar.previewRedeem(shares);
+            mstore(0x00, 0x4cdad506)
+            mstore(0x20, shares)
+            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _assets := mload(0x00)
+        }
     }
 
-    /// @notice Determines value in shares of a @param amount of assets
-    /// @dev fetches directly from ERC4626 `convertToAShares` of Sommelier `Cellar` vault
-    /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view returns (uint256 shares) {
-        return cellar.convertToShares(amount);
+    /// @notice Determines how many shares depositor of `amount` of underlying would receive.
+    /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
+    function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
+        assembly {
+            // return cellar.convertToShares(amount);
+            mstore(0x00, 0xc6e6f592)
+            mstore(0x20, amount)
+            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _shares := mload(0x00)
+        }
     }
 
     /// @notice Returns the current strategy's amount of Cellar vault shares
     /// @return _balance balance the strategy's balance of Cellar vault shares
     function _shareBalance() internal view returns (uint256 _balance) {
-        return cellar.balanceOf(address(this));
+        assembly {
+            // return cellar.balanceOf(address(this));
+            mstore(0x00, 0x70a08231)
+            mstore(0x20, address())
+            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _balance := mload(0x00)
+        }
+    }
+
+    /// @notice Returns the real time estimation of the value in assets held by the strategy
+    /// @return the strategy's total assets(idle + investment positions)
+    function _estimatedTotalAssets() internal view virtual override returns (uint256) {
+        return _underlyingBalance() + _shareValue(_shareBalance());
     }
 }

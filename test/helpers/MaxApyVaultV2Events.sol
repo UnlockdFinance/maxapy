@@ -60,15 +60,19 @@ contract MaxApyVaultV2Events {
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
-        uint256 gain,
+        uint256 realizedGain,
+        uint256 unrealizedGain,
         uint256 loss,
         uint256 debtPayment,
-        uint128 strategyTotalGain,
+        uint128 strategyTotalRealizedGain,
         uint128 strategyTotalLoss,
         uint128 strategyTotalDebt,
         uint256 credit,
         uint16 strategyDebtRatio
     );
+
+    /// @notice Emitted when a vault's autopilot mode is enabled or disabled
+    event AutopilotEnabled(bool isEnabled);
 
     /// OWNERSHIP
 

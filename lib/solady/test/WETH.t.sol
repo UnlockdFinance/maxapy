@@ -50,7 +50,7 @@ contract WETHTest is SoladyTest {
         assertEq(weth.totalSupply(), 0);
 
         _expectDepositEvent(1 ether);
-        SafeTransferLib.safeTransferETH(address(weth), 1 ether);
+        SafeTransferLib.safeTransferETH(address(WETH_MAINNET), 1 ether);
 
         assertEq(weth.balanceOf(address(this)), 1 ether);
         assertEq(weth.totalSupply(), 1 ether);
@@ -122,7 +122,7 @@ contract WETHTest is SoladyTest {
         assertEq(weth.totalSupply(), 0);
 
         _expectDepositEvent(amount);
-        SafeTransferLib.safeTransferETH(address(weth), amount);
+        SafeTransferLib.safeTransferETH(address(WETH_MAINNET), amount);
 
         assertEq(weth.balanceOf(address(this)), amount);
         assertEq(weth.totalSupply(), amount);
@@ -175,7 +175,7 @@ contract WETHInvariants is SoladyTest, InvariantTest {
     }
 
     function invariantTotalSupplyEqualsBalance() public {
-        assertEq(address(weth).balance, weth.totalSupply());
+        assertEq(address(WETH_MAINNET).balance, WETH_MAINNET.totalSupply());
     }
 }
 
@@ -191,7 +191,7 @@ contract WETHTester {
     }
 
     function fallbackDeposit(uint256 amount) public {
-        SafeTransferLib.safeTransferETH(address(weth), amount);
+        SafeTransferLib.safeTransferETH(address(WETH_MAINNET), amount);
     }
 
     function withdraw(uint256 amount) public {

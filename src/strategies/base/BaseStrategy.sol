@@ -9,13 +9,13 @@ import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
 import {IStrategy} from "../../interfaces/IStrategy.sol";
 import {IMaxApyVaultV2} from "../../interfaces/IMaxApyVaultV2.sol";
 import {Initializable} from "../../lib/Initializable.sol";
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 /// @title BaseStrategy
 /// @author Forked and adapted from https://github.com/yearn/yearn-vaults/blob/master/contracts/BaseStrategy.sol
 /// @notice `BaseStrategy` sets the base functionality to be implemented by MaxApy strategies.
 /// @dev Inheriting strategies should implement functionality according to the standards defined in this
 /// contract.
-
 abstract contract BaseStrategy is Initializable, OwnableRoles {
     using SafeTransferLib for address;
 
@@ -26,6 +26,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     uint256 public constant EMERGENCY_ADMIN_ROLE = _ROLE_1;
     uint256 public constant VAULT_ROLE = _ROLE_2;
     uint256 public constant KEEPER_ROLE = _ROLE_3;
+    uint256 public constant MAX_BPS = 10_000;
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -35,10 +36,13 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 
     /// @notice Emitted when the strategy's emergency exit status is updated
-    event StrategyEmergencyExitUpdated(address indexed strategy, address emergencyExitStatus);
+    event StrategyEmergencyExitUpdated(address indexed strategy, uint256 emergencyExitStatus);
 
     /// @notice Emitted when the strategy's strategist is updated
     event StrategistUpdated(address indexed strategy, address newStrategist);
+
+    /// @notice Emitted when the strategy's autopilot status is updated
+    event StrategyAutopilotUpdated(address indexed strategy, bool autoPilotStatus);
 
     /// @dev `keccak256(bytes("Harvested(uint256,uint256,uint256,uint256)"))`.
     uint256 internal constant _HARVESTED_EVENT_SIGNATURE =
@@ -51,6 +55,10 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @dev `keccak256(bytes("StrategistUpdated(address,address)"))`.
     uint256 internal constant _STRATEGY_STRATEGIST_UPDATED_EVENT_SIGNATURE =
         0xf6a8d961ba4f41874e38ad8bed56ca4bcf2356a3dd5bfa626b8a73a0da9f5c69;
+
+    /// @dev `keccak256(bytes("StrategistUpdated(address,address)"))`.
+    uint256 internal constant _STRATEGY_AUTOPILOT_UPDATED =
+        0x517fe77f85715a129ee7e042c1b69addb2890b8cc86b9dcad191c565d43d69d3;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -66,6 +74,8 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     bytes32 public strategyName;
     /// @notice Strategist's address
     address public strategist;
+    /// @notice Strategy's last recorded estimated total assets
+    uint256 public lastEstimatedTotalAssets;
     /// @notice Gap for upgradeability
     uint256[20] private __gap;
 
@@ -134,34 +144,79 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ////////////////////////////////////////////////////////////////
     ///                STRATEGY CORE LOGIC                       ///
     ////////////////////////////////////////////////////////////////
-    /// @notice Withdraws `amountNeeded` to `vault`.
+    /// @notice Tries to withdraw `amountNeeded` to `vault`.
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function withdraw(uint256 amountNeeded) external checkRoles(VAULT_ROLE) returns (uint256 loss) {
+    function withdraw(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 amountFreed;
         // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountNeeded);
         // Send it directly back to vault
         if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountFreed);
-        // Note: Reinvest anything leftover on next `harvest`
+        // Note: update estimatedTotalAssets
+        _snapshotEstimatedTotalAssets();
     }
 
-    /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting
-    /// the Strategy's position.
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    /// NOTE : while in the {withdraw} function the vault gets `amountNeeded` - `loss`
+    /// in {requestWithdraw} the vault always gets `amountNeeded` and `loss` is the amount
+    /// that had to be lost in order to withdraw exactly `amountNeeded`
+    function requestWithdraw(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 amountRequested = previewWithdrawRequest(amountNeeded);
+        uint256 amountFreed;
+        // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
+        (amountFreed, loss) = _liquidatePosition(amountRequested);
+        // Send it directly back to vault
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        // something didn't work as expected
+        // this should NEVER happen in normal conditions
+        else revert();
+        // Note: update esteimated totalAssets
+        _snapshotEstimatedTotalAssets();
+    }
+
+    /// @notice Harvests the Strategy, but in this case a percentage of the profit(if there's any) is reinvested
     /// In the rare case the Strategy is in emergency shutdown, this will exit
     /// the Strategy's position.
-    /// @dev When `harvest()` is called, the Strategy reports to the MaxApy Vault (via
-    /// `MaxApyVault.report()`), so in some cases `harvest()` must be called in order
-    /// to take in profits, to borrow newly available funds from the MaxApy Vault, or
-    /// otherwise adjust its position. In other cases `harvest()` must be
-    /// called to report to the MaxApy Vault on the Strategy's position, especially if
-    /// any losses have occurred.
+    /// @dev When `harvest()` is called, the strategy reinvests a percentage of the profit and
+    /// reports the rest of it to the MaxAPY vault (via`MaxApyVault.report()`), so this function is meant
+    /// to  be called when there are profits or there is new credit available for the strategy
     /// @param minExpectedBalance minimum balance amount of `underlyingAsset` expected after performing any
     /// @param minOutputAfterInvestment minimum expected output after `_invest()`
     /// strategy unwinding (if applies).
-    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment) external checkRoles(KEEPER_ROLE) {
-        uint256 profit;
+    /// @param harvestedProfitBPS percentage of the profit realize and send to the vault as net profit
+    /// @param harvester only relevant when the harvest is triggered from the vault, is the address of the user that is enduring the harvest gas cost
+    /// from the vault and will receive the managemente fees in return
+    function harvest(
+        uint256 minExpectedBalance,
+        uint256 minOutputAfterInvestment,
+        uint256 harvestedProfitBPS,
+        address harvester
+    ) external checkRoles(KEEPER_ROLE) {
+        assembly ("memory-safe") {
+            // if harvestedProfitBPS > MAX_BPS
+            if gt(harvestedProfitBPS, MAX_BPS) {
+                // throw the `InvalidHarvestedProfit` error
+                mstore(0x00, 0x76fbe33c)
+                revert(0x1c, 0x04)
+            }
+        }
+        // normally the treasury would get the management fee
+        address managementFeeReceiver;
+        // if the harvest was done from the vault means it the
+        // harvest was triggered on a deposit
+        if (msg.sender == address(vault)) {
+            // the depositing user will get the management fees as a reward
+            // for paying gas costs of harvest
+            managementFeeReceiver = harvester;
+        }
+
+        uint256 realizedProfit;
+        uint256 unrealizedProfit;
         uint256 loss;
         uint256 debtPayment;
         uint256 debtOutstanding;
@@ -205,25 +260,29 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
                 }
                 if gt(amountFreed, debtOutstanding) {
                     // if (amountFreed > debtOutstanding)
-                    profit := sub(amountFreed, debtOutstanding) // set profit = amountFreed - debtOutstanding
+                    // only report realized profit so no fees are assessed
+                    realizedProfit := sub(amountFreed, debtOutstanding) // set profit = amountFreed - debtOutstanding
                 }
 
                 debtPayment := sub(debtOutstanding, loss) // can not overflow due to `debtOutstanding` being > `loss` in both cases
             }
         } else {
             // Free up returns for vault to pull
-            (profit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
+            (realizedProfit, unrealizedProfit, loss, debtPayment) =
+                _prepareReturn(debtOutstanding, minExpectedBalance, harvestedProfitBPS);
         }
 
         assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
 
             // Store `vault`'s `report()` function selector:
-            // `bytes4(keccak256("report(uint128,uint128,uint128)"))`
-            mstore(0x00, 0x68dbf47f)
-            mstore(0x20, profit) // append the `profit` argument
-            mstore(0x40, loss) // append the `loss` argument
-            mstore(0x60, debtPayment) // append the `debtPayment` argument
+            // `bytes4(keccak256("report(uint128,uint128,uint128,uint128,address)"))`
+            mstore(0x00, 0xfb7053b2)
+            mstore(0x20, realizedProfit) // append the `profit` argument
+            mstore(0x40, unrealizedProfit) // append the `profit` argument
+            mstore(0x60, loss) // append the `loss` argument
+            mstore(0x80, debtPayment) // append the `debtPayment` argument
+            mstore(0xa0, managementFeeReceiver) // append the `debtPayment` argument
 
             // Report to vault
             if iszero(
@@ -232,7 +291,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
                     cachedVault, // Address of `vault`
                     0, // `msg.value`
                     0x1c, // byte offset in memory where calldata starts
-                    0x64, // size of the calldata to copy
+                    0xa4, // size of the calldata to copy
                     0x00, // byte offset in memory to store the return data
                     0x20 // size of the return data
                 )
@@ -250,11 +309,12 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
 
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, minOutputAfterInvestment);
+        _snapshotEstimatedTotalAssets();
 
         assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
 
-            mstore(0x00, profit)
+            mstore(0x00, realizedProfit)
             mstore(0x20, loss)
             mstore(0x40, debtPayment)
             mstore(0x60, debtOutstanding)
@@ -299,6 +359,22 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
     }
 
+    /// @notice Sets the strategy in autopilot mode, meaning that it will be automatically
+    /// harvested from the vault using the strategy
+    /// @param _autoPilot The new autopilot status: true for active false for inactive
+    function setAutopilot(bool _autoPilot) external checkRoles(ADMIN_ROLE) {
+        // grante the keeper role to the vault
+        if (!hasAnyRole(address(vault), KEEPER_ROLE)) {
+            _grantRoles(address(vault), KEEPER_ROLE);
+        }
+        vault.setAutoPilot(_autoPilot);
+        assembly ("memory-safe") {
+            // Emit the `StrategyAutopilotStatusUpdated` event
+            mstore(0x00, _autoPilot)
+            log2(0x00, 0x20, _STRATEGY_AUTOPILOT_UPDATED, address())
+        }
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                    INTERNAL FUNCTIONS                    ///
     ////////////////////////////////////////////////////////////////
@@ -337,7 +413,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// This call is only used during "normal operation" of a Strategy, and
     /// should be optimized to minimize losses as much as possible.
     ///
-    /// This method returns any realized profits and/or realized losses
+    /// This method returns any realized and unrealized profits and/or realized and unrealized losses
     /// incurred, and should return the total amounts of profits/losses/debt
     /// payments (in MaxApy Vault's `underlyingAsset` tokens) for the MaxApy Vault's accounting (e.g.
     /// `underlyingAsset.balanceOf(this) >= debtPayment + profit`).
@@ -353,14 +429,89 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ///       withdrawal fees, etc.
     ///
     /// See `MaxApyVault.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance)
+    function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
         internal
         virtual
-        returns (uint256 profit, uint256 loss, uint256 debtPayment);
+        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
 
     /// @notice Returns the current strategy's balance in underlying token
     /// @return the strategy's balance of underlying token
     function _underlyingBalance() internal view returns (uint256) {
         return underlyingAsset.balanceOf(address(this));
+    }
+
+    /// @notice Returns the real time estimation of the value in assets held by the strategy
+    /// @return the strategy's total assets(idle + investment positions)
+    function _estimatedTotalAssets() internal view virtual returns (uint256);
+
+    /// @notice Returns the real gain/loss from the last harvest
+    function unharvestedAmount() external view virtual returns (int256) {
+        return int256(_estimatedTotalAssets()) - int256(lastEstimatedTotalAssets);
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                    EXTERNAL VIEW FUNCTIONS               ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Provide an accurate estimate for the total amount of assets
+    /// (principle + return) that this Strategy is currently managing,
+    /// denominated in terms of `underlyingAsset` tokens.
+    /// This total should be "realizable" e.g. the total value that could
+    /// *actually* be obtained from this Strategy if it were to divest its
+    /// entire position based on current on-chain conditions.
+    /// @dev Care must be taken in using this function, since it relies on external
+    /// systems, which could be manipulated by the attacker to give an inflated
+    /// (or reduced) value produced by this function, based on current on-chain
+    /// conditions (e.g. this function is possible to influence through
+    /// flashloan attacks, oracle manipulations, or other DeFi attack
+    /// mechanisms).
+    /// @return The estimated total assets in this Strategy.
+    function estimatedTotalAssets() public view returns (uint256) {
+        // always try to use the value from the last harvest so share price is not updated before the harvest
+        // always be pessimistic, take the lowest between the last harvest assets and assets in that moment
+        return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
+    }
+
+    /**
+     *  @notice Provides an indication of whether this strategy is currently "active"
+     *  in that it is managing an active position, or will manage a position in
+     *  the future. This should correlate to `harvest()` activity, so that Harvest
+     *  events can be tracked externally by indexing agents.
+     *  @return True if the strategy is actively managing a position.
+     */
+    function isActive() public view returns (bool) {
+        return estimatedTotalAssets() != 0;
+    }
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
+    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
+    /// @return liquidatedAmount output in assets
+    function previewWithdraw(uint256 requestedAmount) public view virtual returns (uint256 liquidatedAmount);
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewWithdrawRequest(uint256 liquidatedAmount) public view virtual returns (uint256 requestedAmount);
+
+    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
+    function maxRequest() public view virtual returns (uint256);
+
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxWithdraw() public view virtual returns (uint256);
+
+    ////////////////////////////////////////////////////////////////
+    ///                      HELPER FUNCTIONS                    ///
+    ////////////////////////////////////////////////////////////////
+    /// @dev Private helper to substract a - b or return 0 if it underflows
+    function _sub0(uint256 a, uint256 b) internal pure virtual returns (uint256) {
+        unchecked {
+            return a - b > a ? 0 : a - b;
+        }
+    }
+
+    function _snapshotEstimatedTotalAssets() internal {
+        // snapshot of the estimated total assets
+        lastEstimatedTotalAssets = _estimatedTotalAssets();
     }
 }

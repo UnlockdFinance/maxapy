@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {StrategyData} from "./helpers/VaultTypes.sol";
+import {StrategyData} from "src/helpers/VaultTypes.sol";
 import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
-import {IStrategy} from "./interfaces/IStrategy.sol";
+import {IStrategy} from "src/interfaces/IStrategy.sol";
 import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
@@ -43,6 +43,9 @@ KKOl''',,,,,,,,..  'oOKKKKKKKKKKKKKKKKKKKOl,,ccccccc:'  .c0K
 KKKKOoc:;;;;;;;;:ldOKKKKKKKKKKKKKKKKKKKKKKKkl;'......',cx0KK
 KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK0OOOOOOO0KKK*/
 
+/// @title MaxApy Vault V2 Contract
+/// @notice A ERC4626 vault contract deploying `underlyingAsset` to strategies that earn yield and report gains/losses to the vault
+/// @author ERC2626 adaptation of MaxAPYVault: https://github.com/UnlockdFinance/maxapy/blob/development/src/MaxApyVault.sol
 contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     using SafeTransferLib for address;
     ////////////////////////////////////////////////////////////////
@@ -51,9 +54,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     uint256 public constant MAXIMUM_STRATEGIES = 20;
     uint256 public constant MAX_BPS = 10_000;
-    uint256 public constant DEGRADATION_COEFFICIENT = 1e18;
-    uint256 public constant SECS_PER_YEAR = 31_556_952;
     /// 365.2425 days
+    uint256 public constant SECS_PER_YEAR = 31_556_952;
+    // every week
+    uint256 public constant AUTOPILOT_HARVEST_INTERVAL = 1 weeks;
 
     /// Roles
     uint256 public constant ADMIN_ROLE = _ROLE_0;
@@ -75,7 +79,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     error InvalidMinDebtPerHarvest();
     error InvalidPerformanceFee();
     error InvalidManagementFee();
-    error InvalidLockedProfitDegradation();
     error StrategyDebtRatioAlreadyZero();
     error InvalidQueueOrder();
     error VaultDepositLimitExceeded();
@@ -99,10 +102,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     );
 
     /// @notice Emitted when a strategy is removed from the protocol
-    event StrategyAdded(address indexed strategy);
+    event StrategyRemoved(address indexed strategy);
 
     /// @notice Emitted when a vault's emergency shutdown state is switched
     event EmergencyShutdownUpdated(bool emergencyShutdown);
+
+    /// @notice Emitted when a vault's autopilot mode is enabled or disabled
+    event AutopilotEnabled(bool isEnabled);
 
     /// @notice Emitted when a strategy is revoked from the vault
     event StrategyRevoked(address indexed strategy);
@@ -116,6 +122,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint16 newPerformanceFee
     );
 
+    /// @notice Emitted when a strategy is exited
+    event StrategyExited(address indexed strategy, uint256 withdrawn);
+
     /// @notice Emitted when the withdrawal queue is updated
     event WithdrawalQueueUpdated(address[MAXIMUM_STRATEGIES] withdrawalQueue);
 
@@ -125,20 +134,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Emitted when the vault's management fee is updated
     event ManagementFeeUpdated(uint256 newManagementFee);
 
-    /// @notice Emitted the vault's locked profit degradation is updated
-    event LockedProfitDegradationUpdated(uint256 newLockedProfitDegradation);
-
     /// @notice Emitted when the vault's deposit limit is updated
     event DepositLimitUpdated(uint256 newDepositLimit);
 
     /// @notice Emitted when the vault's treasury addresss is updated
     event TreasuryUpdated(address treasury);
-
-    /// @notice Emitted on vault deposits
-    event Deposit(address indexed recipient, uint256 shares, uint256 amount);
-
-    /// @notice Emitted on vault withdrawals
-    event Withdraw(address indexed recipient, uint256 shares, uint256 amount);
 
     /// @notice Emitted on withdrawal strategy withdrawals
     event WithdrawFromStrategy(address indexed strategy, uint128 strategyTotalDebt, uint128 loss);
@@ -146,13 +146,17 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Emitted after assessing protocol fees
     event FeesReported(uint256 managementFee, uint16 performanceFee, uint256 strategistFee, uint256 duration);
 
+    /// @notice Emitted after a forced harvest fails unexpectedly
+    event ForceHarvestFailed(address indexed strategy, bytes reason);
+
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
-        uint256 gain,
+        uint256 realizedGain,
+        uint256 unrealizedGain,
         uint256 loss,
         uint256 debtPayment,
-        uint128 strategyTotalGain,
+        uint128 strategyTotalRealizedGain,
         uint128 strategyTotalLoss,
         uint128 strategyTotalDebt,
         uint256 credit,
@@ -164,10 +168,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         0x66277e61c003f7703009ad857a4c4900f9cd3ee44535afe5905f98d53922e0f4;
 
     uint256 internal constant _STRATEGY_REMOVED_EVENT_SIGNATURE =
-        0x3f008fd510eae7a9e7bee13513d7b83bef8003d488b5a3d0b0da4de71d6846f1;
+        0x09a1db4b80c32706328728508c941a6b954f31eb5affd32f236c1fd405f8fea4;
 
     uint256 internal constant _EMERGENCY_SHUTDOWN_UPDATED_EVENT_SIGNATURE =
         0xa63137c77816d51f856c11ffb11e84757ac9db0ce2569f94edd04c91fe2250a1;
+
+    uint256 internal constant _AUTOPILOT_ENABLED_EVENT_SIGNATURE =
+        0xba59cddbbe4aad399b09d7f484fdd0a4bc54da6a697a48549cbe72d79c66fcb3;
 
     uint256 internal constant _STRATEGY_REVOKED_EVENT_SIGNATURE =
         0x4201c688d84c01154d321afa0c72f1bffe9eef53005c9de9d035074e71e9b32a;
@@ -184,9 +191,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     uint256 internal constant _MANAGEMENT_FEE_UPDATED_EVENT_SIGNATURE =
         0x2147e2bc8c39e67f74b1a9e08896ea1485442096765942206af1f4bc8bcde917;
 
-    uint256 internal constant _LOCKED_PROFIT_DEGRADATION_UPDATED_EVENT_SIGNATURE =
-        0x056863905a721211fc4dda1d688efc8f120b4b689d2e41da8249cf6eff200691;
-
     uint256 internal constant _DEPOSIT_LIMIT_UPDATED_EVENT_SIGNATURE =
         0xc512617347fd848ec9d7347c99c10e4fa7059132c92d0445930a7fb0c8252ff5;
 
@@ -200,7 +204,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         0x25bf703141a84375d04ea08a0c4a21c7406f300f133e12aef555607b4f3ff238;
 
     uint256 internal constant _STRATEGY_REPORTED_EVENT_SIGNATURE =
-        0xc2d7e1173e37528dce423c72b129fa1ad2c5d51e50974c64fe13f1928eb27f89;
+        0x76d4dbb6b8a8587ce9257d3c01366679401bb6abfa332fe63a1b4d52ae275f02;
 
     uint256 private constant _DEPOSIT_EVENT_SIGNATURE =
         0xdcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7;
@@ -208,12 +212,21 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     uint256 private constant _WITHDRAW_EVENT_SIGNATURE =
         0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db;
 
+    uint256 private constant _STRATEGY_EXITED_EVENT_SIGNATURE =
+        0x2e8aac9e73a32a1b5926e2c5a2820a51deb01ed40212b6346d96db2a178cf433;
+
     ////////////////////////////////////////////////////////////////
     ///               VAULT GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
 
     /// @notice Vault state stating if vault is in emergency shutdown mode
     bool public emergencyShutdown;
+    /// @notice Vault state stating if vault allows for automated harvesting of strategies
+    bool public autoPilotEnabled;
+    /// @notice the decimals of the underlying ERC20 token
+    uint8 private immutable _decimals;
+    /// @notice the index in {withdrawalQueue} of the next strategy to be harvested from the autopilot
+    uint8 public nexHarvestStrategyIndex;
     /// @notice Limit for totalAssets the Vault can hold
     uint256 public depositLimit;
     /// @notice Debt ratio for the Vault across all strategies (in BPS, <= 10k)
@@ -224,10 +237,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     uint256 public totalDebt;
     /// @notice block.timestamp of last report
     uint256 public lastReport;
-    /// @notice How much profit is locked and cant be withdrawn
-    uint256 public lockedProfit;
-    /// @notice Rate per block of degradation. DEGRADATION_COEFFICIENT is 100% per block
-    uint256 public lockedProfitDegradation;
     /// @notice Rewards address where performance and management fees are sent to
     address public treasury;
 
@@ -241,6 +250,15 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Flat rate taken from vault yield over a year
     uint256 public managementFee;
 
+    /// @notice name of the vault shares ERC20 token
+    string private _name;
+    /// @notice symbol of the vault shares ERC20 token
+    string private _symbol;
+    /// @notice the assets in which the vault earns interest
+    address private immutable _underlyingAsset;
+
+    /// @notice the assets in which the vault earns interest
+
     ////////////////////////////////////////////////////////////////
     ///                         MODIFIERS                        ///
     ////////////////////////////////////////////////////////////////
@@ -250,26 +268,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _;
     }
 
-    // doesnt work in assembly
     modifier noEmergencyShutdown() {
         if (emergencyShutdown) {
             revert VaultInEmergencyShutdownMode();
         }
-        /*  assembly ("memory-safe") {
-            // if emergencyShutdown == true
-            if shr(160, sload(emergencyShutdown.slot)) {
-                // throw the `VaultInEmergencyShutdownMode` error
-                mstore(0x00, 0x04aca5db)
-                revert(0x1c, 0x04)
-            }
-        } */
         _;
     }
-
-    string private _name;
-    string private _symbol;
-    address private immutable _underlyingAsset;
-    uint8 private immutable _decimals;
 
     constructor(address underlyingAsset_, string memory name_, string memory symbol_, address _treasury) {
         _initializeOwner(msg.sender);
@@ -277,7 +281,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         performanceFee = 1000; // 10% of reported yield (per Strategy)
         managementFee = 200; // 2% of reported yield (per Strategy)
         lastReport = block.timestamp;
-        lockedProfitDegradation = (DEGRADATION_COEFFICIENT * 46) / 10 ** 6; // 6 hours in blocks
         (bool success, uint8 result) = _tryGetAssetDecimals(underlyingAsset_);
         _decimals = success ? result : _DEFAULT_UNDERLYING_DECIMALS;
         // deposit limit is 10M tokens
@@ -291,6 +294,52 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     ////////////////////////////////////////////////////////////////
     ///                    INTERNAL FUNCTIONS                    ///
     ////////////////////////////////////////////////////////////////
+    /// @notice Forces the harvest of a
+    /// @param harvester user that will get extra shares for harvesting
+    /// @dev it should never revert to ensure users can always deposit
+    function _forceOneHarvest(address harvester)
+        internal
+        returns (address strategy, bool success, bytes memory reason)
+    {
+        uint256 l = withdrawalQueue.length;
+        address[MAXIMUM_STRATEGIES] memory strats = withdrawalQueue;
+        // find the first strategy that is in autopilot
+        uint8 i = nexHarvestStrategyIndex > l - 1 ? 0 : nexHarvestStrategyIndex;
+        bool strategyFound;
+        for (i; i < l;) {
+            if (strategies[strats[i]].autoPilot) {
+                strategy = strats[i];
+                strategyFound = true;
+                break;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        // if the strategy we will harvest is the last of the array or its out of bounds
+        // because of some change in the withdrawal queue
+        // set it back to the first index(0) of the array
+        unchecked {
+            if (i >= l - 1 || strats[i + 1] == address(0)) {
+                nexHarvestStrategyIndex = 0;
+            } else {
+                nexHarvestStrategyIndex = ++i;
+            }
+        }
+
+        // if there are no strategies to harvest return
+        if (!strategyFound) return (strategy, true, reason);
+
+        // use try/catch so deposits always succeed
+        // and next index is updated
+        try IStrategy(strategy).harvest(0, 0, 0, harvester) {
+            success = true;
+        } catch (bytes memory _reason) {
+            reason = _reason;
+            success = false;
+        }
+    }
 
     /// @notice Reports a strategy loss, adjusting the corresponding vault and strategy parameters
     /// to minimize trust in the strategy
@@ -396,9 +445,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Issues new shares to cover performance, management and strategist fees
     /// @param strategy The strategy reporting the gain
-    /// @param gain The amount of gain to extract fees from
     /// @return the total fees (performance + management + strategist) extracted from the gain
-    function _assessFees(address strategy, uint256 gain) internal returns (uint256) {
+    function _assessFees(address strategy, uint256 gain, address managementFeeReceiver) internal returns (uint256) {
         bool success;
         uint256 slot0Content;
         assembly ("memory-safe") {
@@ -500,7 +548,16 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Treasury earns remaining shares (performance fee + management fee + any dust leftover from flooring math above)
             uint256 cachedBalance = balanceOf(address(this));
             if (cachedBalance != 0) {
-                address(this).safeTransfer(treasury, cachedBalance);
+                // if the harvest was triggered by a regular user send management fee to
+                // the user that endured the harvest
+                if (managementFeeReceiver != address(0)) {
+                    address(this).safeTransfer(managementFeeReceiver, cachedBalance * computedManagementFee / totalFee);
+                    cachedBalance = balanceOf(address(this));
+                }
+                // transfer the rest of it to the treasury
+                if (cachedBalance != 0) {
+                    address(this).safeTransfer(treasury, cachedBalance);
+                }
             }
         }
 
@@ -528,7 +585,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (emergencyShutdown) return 0;
 
         // Compute necessary data regarding current state of the vault
-        uint256 vaultTotalAssets = _totalAssets();
+        uint256 vaultTotalAssets = _totalAccountedAssets();
         uint256 vaultDebtLimit = _computeDebtLimit(debtRatio, vaultTotalAssets);
         uint256 vaultTotalDebt = totalDebt;
 
@@ -627,7 +684,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         // If debt ratio configured in vault is zero or emergency shutdown, any amount of debt in the strategy should be returned
         if (debtRatio == 0 || emergencyShutdown) return strategyTotalDebt;
 
-        uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalAssets());
+        uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalAccountedAssets());
 
         // There will not be debt outstanding if strategy total debt is smaller or equal to the current debt limit
         if (strategyDebtLimit >= strategyTotalDebt) {
@@ -692,27 +749,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _mint(to, shares);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                INTERNAL VIEW FUNCTIONS                   ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Calculates the free funds available considering the locked profit
-    /// @return The amount of free funds available
-    function _freeFunds() internal view returns (uint256) {
-        return _totalAssets() - _calculateLockedProfit();
-    }
-
-    /// @dev To be overridden to return the number of decimals of the underlying asset.
-    function _underlyingDecimals() internal view override returns (uint8) {
-        return _decimals;
-    }
-
-    /// @dev Override to return a non-zero value to make the inflation attack even more unfeasible.
-    /// Only used when {_useVirtualShares} returns true.
-    function _decimalsOffset() internal pure override returns (uint8) {
-        return 6;
-    }
-
     /// @dev Private helper to return if either value is zero.
     function _eitherIsZero_(uint256 a, uint256 b) internal pure virtual returns (bool result) {
         /// @solidity memory-safe-assembly
@@ -728,10 +764,49 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
     }
 
+    /// @dev Private helper to substract a - b or return 0 if it underflows
+    function _sub0(uint256 a, uint256 b) internal pure virtual returns (uint256) {
+        unchecked {
+            return a - b > a ? 0 : a - b;
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                INTERNAL VIEW FUNCTIONS                   ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice the number of decimals of the underlying token
+    function _underlyingDecimals() internal view override returns (uint8) {
+        return _decimals;
+    }
+
+    /// @dev Override to return a non-zero value to make the inflation attack even more unfeasible.
+    function _decimalsOffset() internal pure override returns (uint8) {
+        return 6;
+    }
+
+    /// @notice Returns the estimate amount of assets held by the vault and strategy positions,
+    /// including unrealised profit or losses
+    /// @return totalAssets_ The total assets under control of this Vault
+    function _totalAssets() internal view returns (uint256 totalAssets_) {
+        // use accounted assets for the vault balance, prevents inflation attacks or similar
+        totalAssets_ = totalIdle;
+        address[MAXIMUM_STRATEGIES] memory _withdrawalQueue = withdrawalQueue;
+        for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+            address strategy = _withdrawalQueue[i];
+            // Check if we have exhausted the queue
+            if (strategy == address(0)) break;
+            totalAssets_ += IStrategy(strategy).estimatedTotalAssets();
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     /// @notice Returns the total quantity of all assets under control of this Vault,
     /// whether they're loaned out to a Strategy, or currently held in the Vault
     /// @return totalAssets_ The total assets under control of this Vault
-    function _totalAssets() internal view returns (uint256 totalAssets_) {
+    function _totalAccountedAssets() internal view returns (uint256 totalAssets_) {
         assembly {
             let totalDebt_ := sload(totalDebt.slot)
             totalAssets_ := add(sload(totalIdle.slot), totalDebt_)
@@ -741,168 +816,172 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
     }
 
-    /// @notice Calculates how much profit is locked and cant be withdrawn
-    /// @return calculatedLockedProfit The total assets locked
-    function _calculateLockedProfit() internal view returns (uint256 calculatedLockedProfit) {
-        assembly {
-            // No need to check for underflow, since block.timestamp is always greater or equal than lastReport
-            let difference := sub(timestamp(), sload(lastReport.slot)) // difference = block.timestamp - lastReport
-            let lockedProfitDegradation_ := sload(lockedProfitDegradation.slot)
-
-            // Overflow check equivalent to require(lockedProfitDegradation_ == 0 || difference <= type(uint256).max / lockedProfitDegradation_)
-            if iszero(iszero(mul(lockedProfitDegradation_, gt(difference, div(not(0), lockedProfitDegradation_))))) {
-                revert(0, 0)
-            }
-
-            // lockedFundsRatio = (block.timestamp - lastReport) * lockedProfitDegradation
-            let lockedFundsRatio := mul(difference, lockedProfitDegradation_)
-
-            if lt(lockedFundsRatio, DEGRADATION_COEFFICIENT) {
-                let vaultLockedProfit := sload(lockedProfit.slot)
-                // Overflow check equivalent to require(vaultLockedProfit == 0 || lockedFundsRatio <= type(uint256).max / vaultLockedProfit)
-                if iszero(iszero(mul(vaultLockedProfit, gt(lockedFundsRatio, div(not(0), vaultLockedProfit))))) {
-                    revert(0, 0)
-                }
-                // ((lockedFundsRatio * vaultLockedProfit) / DEGRADATION_COEFFICIENT
-                let degradation := div(mul(lockedFundsRatio, vaultLockedProfit), DEGRADATION_COEFFICIENT)
-                // Overflow check
-                if gt(degradation, vaultLockedProfit) { revert(0, 0) }
-                // calculatedLockedProfit = vaultLockedProfit - ((lockedFundsRatio * vaultLockedProfit) / DEGRADATION_COEFFICIENT);
-                calculatedLockedProfit := sub(vaultLockedProfit, degradation)
-            }
-        }
-    }
-
     ////////////////////////////////////////////////////////////////
     ///                EXTERNAL VIEW FUNCTIONS                   ///
     ////////////////////////////////////////////////////////////////
 
-    /// @dev Returns the name of the vault shares token.
+    /// @notice Returns the name of the vault shares token.
     function name() public view override returns (string memory) {
         return _name;
     }
-    /// @dev Returns the symbol of the token.
 
+    /// @notice Returns the symbol of the token.
     function symbol() public view override returns (string memory) {
         return _symbol;
     }
 
-    /// @dev Returns the address of the underlying asset.
+    /// @notice Returns the address of the underlying asset.
     function asset() public view override returns (address) {
         return _underlyingAsset;
     }
-    /// @dev Returns the total amount of the underlying asset managed by the Vault.
-    ///
-    /// - SHOULD include any compounding that occurs from the yield.
-    /// - MUST be inclusive of any fees that are charged against assets in the Vault.
-    /// - MUST NOT revert.
 
+    /// @notice Returns the total amount of the underlying asset managed by the Vault.
     function totalAssets() public view override returns (uint256) {
         return _totalAssets();
     }
 
-    /// @dev Returns the maximum amount of the underlying asset that can be deposited
+    /// @notice Returns the total amount of accounted idle and strategy debt assets
+    function totalAccountedAssets() public view returns (uint256) {
+        return _totalAccountedAssets();
+    }
+
+    /// @notice Returns the maximum amount of the underlying asset that can be deposited
     /// into the Vault for `to`, via a deposit call.
-    ///
-    /// - MUST return a limited value if `to` is subject to some deposit limit.
-    /// - MUST return `2**256-1` if there is no maximum limit.
-    /// - MUST NOT revert.
-    /// Note: it does not set a max deposit per `deposit`, but the max TVL
-    /// of the vault instead
-    function maxDeposit(address /*to*/ ) public view override returns (uint256) {
+    function maxDeposit(address /*to*/ ) public view override returns (uint256 maxAssets) {
         return depositLimit - totalAssets();
     }
 
-    /// @dev Returns the maximum amount of the Vault shares that can be minter for `to`,
+    /// @notice Returns the maximum amount of the Vault shares that can be minter for `to`,
     /// via a mint call.
-    ///
-    /// - MUST return a limited value if `to` is subject to some mint limit.
-    /// - MUST return `2**256-1` if there is no maximum limit.
-    /// - MUST NOT revert.
-    /// Note: it does not set a max deposit per `deposit`, but the max shares
-    /// supply of the vault instead
-    function maxMint(address /*to*/ ) public view override returns (uint256) {
+    function maxMint(address /*to*/ ) public view override returns (uint256 maxShares) {
         return convertToShares(maxDeposit(address(0)));
     }
 
-    /// @dev Returns the amount of shares that the Vault will exchange for the amount of
+    /// @notice Returns the maximum amount of the underlying asset that can be withdrawn
+    /// from the `owner`'s balance in the Vault, via a withdraw call.
+    function maxWithdraw(address owner) public view override returns (uint256 maxAssets) {
+        uint256 maxRequestableAssets = totalIdle;
+        for (uint256 i; i < MAXIMUM_STRATEGIES; i++) {
+            address strategy = withdrawalQueue[i];
+            if (strategy == address(0)) break;
+            maxRequestableAssets += IStrategy(strategy).maxRequest();
+        }
+        uint256 totalSupply = totalSupply();
+        // prevent division by zero
+        if (totalSupply == 0) return 0;
+        maxAssets = Math.fullMulDiv(maxRequestableAssets, maxRedeem(owner), totalSupply);
+    }
+
+    /// @notice Returns the estimate price of 1 vault share
+    function sharePrice() external view returns (uint256) {
+        return convertToAssets(10 ** decimals());
+    }
+
+    /// @notice Returns the amount of shares that the Vault will exchange for the amount of
     /// assets provided, in an ideal scenario where all conditions are met.
-    ///
-    /// - MUST NOT be inclusive of any fees that are charged against assets in the Vault.
-    /// - MUST NOT show any variations depending on the caller.
-    /// - MUST NOT reflect slippage or other on-chain conditions, during the actual exchange.
-    /// - MUST NOT revert.
-    ///
-    /// Note: This calculation MAY NOT reflect the "per-user" price-per-share, and instead
-    /// should reflect the "average-user's" price-per-share, i.e. what the average user should
-    /// expect to see when exchanging to and from.
+    /// @dev some the virtual shares and decimal offset checks have been removed for further
+    /// gas optimization
     function convertToShares(uint256 assets) public view override returns (uint256 shares) {
         uint256 o = _decimalsOffset();
-        return Math.fullMulDiv(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
+        return Math.fullMulDiv(assets, totalSupply() + 10 ** o, _inc_(_totalAssets()));
     }
 
     /// @dev Returns the amount of assets that the Vault will exchange for the amount of
     /// shares provided, in an ideal scenario where all conditions are met.
-    ///
-    /// - MUST NOT be inclusive of any fees that are charged against assets in the Vault.
-    /// - MUST NOT show any variations depending on the caller.
-    /// - MUST NOT reflect slippage or other on-chain conditions, during the actual exchange.
-    /// - MUST NOT revert.
-    ///
-    /// Note: This calculation MAY NOT reflect the "per-user" price-per-share, and instead
-    /// should reflect the "average-user's" price-per-share, i.e. what the average user should
-    /// expect to see when exchanging to and from.
+    /// @dev some the virtual shares and decimal offset checks have been removed for further
+    /// gas optimization
     function convertToAssets(uint256 shares) public view override returns (uint256 assets) {
         uint256 o = _decimalsOffset();
-        return Math.fullMulDiv(shares, _freeFunds() + 1, totalSupply() + 10 ** o);
+        return Math.fullMulDiv(shares, _totalAssets() + 1, totalSupply() + 10 ** o);
     }
+
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their mint
+    /// at the current block, given current on-chain conditions.
+    function previewMint(uint256 shares) public view override returns (uint256 assets) {
+        uint256 o = _decimalsOffset();
+        return Math.fullMulDivUp(shares, _totalAssets() + 1, totalSupply() + 10 ** o);
+    }
+
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal
     /// at the current block, given the current on-chain conditions.
-    ///
-    /// - MUST return as close to and no fewer than the exact amount of Vault shares that
-    ///   will be burned in a withdraw call in the same transaction, i.e. withdraw should
-    ///   return the same or fewer shares as `previewWithdraw` if call in the same transaction.
-    /// - MUST NOT account for withdrawal limits like those returned from `maxWithdraw` and should
-    ///   always act as if the withdrawal will be accepted, regardless of share balance, etc.
-    /// - MUST be inclusive of withdrawal fees. Integrators should be aware of this.
-    /// - MUST not revert.
-    ///
-    /// Note: Any unfavorable discrepancy between `convertToShares` and `previewWithdraw` SHOULD
-    /// be considered slippage in share price or some other type of condition,
-    /// meaning the depositor will lose assets by depositing.
-
     function previewWithdraw(uint256 assets) public view override returns (uint256 shares) {
         if (assets == 0) return 0;
         if (assets == type(uint256).max) assets = convertToAssets(balanceOf(msg.sender));
 
+        uint256 _totalAssets_ = _totalAssets();
+        uint256 vaultBalance = totalIdle;
         uint256 o = _decimalsOffset();
-        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_freeFunds()));
-        if (shares == 0) return 0;
-        while (true) {
-            uint256 _assets = previewRedeem(shares);
-            if (_assets == assets) return shares;
-            shares = Math.fullMulDivUp(shares, assets, _assets);
+        // convert the assets to shares without any losses
+        // very important: ROUND UP
+        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_totalAssets_));
+
+        // in case the vault's balance doesn't cover the requested `assets`
+        if (assets > vaultBalance) {
+            // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
+            // from strategies until requested value amount is covered.
+            // During forced withdrawal, a Strategy may realize a loss, which is reported back to the
+            // Vault. This will affect the withdrawer, affecting the amount of shares that will
+            // burn in order to withdraw exactly @param assets assets
+
+            uint256 totalLoss;
+            // Iterate over strategies
+            for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+                address strategy = withdrawalQueue[i];
+
+                // Check if we have exhausted the queue
+                if (strategy == address(0)) break;
+
+                // Check if the vault balance is finally enough to cover the requested withdrawal
+                if (vaultBalance >= assets) break;
+
+                // Compute remaining amount to withdraw considering the current balance of the vault
+                uint256 amountNeeded = assets - vaultBalance;
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxRequest());
+
+                // Try the next strategy if the current strategy has no debt to be withdrawn
+                if (amountNeeded == 0) {
+                    unchecked {
+                        ++i;
+                    }
+                    continue;
+                }
+
+                // Withdraw from strategy. Compute amount withdrawn
+                // considering the difference between balances pre/post withdrawal
+                uint256 withdrawn = IStrategy(strategy).previewWithdrawRequest(amountNeeded);
+                uint256 loss = withdrawn - amountNeeded;
+
+                // increase the vault balance by the needed amount
+                vaultBalance += withdrawn;
+
+                // If loss has been realised, withdrawer will incur it, affecting to the amount
+                // of shasers that the user will burn
+                if (loss != 0) {
+                    totalLoss += loss;
+                }
+
+                unchecked {
+                    ++i;
+                }
+            }
+            // Increase the shares if there are any losses
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_totalAssets_));
         }
-        return shares;
+
+        // if there are more assets to cover(when requesting more assets then total)
+        // we add the extra shares needed, even though it would revert if someone tries
+        // to withdraw that much since they wouln't have the needed shares
+        if (vaultBalance < assets) {
+            shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_totalAssets_));
+        }
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redemption
     /// at the current block, given current on-chain conditions.
-    ///
-    /// - MUST return as close to and no more than the exact amount of assets that
-    ///   will be withdrawn in a redeem call in the same transaction, i.e. redeem should
-    ///   return the same or more assets as `previewRedeem` if called in the same transaction.
-    /// - MUST NOT account for redemption limits like those returned from `maxRedeem` and should
-    ///   always act as if the redemption will be accepted, regardless of approvals, etc.
-    /// - MUST be inclusive of withdrawal fees. Integrators should be aware of this.
-    /// - MUST NOT revert.
-    ///
-    /// Note: Any unfavorable discrepancy between `convertToAssets` and `previewRedeem` SHOULD
-    /// be considered slippage in share price or some other type of condition,
-    /// meaning the depositor will lose assets by depositing.
     function previewRedeem(uint256 shares) public view override returns (uint256 assets) {
         if (shares == 0) return 0;
         if (shares == type(uint256).max) shares = balanceOf(msg.sender);
+
         assets = convertToAssets(shares);
         uint256 vaultBalance = totalIdle;
 
@@ -919,28 +998,15 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Check if the vault balance is finally enough to cover the requested withdrawal
                 if (vaultBalance >= assets) break;
 
-                uint256 slotStrategies2;
                 // Compute remaining amount to withdraw considering the current balance of the vault
                 uint256 amountNeeded;
                 assembly ("memory-safe") {
                     // amountNeeded = assets - vaultBalance;
                     amountNeeded := sub(assets, vaultBalance)
-
-                    // cache slot strategies[strategy].strategyTotalDebt
-                    mstore(0x00, strategy)
-                    mstore(0x20, strategies.slot)
-                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
-
-                    // compute strategies[strategy].strategyTotalDebt
-                    let strategyTotalDebt := shr(128, shl(128, sload(slotStrategies2)))
-
-                    // Don't withdraw more than the debt loaned to the strategy so that the strategy can still continue
-                    // to work based on the profits it has.
-
-                    // amountNeeded = Math.min(amountNeeded, strategyTotalDebt)
-                    amountNeeded :=
-                        xor(amountNeeded, mul(xor(amountNeeded, strategyTotalDebt), lt(strategyTotalDebt, amountNeeded)))
                 }
+
+                // ask for the min between the needed amount and max withdraw of the strategy
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxWithdraw());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountNeeded == 0) {
@@ -954,7 +1020,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // considering the difference between balances pre/post withdrawal
                 uint256 withdrawn = IStrategy(strategy).previewWithdraw(amountNeeded);
                 uint256 loss = amountNeeded - withdrawn;
-                if (withdrawn == 0) continue;
 
                 // Increase cached vault balance to track the newly withdrawn amount
                 vaultBalance += withdrawn;
@@ -973,6 +1038,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     ///                 DEPOSIT/WITHDRAWAL LOGIC                 ///
     ////////////////////////////////////////////////////////////////
 
+    /// @notice Mints `shares` Vault shares to `to` by depositing exactly `assets`
+    /// of underlying tokens.
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
+    /// @dev reverts with custom `VaultDepositLimitExceeded` error instead of Solady's `DepositMoreThanMax`
     function deposit(uint256 assets, address receiver)
         public
         virtual
@@ -992,6 +1061,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets, shares = previewDeposit(assets));
     }
 
+    /// @notice Mints `shares` Vault shares to `to` by depositing exactly `assets`
+    /// of underlying tokens.
+    /// @notice it allows for gasless approvals on deposits
+    /// @param v, @param r, @param s, @param deadline, @param owner @param assets the components of the {Permit} EIP712 signature
     function depositWithPermit(
         address owner,
         uint256 assets,
@@ -1013,6 +1086,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(owner, receiver, assets, shares = previewDeposit(assets));
     }
 
+    /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
+    /// of underlying tokens.
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
+    /// @dev reverts with custom `VaultDepositLimitExceeded` error instead of Solady's `MinttMoreThanMax`
     function mint(uint256 shares, address receiver)
         public
         virtual
@@ -1032,6 +1109,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets = previewMint(shares), shares);
     }
 
+    /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
+    /// of underlying tokens.
+    /// @notice it allows for gasless approvals on mints
+    /// @param v, @param r, @param s, @param deadline, @param owner assets(calculated from @param shares ) the components of the {Permit} EIP712 signature
     function mintWithPermit(
         address owner,
         uint256 shares,
@@ -1054,8 +1135,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets, shares);
     }
 
+    /// @dev override the Solady's internal function to add extra checks
     function _deposit(address by, address to, uint256 assets, uint256 shares) internal override {
-        SafeTransferLib.safeTransferFrom(asset(), by, address(this), assets);
+        asset().safeTransferFrom(by, address(this), assets);
         uint256 totalIdle_;
         assembly ("memory-safe") {
             // if to == address(0)
@@ -1099,57 +1181,52 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             let m := shr(96, not(0))
             log3(0x00, 0x40, _DEPOSIT_EVENT_SIGNATURE, and(m, by), and(m, to))
         }
+        // if autipilot is enabled and > 1 week from last harvest check if there is any strategy in autopilot
+        // and harvest one strategy
+        if (autoPilotEnabled && lastReport + AUTOPILOT_HARVEST_INTERVAL < block.timestamp) {
+            // `to` will receive the extra shares from the management fees
+            (address strategy, bool success, bytes memory reason) = _forceOneHarvest(to);
+            if (!success) {
+                emit ForceHarvestFailed(strategy, reason);
+            }
+        }
     }
 
+    /// @notice Burns `shares` from `owner` and sends exactly `assets` of underlying tokens to `to`.
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function withdraw(uint256 assets, address to, address owner)
         public
         override
         nonReentrant
         returns (uint256 shares)
     {
+        if (assets == type(uint256).max) assets = maxWithdraw(owner);
         if (assets > maxWithdraw(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x936941fc) // `WithdrawMoreThanMax()`.
                 revert(0x1c, 0x04)
             }
         }
-        assembly ("memory-safe") {
-            if eq(shares, not(0)) {
-                // compute `balanceOf(msg.sender)` and store it in `shares`
-                mstore(0x0c, 0x87a211a2) // `_BALANCE_SLOT_SEED`
-                mstore(0x00, caller())
-                shares := sload(keccak256(0x0c, 0x20))
-            }
-        }
-        _withdrawWithLosses(msg.sender, to, owner, assets, shares = previewWithdraw(assets));
+        shares = _withdraw(msg.sender, to, owner, assets);
     }
 
+    /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.
+    /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function redeem(uint256 shares, address to, address owner) public override nonReentrant returns (uint256 assets) {
+        if (shares == type(uint256).max) shares = maxRedeem(owner);
         if (shares > maxRedeem(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x4656425a) // `RedeemMoreThanMax()`.
                 revert(0x1c, 0x04)
             }
         }
-        // if (shares == type(uint256).max) shares = balanceOf(msg.sender);
-        assembly ("memory-safe") {
-            if eq(shares, not(0)) {
-                // compute `balanceOf(msg.sender)` and store it in `shares`
-                mstore(0x0c, 0x87a211a2) // `_BALANCE_SLOT_SEED`
-                mstore(0x00, caller())
-                shares := sload(keccak256(0x0c, 0x20))
-            }
-        }
         // substract losses to the total assets
-        assets = _withdrawWithLosses(msg.sender, to, owner, convertToAssets(shares), shares);
+        assets = _redeem(msg.sender, to, owner, shares);
     }
 
     /// @dev Withdraws the needed amount of assets realising losses such as slippage
-    /// @return the real amount of assets withdrawn
-    function _withdrawWithLosses(address by, address to, address owner, uint256 assets, uint256 shares)
-        private
-        returns (uint256)
-    {
+    /// @return assets the real amount of assets withdrawn
+    function _redeem(address by, address to, address owner, uint256 shares) private returns (uint256 assets) {
         if (by != owner) {
             _spendAllowance(owner, by, shares);
         }
@@ -1161,7 +1238,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 revert(0x1c, 0x04)
             }
         }
-
+        // Calculate assets from shares
+        assets = convertToAssets(shares);
         // Cache underlying asset
         address underlying = asset();
 
@@ -1188,27 +1266,22 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 if (vaultBalance >= assets) break;
 
                 uint256 slotStrategies2;
+                assembly {
+                    // cache slot strategies[strategy].strategyTotalDebt
+                    mstore(0x00, strategy)
+                    mstore(0x20, strategies.slot)
+                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
+                }
+
                 // Compute remaining amount to withdraw considering the current balance of the vault
                 uint256 amountNeeded;
                 assembly ("memory-safe") {
                     // amountNeeded = assets - vaultBalance;
                     amountNeeded := sub(assets, vaultBalance)
-
-                    // cache slot strategies[strategy].strategyTotalDebt
-                    mstore(0x00, strategy)
-                    mstore(0x20, strategies.slot)
-                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
-
-                    // compute strategies[strategy].strategyTotalDebt
-                    let strategyTotalDebt := shr(128, shl(128, sload(slotStrategies2)))
-
-                    // Don't withdraw more than the debt loaned to the strategy so that the strategy can still continue
-                    // to work based on the profits it has.
-
-                    // amountNeeded = Math.min(amountNeeded, strategyTotalDebt)
-                    amountNeeded :=
-                        xor(amountNeeded, mul(xor(amountNeeded, strategyTotalDebt), lt(strategyTotalDebt, amountNeeded)))
                 }
+
+                // ask for the min between the needed amount and max withdraw of the strategy
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxWithdraw());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountNeeded == 0) {
@@ -1222,9 +1295,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // considering the difference between balances pre/post withdrawal
                 uint256 preBalance = SafeTransferLib.balanceOf(underlying, address(this));
                 uint256 loss = IStrategy(strategy).withdraw(amountNeeded);
-
                 uint256 withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
-
                 if (withdrawn == 0) continue;
 
                 // Increase cached vault balance to track the newly withdrawn amount
@@ -1238,18 +1309,13 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                assembly ("memory-safe") {
-                    // Reduce debts by the amount withdrawn
-                    //totalDebt -= withdrawn;
-                    let totalDebt_ := sload(totalDebt.slot)
-                    if gt(withdrawn, totalDebt_) { revert(0, 0) }
-                    sstore(totalDebt.slot, sub(totalDebt_, withdrawn))
+                totalDebt = _sub0(totalDebt, withdrawn);
 
-                    // compute strategies[strategy].strategyTotalDebt
-                    let slotContent := sload(slotStrategies2)
-                    let strategyTotalDebt := sub(shr(128, shl(128, slotContent)), withdrawn)
-                    // strategies[strategy].strategyTotalDebt -= uint128(withdrawn);
-                    sstore(slotStrategies2, or(shl(128, shr(128, slotContent)), strategyTotalDebt))
+                uint128 strategyTotalDebt = uint128(_sub0(strategies[strategy].strategyTotalDebt, withdrawn));
+
+                strategies[strategy].strategyTotalDebt = strategyTotalDebt;
+
+                assembly ("memory-safe") {
                     // Emit the `WithdrawFromStrategy` event
                     mstore(0x00, strategyTotalDebt)
                     mstore(0x20, loss)
@@ -1292,6 +1358,137 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         return assets;
     }
 
+    /// @dev Burns the needed amount of shars to withdraw @param assets after lealising loses
+    /// @return shares the real amount shares burnt
+    function _withdraw(address by, address to, address owner, uint256 assets) private returns (uint256 shares) {
+        assembly ("memory-safe") {
+            // if assets == 0
+            if iszero(assets) {
+                // throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
+            }
+        }
+
+        uint256 _totalAssets_ = _totalAssets();
+        uint256 vaultBalance = totalIdle;
+        uint256 o = _decimalsOffset();
+        address underlying = asset();
+        // convert the assets to shares without any losses
+        // very important: ROUND UP
+        shares = Math.fullMulDivUp(assets, totalSupply() + 10 ** o, _inc_(_totalAssets_));
+
+        // in case the vault's balance doesn't cover the requested `assets`
+        if (assets > vaultBalance) {
+            // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
+            // from strategies until requested value amount is covered.
+            // During forced withdrawal, a Strategy may realize a loss, which is reported back to the
+            // Vault. This will affect the withdrawer, affecting the amount of shares that will
+            // burn in order to withdraw exactly @param assets assets
+
+            uint256 totalLoss;
+            // Iterate over strategies
+            for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+                address strategy = withdrawalQueue[i];
+
+                // Check if we have exhausted the queue
+                if (strategy == address(0)) break;
+
+                // Check if the vault balance is finally enough to cover the requested withdrawal
+                if (vaultBalance >= assets) break;
+
+                uint256 slotStrategies2;
+                assembly {
+                    // cache slot strategies[strategy].strategyTotalDebt
+                    mstore(0x00, strategy)
+                    mstore(0x20, strategies.slot)
+                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
+                }
+
+                // Compute remaining amount to withdraw considering the current balance of the vault
+                uint256 amountNeeded = assets - vaultBalance;
+                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxRequest());
+
+                // Try the next strategy if the current strategy has no debt to be withdrawn
+                if (amountNeeded == 0) {
+                    unchecked {
+                        ++i;
+                    }
+                    continue;
+                }
+
+                // Withdraw from strategy. Compute amount withdrawn
+                // considering the difference between balances pre/post withdrawal
+                uint256 preBalance = underlying.balanceOf(address(this));
+                uint256 loss = IStrategy(strategy).requestWithdraw(amountNeeded);
+
+                uint256 withdrawn = underlying.balanceOf(address(this)) - preBalance;
+
+                if (withdrawn == 0) continue;
+
+                // increase the vault balance by the needed amount
+                vaultBalance += withdrawn;
+
+                // If loss has been realised, withdrawer will incur it, affecting to the amount
+                // of shasers that the user will burn
+                if (loss != 0) {
+                    totalLoss += loss;
+                    _reportLoss(strategy, loss);
+                }
+
+                totalDebt = _sub0(totalDebt, withdrawn);
+
+                uint128 strategyTotalDebt = uint128(_sub0(strategies[strategy].strategyTotalDebt, withdrawn));
+
+                strategies[strategy].strategyTotalDebt = strategyTotalDebt;
+
+                assembly ("memory-safe") {
+                    // Emit the `WithdrawFromStrategy` event
+                    mstore(0x00, strategyTotalDebt)
+                    mstore(0x20, loss)
+                    log2(0x00, 0x40, _WITHDRAW_FROM_STRATEGY_EVENT_SIGNATURE, strategy)
+                }
+
+                unchecked {
+                    ++i;
+                }
+            }
+
+            // Update total idle with the actual vault balance that considers the total withdrawn amount
+            totalIdle = vaultBalance;
+            // Increase the shares if there are any losses
+            shares += Math.fullMulDivUp(totalLoss, totalSupply() + 10 ** o, _inc_(_totalAssets_));
+
+            // if there are more assets to cover(when requesting more assets then total)
+            // we add the extra shares needed, even though it would revert if someone tries
+            // to withdraw that much since they wouln't have the needed shares
+            if (vaultBalance < assets) {
+                shares += Math.fullMulDivUp(assets - vaultBalance, totalSupply() + 10 ** o, _inc_(_totalAssets_));
+            }
+        }
+
+        // spend allowance
+        if (by != owner) {
+            _spendAllowance(owner, by, shares);
+        }
+
+        // Burn shares
+        _burn(owner, shares);
+
+        // Reduce value withdrawn from vault total idle
+        totalIdle -= assets;
+        // Transfer underlying to `recipient`
+        SafeTransferLib.safeTransfer(underlying, to, assets);
+
+        assembly ("memory-safe") {
+            // Emit the {Withdraw} event.
+            mstore(0x00, assets)
+            mstore(0x20, shares)
+            let m := shr(96, not(0))
+            log4(0x00, 0x40, _WITHDRAW_EVENT_SIGNATURE, and(m, by), and(m, to), and(m, owner))
+        }
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                      REPORT LOGIC                        ///
     ////////////////////////////////////////////////////////////////
@@ -1303,18 +1500,21 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// Vault "decides" whether to take some back or give it more.
     /// Note that the most it can take is `gain + debtPayment`, and the most it can give is all of the
     /// remaining reserves. Anything outside of those bounds is abnormal behavior
-    /// @param gain Amount Strategy has realized as a gain on its investment since its last report, and is free
+    /// @param realizedGain Amount Strategy has realized as a gain on its investment since its last report, and is free
     /// to be given back to Vault as earnings
+    /// @param unrealizedGain Amount Strategy accounted as gain on its investment since its last report
     /// @param loss Amount Strategy has realized as a loss on its investment since its last report, and should be
     /// accounted for on the Vault's balance sheet. The loss will reduce the debtRatio for the strategy and vault.
     /// The next time the strategy will harvest, it will pay back the debt in an attempt to adjust to the new debt limit.
     /// @param debtPayment Amount Strategy has made available to cover outstanding debt
     /// @return debt Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
-    function report(uint128 gain, uint128 loss, uint128 debtPayment)
-        external
-        checkRoles(STRATEGY_ROLE)
-        returns (uint256)
-    {
+    function report(
+        uint128 realizedGain,
+        uint128 unrealizedGain,
+        uint128 loss,
+        uint128 debtPayment,
+        address managementFeeReceiver
+    ) external checkRoles(STRATEGY_ROLE) returns (uint256) {
         // Cache underlying asset
         address underlying = asset();
         // Cache strategy balance
@@ -1322,12 +1522,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
         assembly ("memory-safe") {
             // Ensure strategy reporting actually has enough funds to cover `gain` and `debtPayment`
-            let sum := add(gain, debtPayment)
-            if lt(sum, gain) {
+            let sum := add(realizedGain, debtPayment)
+            if lt(sum, realizedGain) {
                 // throw the `Overflow` error
                 revert(0, 0)
             }
-            // if (underlying.balanceOf(msg.sender) < gain + debtPayment)
+            // if (underlying.balanceOf(msg.sender) < realizedGain + debtPayment)
             if lt(senderBalance, sum) {
                 // throw the `InvalidReportedGainAndDebtPayment` error
                 mstore(0x00, 0x746feeec)
@@ -1340,11 +1540,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             _reportLoss(msg.sender, loss);
         }
 
-        // Assess both management fee and performance fee, and issue both as shares of the vault
-        uint256 totalFees = _assessFees(msg.sender, gain);
+        uint256 _totalFees = _assessFees(msg.sender, uint256(unrealizedGain), managementFeeReceiver);
 
         // Set gain returns as realized gains for the vault
-        strategies[msg.sender].strategyTotalGain += gain;
+        strategies[msg.sender].strategyTotalRealizedGain += realizedGain;
 
         // Compute the line of credit the Vault is able to offer the Strategy (if any)
         uint256 credit = _creditAvailable(msg.sender);
@@ -1369,7 +1568,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
         // Give/take corresponding amount to/from Strategy, based on the difference between the reported gains
         // and the debt needed to be paid off (if any)
-        uint256 totalReportedAmount = gain + debtPayment;
+        uint256 totalReportedAmount = realizedGain + debtPayment;
 
         unchecked {
             if (credit > totalReportedAmount) {
@@ -1379,19 +1578,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             } else if (totalReportedAmount > credit) {
                 // Amount reported by the strategy is greater than the credit, take funds **from** strategy
                 totalIdle += (totalReportedAmount - credit);
-                SafeTransferLib.safeTransferFrom(underlying, msg.sender, address(this), totalReportedAmount - credit);
+                asset().safeTransferFrom(msg.sender, address(this), totalReportedAmount - credit);
             }
 
             // else don't do anything (credit and reported amounts are balanced, hence no transfers need to be executed)
-        }
-
-        // Profit is locked and gradually released per block
-        uint256 lockedProfitBeforeLoss = _calculateLockedProfit() + gain - totalFees;
-
-        if (lockedProfitBeforeLoss > 0) {
-            lockedProfit = lockedProfitBeforeLoss - loss;
-        } else {
-            lockedProfit = 0;
         }
 
         // Update reporting time
@@ -1400,10 +1590,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
         emit StrategyReported(
             msg.sender,
-            gain,
+            realizedGain,
+            unrealizedGain,
             loss,
             debtPayment,
-            strategies[msg.sender].strategyTotalGain,
+            strategies[msg.sender].strategyTotalRealizedGain,
             strategies[msg.sender].strategyTotalLoss,
             strategies[msg.sender].strategyTotalDebt,
             credit,
@@ -1533,7 +1724,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             //     strategyMaxDebtPerHarvest: uint128(strategyMaxDebtPerHarvest),
             //     strategyMinDebtPerHarvest: uint128(strategyMinDebtPerHarvest),
             //     strategyTotalDebt: 0,
-            //     strategyTotalGain: 0,
+            //     strategyTotalRealizedGain: 0,
             //     strategyTotalLoss: 0
             // });
 
@@ -1634,6 +1825,64 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
         // Revoke the strategy
         _revokeStrategy(strategy, cachedStrategyDebtRatio);
+    }
+
+    /// @notice Fully exit a strategy
+    /// @dev This is the most aggressive strategy exit plan, it liquidates all the positions
+    /// from the strategy, revoke the strategy role, and remove it from the withdrawal queue
+    /// as well
+    /// @param strategy The strategy to revoke
+    function exitStrategy(address strategy) external checkRoles(ADMIN_ROLE) {
+        // Liquidate the strategy fully
+        IStrategy _strategy = IStrategy(strategy);
+        uint256 _maxWithdraw = _strategy.maxWithdraw();
+        uint256 loss = _strategy.withdraw(_maxWithdraw);
+        uint256 withdrawn = _maxWithdraw - loss;
+        uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
+        uint256 strategyDebtRatio = strategies[strategy].strategyDebtRatio;
+        totalIdle += withdrawn;
+        // Cannot undeflow
+        unchecked {
+            totalDebt -= strategyTotalDebt;
+            debtRatio -= strategyDebtRatio;
+        }
+        // Clear debt of strategy
+        strategies[strategy].autoPilot = false;
+        strategies[strategy].strategyActivation = 0;
+        strategies[strategy].strategyTotalDebt = 0;
+        strategies[strategy].strategyDebtRatio = 0;
+
+        // Remove `STRATEGY_ROLE` from strategy
+        _removeRoles(strategy, STRATEGY_ROLE);
+
+        // Remove the strategy from the queue
+        address[MAXIMUM_STRATEGIES] memory cachedWithdrawalQueue = withdrawalQueue;
+        for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+            if (cachedWithdrawalQueue[i] == strategy) {
+                // The strategy was found and can be removed
+                withdrawalQueue[i] = address(0);
+
+                _removeRoles(strategy, STRATEGY_ROLE);
+
+                // Update withdrawal queue
+                _organizeWithdrawalQueue();
+
+                assembly {
+                    // Emit the `StrategyRemoved` event
+                    log2(0x00, 0x00, _STRATEGY_REMOVED_EVENT_SIGNATURE, strategy)
+
+                    // Emit the `StrategyRemoved` event
+                    mstore(0x00, withdrawn)
+                    log2(0x00, 0x20, _STRATEGY_EXITED_EVENT_SIGNATURE, strategy)
+                }
+
+                return;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @notice Updates a given strategy configured data
@@ -1745,7 +1994,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 add(slot, 1),
                 or(
                     // Obtain old values in slot
-                    shl(128, shr(128, sload(add(slot, 1)))), // Extract previously stored `strategyTotalGain`
+                    shl(128, shr(128, sload(add(slot, 1)))), // Extract previously stored `strategyTotalRealizedGain`
                     // Build new values to store
                     shr(128, shl(128, newMinDebtPerHarvest))
                 )
@@ -1847,27 +2096,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
     }
 
-    /// @notice Used to change the value of `lockedProfitDegradation`
-    /// @param _lockedProfitDegradation The rate of degradation in percent per second scaled to 1e18
-    function setLockedProfitDegradation(uint256 _lockedProfitDegradation) external checkRoles(ADMIN_ROLE) {
-        assembly ("memory-safe") {
-            // if (_lockedProfitDegradation > DEGRADATION_COEFFICIENT)
-            if gt(_lockedProfitDegradation, DEGRADATION_COEFFICIENT) {
-                // throw the `InvalidLockedProfitDegradation` error
-                mstore(0x00, 0xd5fccc67)
-                revert(0x1c, 0x04)
-            }
-        }
-
-        lockedProfitDegradation = _lockedProfitDegradation;
-
-        assembly ("memory-safe") {
-            // Emit the `LockedProfitDegradationUpdated` event
-            mstore(0x00, _lockedProfitDegradation)
-            log1(0x00, 0x20, _LOCKED_PROFIT_DEGRADATION_UPDATED_EVENT_SIGNATURE)
-        }
-    }
-
     /// @notice Changes the maximum amount of tokens that can be deposited in this Vault
     /// @dev This is not how much may be deposited by a single depositor,
     /// but the maximum amount that may be deposited across all depositors
@@ -1907,6 +2135,28 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
     }
 
+    /// @notice Enables or disables the autopilot mode, that allows for automated harvesting
+    /// of strategies from the vault
+    /// If autopilot is enabled:
+    /// 1. Strategies can switch to autopilot mode
+    /// 2. Every week ,when one user deposits the vault with force the harvest of one strategy every time
+    /// 3. The depositing user that calls harvest will get extra shares as a reward for paying for the harvest gas
+    /// @param _autoPilotEnabled  If true, it is  activated, if false it is disabled
+    function setAutopilotEnabled(bool _autoPilotEnabled) external checkRoles(ADMIN_ROLE) {
+        autoPilotEnabled = _autoPilotEnabled;
+        assembly ("memory-safe") {
+            // Emit the `AutoPilotEnabled` event
+            mstore(0x00, _autoPilotEnabled)
+            log1(0x00, 0x20, _AUTOPILOT_ENABLED_EVENT_SIGNATURE)
+        }
+    }
+
+    /// @notice Switches the autopilot mode of a strategy
+    /// @param _autoPilot If true, set the strategy in autiopilot mode
+    function setAutoPilot(bool _autoPilot) external checkRoles(STRATEGY_ROLE) {
+        strategies[msg.sender].autoPilot = _autoPilot;
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
@@ -1930,7 +2180,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice returns stratetegyTotalDebt, saves gas, no need to return the whole struct
     /// @param strategy The Strategy to check
     /// @return strategyTotalDebt The strategy's total debt
-    function getStratetegyTotalDebt(address strategy) external view returns (uint256 strategyTotalDebt) {
+    function getStrategyTotalDebt(address strategy) external view returns (uint256 strategyTotalDebt) {
         assembly ("memory-safe") {
             // Store data necessary to compute strategies[newStrategy] slot
             mstore(0x00, strategy)

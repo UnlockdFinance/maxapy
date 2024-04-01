@@ -11,7 +11,12 @@ interface IStrategy {
 
     function renounceRoles(uint256 roles) external payable;
 
-    function harvest(uint256 minExpectedBalance, uint256 minOutputAfterInvestment) external;
+    function harvest(
+        uint256 minExpectedBalance,
+        uint256 minOutputAfterInvestment,
+        uint256 harvestedPreofitBPS,
+        address harvester
+    ) external;
 
     function setEmergencyExit(uint256 _emergencyExit) external;
 
@@ -25,9 +30,13 @@ interface IStrategy {
 
     function withdraw(uint256 amountNeeded) external returns (uint256);
 
+    function requestWithdraw(uint256 amountNeeded) external returns (uint256);
+
     function delegatedAssets() external view returns (uint256);
 
     function estimatedTotalAssets() external view returns (uint256);
+
+    function lastEstimatedTotalAssets() external view returns (uint256);
 
     function strategist() external view returns (address);
 
@@ -47,4 +56,10 @@ interface IStrategy {
     function ordinalsFromRoles(uint256 roles) external pure returns (uint8[] memory ordinals);
 
     function previewWithdraw(uint256) external view returns (uint256);
+
+    function previewWithdrawRequest(uint256) external view returns (uint256);
+
+    function maxWithdraw() external view returns (uint256);
+
+    function maxRequest() external view returns (uint256);
 }

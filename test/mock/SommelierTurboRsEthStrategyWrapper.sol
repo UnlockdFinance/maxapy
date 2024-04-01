@@ -2,11 +2,11 @@
 pragma solidity ^0.8.19;
 
 import {
-    SommelierRealYieldUSDStrategy,
+    SommelierTurboRsEthStrategy,
     SafeTransferLib
-} from "../../src/strategies/sommelier/SommelierRealYieldUSDStrategy.sol";
+} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboRsEthStrategy.sol";
 
-contract SommelierRealYieldStrategyWrapper is SommelierRealYieldUSDStrategy {
+contract SommelierTurboRsEthStrategyWrapper is SommelierTurboRsEthStrategy {
     using SafeTransferLib for address;
 
     function investSommelier(uint256 amount) external returns (uint256) {
@@ -14,19 +14,19 @@ contract SommelierRealYieldStrategyWrapper is SommelierRealYieldUSDStrategy {
     }
 
     function triggerLoss(uint256 amount) external {
-        // use address(1) since USDC has blacklisted addresses
-        underlyingAsset.safeTransfer(address(1), amount);
+        underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }
 
-    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment) external {
-        vault.report(gain, loss, debtPayment);
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
+        vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
-    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance)
+    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)
         external
-        returns (uint256 profit, uint256 loss, uint256 debtPayment)
+        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        (profit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
+        (realizedProfit, unrealizedProfit, loss, debtPayment) =
+            _prepareReturn(debtOutstanding, minExpectedBalance, harvestedProvitBPS);
     }
 
     function adjustPosition() external {

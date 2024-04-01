@@ -5,8 +5,9 @@ import {Test, console, Vm} from "forge-std/Test.sol";
 
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {Utilities} from "../utils/Utilities.sol";
+import {Tokens} from "../helpers/Tokens.sol";
 
-contract BaseTest is Test {
+contract BaseTest is Tokens, Test {
     /*//////////////////////////////////////////////////////////////////////////
                                     STRUCTS
     //////////////////////////////////////////////////////////////////////////*/
@@ -23,28 +24,23 @@ contract BaseTest is Test {
     //////////////////////////////////////////////////////////////////////////*/
     Utilities public utils;
     Users public users;
-    uint256 public mainnetFork;
+    uint256 public chainFork;
 
-    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address internal constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address internal constant ST_ETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     uint256 internal constant MAX_BPS = 10_000;
     uint256 internal constant DELTA_PRECISION = 1e18;
 
     /*//////////////////////////////////////////////////////////////////////////
                                     SETUP
     //////////////////////////////////////////////////////////////////////////*/
-    function setUp() public virtual {
+    function _setUp(string memory chain) internal virtual {
         if (vm.envOr("FORK", false)) {
-            mainnetFork = vm.createSelectFork(vm.envString("RPC_MAINNET"));
+            chainFork = vm.createSelectFork(vm.envString(string.concat("RPC_", chain)));
             vm.rollFork(17635792);
         }
         // Setup utils
         utils = new Utilities();
 
-        address[] memory tokens = new address[](2);
-        tokens[0] = WETH;
-        tokens[1] = USDC;
+        address[] memory tokens = getTokensList(chain);
 
         // Create users for testing.
         users = Users({

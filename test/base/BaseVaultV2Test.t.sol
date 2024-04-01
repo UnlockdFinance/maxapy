@@ -25,13 +25,12 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
 
     IMaxApyVaultV2 public vault;
     address public TREASURY;
-    uint256 public _1_USDC = 1e6;
 
-    function setupVault() public {
-        super.setUp();
+    function setupVault(string memory chain) public {
+        super._setUp(chain);
         /// Fork mode activated
         TREASURY = makeAddr("treasury");
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
         vault = IMaxApyVaultV2(address(maxApyVault));
     }
 
@@ -39,41 +38,35 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
                                 HELPERS
     //////////////////////////////////////////////////////////////////////////*/
     function _deposit(address user, IMaxApyVaultV2 _vault, uint256 amount) internal returns (uint256) {
+        address asset = _vault.asset();
         vm.startPrank(user);
         uint256 expectedShares = _vault.previewDeposit(amount);
-        uint256 vaultBalanceBefore = IERC20(USDC).balanceOf(address(vault));
+        uint256 vaultBalanceBefore = IERC20(asset).balanceOf(address(vault));
         vm.expectEmit();
         emit Deposit(user, user, amount, expectedShares);
         uint256 shares = _vault.deposit(amount, user);
         assertEq(_vault.balanceOf(user), expectedShares);
-        assertEq(IERC20(USDC).balanceOf(address(vault)), vaultBalanceBefore + amount);
+        assertEq(IERC20(asset).balanceOf(address(vault)), vaultBalanceBefore + amount);
 
         vm.stopPrank();
         return shares;
     }
 
-    function _withdraw(address user, IMaxApyVaultV2 _vault, uint256 assets, uint256 expectedLoss)
-        internal
-        returns (uint256)
-    {
+    function _withdraw(address user, IMaxApyVaultV2 _vault, uint256 assets) internal returns (uint256) {
         vm.startPrank(user);
 
-        uint256 userBalanceBefore = IERC20(_vault).balanceOf(user);
-        if (assets == type(uint256).max) assets = _vault.convertToAssets(IERC20(_vault).balanceOf(user));
+        address asset = _vault.asset();
+        uint256 userBalanceBefore = IERC20(asset).balanceOf(user);
 
-        uint256 shares = vault.convertToShares(assets);
+        uint256 expectedShares = vault.previewWithdraw(assets);
+        uint256 burntShares = _vault.withdraw(assets, user, user);
+        uint256 withdrawn = IERC20(asset).balanceOf(user) - userBalanceBefore;
 
-        vm.expectEmit();
-        emit Withdraw(user, user, user, assets - expectedLoss, shares);
-
-        uint256 _assets = _vault.redeem(shares, user, user);
-
-        assertEq(assets - _assets, expectedLoss);
-
-        assertEq(IERC20(_vault).balanceOf(user), userBalanceBefore - shares);
+        assertEq(withdrawn, assets);
+        assertLe(burntShares, expectedShares);
         vm.stopPrank();
 
-        return _assets;
+        return assets;
     }
 
     function _redeem(address user, IMaxApyVaultV2 _vault, uint256 shares, uint256 expectedLoss)
@@ -82,19 +75,15 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
     {
         vm.startPrank(user);
 
-        uint256 userBalanceBefore = IERC20(USDC).balanceOf(user);
+        uint256 sharesBalanceBefore = IERC20(_vault).balanceOf(user);
         uint256 sharesComputed = shares;
-        if (shares == type(uint256).max) sharesComputed = _vault.balanceOf(user);
 
-        uint256 expectedValue = _vault.convertToAssets(sharesComputed);
+        uint256 expectedValue = _vault.previewRedeem(sharesComputed);
+        uint256 valueWithdrawn = _vault.redeem(shares, user, user);
+        uint256 sharesBurnt = sharesBalanceBefore - IERC20(_vault).balanceOf(user);
 
-        vm.expectEmit();
-        emit Withdraw(user, users.alice, users.alice, expectedValue, shares);
-
-        uint256 valueWithdrawn = _vault.redeem(shares, users.alice, users.alice);
-        assertEq(expectedValue - valueWithdrawn, expectedLoss, "expected loss");
-
-        assertEq(IERC20(USDC).balanceOf(user) - userBalanceBefore, valueWithdrawn, "withdrawn");
+        assertGe(valueWithdrawn, expectedValue);
+        assertEq(shares, sharesBurnt);
         vm.stopPrank();
 
         return valueWithdrawn;
@@ -110,19 +99,6 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         returns (uint256)
     {
         return (computedStrategistFee * reward) / totalFee;
-    }
-
-    function _freeFunds() internal view returns (uint256) {
-        return vault.totalAssets() - _calculateLockedProfit();
-    }
-
-    function _calculateLockedProfit() internal view returns (uint256 calculatedLockedProfit) {
-        uint256 lockedFundsRatio = (block.timestamp - vault.lastReport()) * vault.lockedProfitDegradation();
-        if (lockedFundsRatio < vault.DEGRADATION_COEFFICIENT()) {
-            uint256 vaultLockedProfit = vault.lockedProfit();
-            calculatedLockedProfit =
-                vaultLockedProfit - ((lockedFundsRatio * vaultLockedProfit) / vault.DEGRADATION_COEFFICIENT());
-        }
     }
 
     function _calculateMaxExpectedLoss(uint256 maxLoss, uint256 valueToWithdraw, uint256 totalLoss)

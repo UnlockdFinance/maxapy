@@ -25,7 +25,7 @@ struct StrategyData {
     uint128 strategyMinDebtPerHarvest;
     /// @notice Total returns that Strategy has realized for Vault
     /// @dev max strategy total gain of 79,228,162,514,264,337,593,543,950,335
-    uint128 strategyTotalGain;
+    uint128 strategyTotalRealizedGain;
     /// Slot 2
     /// @notice Total outstanding debt that Strategy has
     /// @dev max total debt of 79,228,162,514,264,337,593,543,950,335
@@ -33,4 +33,9 @@ struct StrategyData {
     /// @notice Total losses that Strategy has realized for Vault
     /// @dev max strategy total loss of 79,228,162,514,264,337,593,543,950,335
     uint128 strategyTotalLoss;
+    /// Slot 3
+    /// @notice True if the strategy has switched to autopilot mode
+    /// @dev it is activated from the strategy and will only work if `autoPilotEnabled` == true
+    /// @dev the strategy can still be manually harvested in autopilot mode
+    bool autoPilot;
 }
