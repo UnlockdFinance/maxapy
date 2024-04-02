@@ -860,16 +860,16 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Returns the maximum amount of the underlying asset that can be withdrawn
     /// from the `owner`'s balance in the Vault, via a withdraw call.
     function maxWithdraw(address owner) public view override returns (uint256 maxAssets) {
-        uint256 maxRequestableAssets = totalIdle;
+        uint256 maxLiquidableAssets = totalIdle;
         for (uint256 i; i < MAXIMUM_STRATEGIES; i++) {
             address strategy = withdrawalQueue[i];
             if (strategy == address(0)) break;
-            maxRequestableAssets += IStrategy(strategy).maxRequest();
+            maxLiquidableAssets += IStrategy(strategy).maxLiquidateExact();
         }
         uint256 totalSupply = totalSupply();
         // prevent division by zero
         if (totalSupply == 0) return 0;
-        maxAssets = Math.fullMulDiv(maxRequestableAssets, maxRedeem(owner), totalSupply);
+        maxAssets = Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply);
     }
 
     /// @notice Returns the estimate price of 1 vault share
@@ -938,7 +938,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Compute remaining amount to request considering the current balance of the vault
                 uint256 amountRequested = assets - vaultBalance;
                 // Can't request more than allowed by the strategy
-                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxRequest());
+                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidateExact());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
@@ -950,7 +950,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
                 // Withdraw from strategy. Compute amount withdrawn(should be requestedAmount)
                 // considering the difference between balances pre/post withdrawal
-                uint256 withdrawn = IStrategy(strategy).previewWithdrawRequest(amountRequested);
+                uint256 withdrawn = IStrategy(strategy).previewLiquidateExact(amountRequested);
                 uint256 loss = withdrawn - amountRequested;
 
                 // increase the vault balance by requested amount
@@ -1008,7 +1008,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
 
                 // ask for the min between the needed amount and max withdraw of the strategy
-                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxWithdraw());
+                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
@@ -1020,7 +1020,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
                 // Withdraw from strategy. Compute amount withdrawn
                 // considering the difference between balances pre/post withdrawal
-                uint256 withdrawn = IStrategy(strategy).previewWithdraw(amountRequested);
+                uint256 withdrawn = IStrategy(strategy).previewLiquidate(amountRequested);
                 uint256 loss = amountRequested - withdrawn;
 
                 // Increase cached vault balance to track the newly withdrawn amount
@@ -1283,7 +1283,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
 
                 // ask for the min between the needed amount and max withdraw of the strategy
-                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxWithdraw());
+                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
@@ -1296,7 +1296,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Withdraw from strategy. Compute amount withdrawn
                 // considering the difference between balances pre/post withdrawal
                 uint256 preBalance = SafeTransferLib.balanceOf(underlying, address(this));
-                uint256 loss = IStrategy(strategy).withdraw(amountRequested);
+                uint256 loss = IStrategy(strategy).liquidate(amountRequested);
                 uint256 withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
                 if (withdrawn == 0) continue;
 
@@ -1411,7 +1411,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Compute remaining amount to withdraw considering the current balance of the vault
                 uint256 amountRequested = assets - vaultBalance;
                 // Can't request more than allowed by the strategy
-                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxRequest());
+                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidateExact());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
@@ -1424,7 +1424,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Withdraw from strategy. Compute amount withdrawn(should be requestedAmount)
                 // considering the difference between balances pre/post withdrawal
                 uint256 preBalance = underlying.balanceOf(address(this));
-                uint256 loss = IStrategy(strategy).requestWithdraw(amountRequested);
+                uint256 loss = IStrategy(strategy).liquidateExact(amountRequested);
 
                 uint256 withdrawn = underlying.balanceOf(address(this)) - preBalance;
 
@@ -1839,8 +1839,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     function exitStrategy(address strategy) external checkRoles(ADMIN_ROLE) {
         // Liquidate the strategy fully
         IStrategy _strategy = IStrategy(strategy);
-        uint256 _maxWithdraw = _strategy.maxWithdraw();
-        uint256 loss = _strategy.withdraw(_maxWithdraw);
+        uint256 _maxWithdraw = _strategy.maxLiquidate();
+        uint256 loss = _strategy.liquidate(_maxWithdraw);
         uint256 withdrawn = _maxWithdraw - loss;
         uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
         uint256 strategyDebtRatio = strategies[strategy].strategyDebtRatio;

@@ -148,7 +148,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function withdraw(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
+    function liquidate(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 amountFreed;
         // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountNeeded);
@@ -163,10 +163,10 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
     /// NOTE : while in the {withdraw} function the vault gets `amountNeeded` - `loss`
-    /// in {requestWithdraw} the vault always gets `amountNeeded` and `loss` is the amount
+    /// in {liquidateExact} the vault always gets `amountNeeded` and `loss` is the amount
     /// that had to be lost in order to withdraw exactly `amountNeeded`
-    function requestWithdraw(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
-        uint256 amountRequested = previewWithdrawRequest(amountNeeded);
+    function liquidateExact(uint256 amountNeeded) external virtual checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 amountRequested = previewLiquidateExact(amountNeeded);
         uint256 amountFreed;
         // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountRequested);
@@ -486,19 +486,19 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @dev calculates the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view virtual returns (uint256 liquidatedAmount);
+    function previewLiquidate(uint256 requestedAmount) public view virtual returns (uint256 liquidatedAmount);
 
     /// @notice This function is meant to be called from the vault
     /// @dev calculates the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view virtual returns (uint256 requestedAmount);
+    function previewLiquidateExact(uint256 liquidatedAmount) public view virtual returns (uint256 requestedAmount);
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxRequest() public view virtual returns (uint256);
+    function maxLiquidateExact() public view virtual returns (uint256);
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxWithdraw() public view virtual returns (uint256);
+    function maxLiquidate() public view virtual returns (uint256);
 
     ////////////////////////////////////////////////////////////////
     ///                      HELPER FUNCTIONS                    ///

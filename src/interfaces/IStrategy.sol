@@ -28,9 +28,9 @@ interface IStrategy {
 
     function emergencyExit() external returns (uint256);
 
-    function withdraw(uint256 amountNeeded) external returns (uint256);
+    function liquidate(uint256 amountNeeded) external returns (uint256);
 
-    function requestWithdraw(uint256 amountNeeded) external returns (uint256);
+    function liquidateExact(uint256 amountNeeded) external returns (uint256);
 
     function delegatedAssets() external view returns (uint256);
 
@@ -55,11 +55,11 @@ interface IStrategy {
 
     function ordinalsFromRoles(uint256 roles) external pure returns (uint8[] memory ordinals);
 
-    function previewWithdraw(uint256) external view returns (uint256);
+    function previewLiquidate(uint256) external view returns (uint256);
 
-    function previewWithdrawRequest(uint256) external view returns (uint256);
+    function previewLiquidateExact(uint256) external view returns (uint256);
 
-    function maxWithdraw() external view returns (uint256);
+    function maxLiquidate() external view returns (uint256);
 
-    function maxRequest() external view returns (uint256);
+    function maxLiquidateExact() external view returns (uint256);
 }

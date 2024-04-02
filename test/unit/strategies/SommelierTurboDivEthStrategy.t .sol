@@ -1193,7 +1193,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
     } */
 
     ////////////////////////////////////////////////////////////////
-    ///                     TEST previewWithdraw()               ///
+    ///                     TEST previewLiquidate()               ///
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboDivEth__PreviewWithraw() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -1201,9 +1201,9 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
-        uint256 expected = strategy.previewWithdraw(30 ether);
+        uint256 expected = strategy.previewLiquidate(30 ether);
         vm.startPrank(address(vault));
-        uint256 loss = strategy.withdraw(30 ether);
+        uint256 loss = strategy.liquidate(30 ether);
         assertGe(30 ether - loss, expected);
     }
 
@@ -1215,14 +1215,14 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0, address(0));
         vm.stopPrank();
-        uint256 expected = strategy.previewWithdraw(amount);
+        uint256 expected = strategy.previewLiquidate(amount);
         vm.startPrank(address(vault));
-        uint256 loss = strategy.withdraw(amount);
+        uint256 loss = strategy.liquidate(amount);
         assertGe(amount - loss, expected);
     } */
 
     ////////////////////////////////////////////////////////////////
-    ///                     TEST previewWithdrawRequest()        ///
+    ///                     TEST previewLiquidateExact()        ///
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboDivEth__PreviewWithrawRequest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -1230,10 +1230,10 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
-        uint256 requestedAmount = strategy.previewWithdrawRequest(30 ether);
+        uint256 requestedAmount = strategy.previewLiquidateExact(30 ether);
         vm.startPrank(address(vault));
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
-        uint256 losses = strategy.requestWithdraw(30 ether);
+        uint256 losses = strategy.liquidateExact(30 ether);
         uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, 30 ether);
@@ -1249,10 +1249,10 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0, address(0));
         vm.stopPrank();                                          
-        uint256 requestedAmount = strategy.previewWithdrawRequest(amount);
+        uint256 requestedAmount = strategy.previewLiquidateExact(amount);
         vm.startPrank(address(vault));
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
-        uint256 losses = strategy.requestWithdraw(amount);
+        uint256 losses = strategy.liquidateExact(amount);
         uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore ;
         // withdraw exactly what requested 
         assertEq(withdrawn, amount);
@@ -1261,27 +1261,27 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
     } */
 
     ////////////////////////////////////////////////////////////////
-    ///                     TEST maxRequest()                    ///
+    ///                     TEST maxLiquidateExact()                    ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierTurboDivEth__MaxRequest() public {
+    function testSommelierTurboDivEth__maxLiquidateExact() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
-        uint256 maxRequest = strategy.maxRequest();
+        uint256 maxLiquidateExact = strategy.maxLiquidateExact();
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
-        uint256 requestedAmount = strategy.previewWithdrawRequest(maxRequest);
+        uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
         vm.startPrank(address(vault));
-        uint256 losses = strategy.requestWithdraw(maxRequest);
+        uint256 losses = strategy.liquidateExact(maxLiquidateExact);
         uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
-        assertEq(withdrawn, maxRequest);
+        assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
-        assertLe(losses, requestedAmount - maxRequest);
+        assertLe(losses, requestedAmount - maxLiquidateExact);
     }
 
-    /*  function testSommelierTurboDivEth__MaxRequest__FUZZY(uint256 amount) public {
+    /*  function testSommelierTurboDivEth__maxLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH_MAINNET, users.alice, amount * 2);
@@ -1289,16 +1289,16 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0, address(0));
         vm.stopPrank();                                                   
-        uint256 maxRequest = strategy.maxRequest();
+        uint256 maxLiquidateExact = strategy.maxLiquidateExact();
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
-        uint256 requestedAmount = strategy.previewWithdrawRequest(maxRequest);
+        uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
         vm.startPrank(address(vault));
-        uint256 losses = strategy.requestWithdraw(maxRequest);
+        uint256 losses = strategy.liquidateExact(maxLiquidateExact);
         uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore ;
         // withdraw exactly what requested 
-        assertEq(withdrawn, maxRequest);
+        assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
-        assertLe(losses, requestedAmount - maxRequest);
+        assertLe(losses, requestedAmount - maxLiquidateExact);
     } */
 
     ////////////////////////////////////////////////////////////////
@@ -1310,10 +1310,10 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, 0, address(0));
         vm.stopPrank();
-        uint256 maxWithdraw = strategy.maxWithdraw();
+        uint256 maxWithdraw = strategy.maxLiquidate();
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         vm.startPrank(address(vault));
-        strategy.withdraw(maxWithdraw);
+        strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
@@ -1326,10 +1326,10 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         strategy.harvest(0,0,0, address(0));
         vm.stopPrank();                                          
-        uint256 maxWithdraw = strategy.maxWithdraw();
+        uint256 maxWithdraw = strategy.maxLiquidate();
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         vm.startPrank(address(vault));
-        strategy.withdraw(maxWithdraw);
+        strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore ;
         assertLe(withdrawn, maxWithdraw);
     } */

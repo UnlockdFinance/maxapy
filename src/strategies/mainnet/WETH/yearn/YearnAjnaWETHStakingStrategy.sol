@@ -75,7 +75,7 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+    function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
