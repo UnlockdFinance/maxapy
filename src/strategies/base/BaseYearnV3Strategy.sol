@@ -476,7 +476,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
 
     /// @notice Returns the current strategy's amount of yVault vault shares
     /// @return _balance balance the strategy's balance of yVault vault shares
-    function _shareBalance() internal virtual view returns (uint256 _balance) {
+    function _shareBalance() internal view virtual returns (uint256 _balance) {
         assembly {
             // return yVault.balanceOf(address(this));
             mstore(0x00, 0x70a08231)
