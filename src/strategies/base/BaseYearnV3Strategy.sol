@@ -6,9 +6,9 @@ import {IYVaultV3} from "src/interfaces/IYVaultV3.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
-/// @title BaseYearnStrategy
+/// @title BaseYearnV3Strategy
 /// @author MaxApy
-/// @notice `BaseYearnStrategy` sets the base functionality to be implemented by MaxApy Sommelier strategies.
+/// @notice `BaseYearnV3Strategy` sets the base functionality to be implemented by MaxApy YearnV3 strategies.
 /// @dev Some functions can be overriden if needed
 contract BaseYearnV3Strategy is BaseStrategy {
     using SafeTransferLib for address;
@@ -98,7 +98,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function requestWithdraw(uint256 amountNeeded)
+    function liquidateExact(uint256 amountNeeded)
         external
         virtual
         override
@@ -164,7 +164,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @dev calculates estunated the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view virtual override returns (uint256 liquidatedAmount) {
+    function previewLiquidate(uint256 requestedAmount) public view virtual override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -185,7 +185,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount)
+    function previewLiquidateExact(uint256 liquidatedAmount)
         public
         view
         virtual
@@ -201,12 +201,12 @@ contract BaseYearnV3Strategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public view virtual override returns (uint256) {
+    function maxLiquidate() public view virtual override returns (uint256) {
         return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public view virtual override returns (uint256) {
+    function maxLiquidateExact() public view virtual override returns (uint256) {
         // only can request harvested assets
         return _underlyingBalance() + yVault.maxWithdraw(address(this));
     }
@@ -476,7 +476,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
 
     /// @notice Returns the current strategy's amount of yVault vault shares
     /// @return _balance balance the strategy's balance of yVault vault shares
-    function _shareBalance() internal virtual view returns (uint256 _balance) {
+    function _shareBalance() internal view virtual returns (uint256 _balance) {
         assembly {
             // return yVault.balanceOf(address(this));
             mstore(0x00, 0x70a08231)

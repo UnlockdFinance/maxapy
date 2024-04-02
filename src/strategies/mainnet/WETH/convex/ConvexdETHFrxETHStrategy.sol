@@ -255,7 +255,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
+    function previewLiquidate(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -277,24 +277,24 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
+    function previewLiquidateExact(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         requestedAmount = liquidatedAmount;
         if (underlyingBalance < liquidatedAmount) {
             // increase 1% to be pessimistic
-            requestedAmount = previewWithdraw(liquidatedAmount) * 101 / 100;
+            requestedAmount = previewLiquidate(liquidatedAmount) * 101 / 100;
         }
         return requestedAmount + underlyingBalance;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public view override returns (uint256) {
+    function maxLiquidate() public view override returns (uint256) {
         return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public view override returns (uint256) {
-        return previewWithdraw(_estimatedTotalAssets()) * 99 / 100;
+    function maxLiquidateExact() public view override returns (uint256) {
+        return previewLiquidate(_estimatedTotalAssets()) * 99 / 100;
     }
     /// @notice Returns the amount of Curve LP tokens staked in Convex
     /// @return the amount of staked LP tokens

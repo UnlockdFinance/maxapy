@@ -121,9 +121,9 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
     /// NOTE : while in the {withdraw} function the vault gets `amountNeeded` - `loss`
-    /// in {requestWithdraw} the vault always gets `amountNeeded` and `loss` is the amount
+    /// in {liquidate} the vault always gets `amountNeeded` and `loss` is the amount
     /// that had to be lost in order to withdraw exactly `amountNeeded`
-    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+    function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
@@ -186,7 +186,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
+    function previewLiquidate(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -207,7 +207,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
+    function previewLiquidateExact(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         uint256 loss;
         if (underlyingBalance < liquidatedAmount) {
@@ -222,12 +222,12 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public view override returns (uint256) {
+    function maxLiquidate() public view override returns (uint256) {
         return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public view override returns (uint256) {
+    function maxLiquidateExact() public view override returns (uint256) {
         return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
 
