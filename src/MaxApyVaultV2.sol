@@ -952,7 +952,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 uint256 loss = withdrawn - amountNeeded;
 
                 // increase the vault balance by the needed amount
-                vaultBalance += withdrawn;
+                vaultBalance += amountNeeded;
 
                 // If loss has been realised, withdrawer will incur it, affecting to the amount
                 // of shasers that the user will burn
