@@ -3,8 +3,8 @@ pragma solidity ^0.8.19;
 
 import {BaseYearnV2Strategy, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseYearnV2Strategy.sol";
 
-/// @title YearnWETHStrategy
+/// @title YearnUSDCStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `YearnWETHStrategy` supplies an underlying token into a generic Yearn Vault,
+/// @notice `YearnUSDCStrategy` supplies an underlying token into a generic Yearn Vault,
 /// earning the Yearn Vault's yield
-contract YearnWETHStrategy is BaseYearnV2Strategy {}
+contract YearnUSDCStrategy is BaseYearnV2Strategy {}
