@@ -3,13 +3,13 @@
 MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault implemented in Solidity, designed to **optimize yield** through various strategies, and earn interest in ERC20 tokens. It relies on the safety of the battle-tested [Yearn's yVault](https://github.com/yearn/yearn-vaults/blob/efb47d8a84fcb13ceebd3ceb11b126b323bcc05d/contracts/Vault.vy) and the innovation of MaxAPY.
 
 ## Contracts
+
 ```ml
 src
-├─ base
-    ├─ BaseVault — "Base abstract implementation of MaxAPYVault"
 ├─ helpers
     ├─ VaultTypes — "Contains data structures of the vault"
 ├─ interfaces  — "Interfaces of all the contracts involved in the protocol"
+    ├─ IBalancer
     ├─ IConvexBooster
     ├─ IConvexRewards
     ├─ IMaxApyVaultV2
@@ -40,6 +40,8 @@ src
         ├─ USDC — "USDC strategies" 
             ├─ sommelier — "Strategies interacting with Sommelier Finance"
                 ├─SommelierTurboGHOStrategy
+            ├─ yearn — "Strategies interacting with Yearn"
+                ├─YearnUSDCStrategy
         ├─ WETH — "Wrapped Ether strategies" 
             ├─ convex — "Strategies interacting with Convex Finance"
                 ├─ConvexdETHFrxETHStrategy 
@@ -62,14 +64,19 @@ src
 ```
 
 ## Install 
+
 ```bash
 git clone https://github.com/UnlockdFinance/maxapy-v2.git
 ```
+
 ## Compile
-```
+
+```bash
 forge build
 ```
+
 ## Test
-```
+
+```bash
 forge test
 ```
