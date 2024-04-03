@@ -641,7 +641,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // check vault data
         assertEq(vault.debtRatio(), 9000);
         assertEq(vault.totalDebt(), 9 ether);
-        assertEq(vault.totalAccountedAssets(), 10 ether);
+        assertEq(vault.totalDeposits(), 10 ether);
         assertEq(vault.totalIdle(), 1 ether);
 
         // Strategy 1: Yearn
@@ -663,7 +663,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // check vault data
         assertEq(vault.debtRatio(), 6750);
         assertEq(vault.totalDebt(), 6.75 ether);
-        assertEq(vault.totalAccountedAssets(), 9.999999999999999998 ether);
+        assertEq(vault.totalDeposits(), 9.999999999999999998 ether);
         assertEq(vault.totalIdle(), 3.249999999999999998 ether);
 
         // Strategy 2: Sommelier
@@ -685,7 +685,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // check vault data
         assertEq(vault.debtRatio(), 4500);
         assertEq(vault.totalDebt(), 4.5 ether);
-        assertEq(vault.totalAccountedAssets(), 9.998755009497361781 ether); // slight losses from withdraw
+        assertEq(vault.totalDeposits(), 9.998755009497361781 ether); // slight losses from withdraw
         assertEq(vault.totalIdle(), 5.498755009497361781 ether);
 
         // Strategy 3: Sommelier
@@ -707,7 +707,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // check vault data
         assertEq(vault.debtRatio(), 2250);
         assertEq(vault.totalDebt(), 2.25 ether);
-        assertEq(vault.totalAccountedAssets(), 9.996511336157465263 ether); // slight losses from withdraw
+        assertEq(vault.totalDeposits(), 9.996511336157465263 ether); // slight losses from withdraw
         assertEq(vault.totalIdle(), 7.746511336157465263 ether);
 
         // Strategy 4: Sommelier
@@ -729,7 +729,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // check vault data
         assertEq(vault.debtRatio(), 0);
         assertEq(vault.totalDebt(), 0);
-        assertEq(vault.totalAccountedAssets(), 9.990466618247177147 ether); // slight losses from withdraw
+        assertEq(vault.totalDeposits(), 9.990466618247177147 ether); // slight losses from withdraw
         assertEq(vault.totalIdle(), 9.990466618247177147 ether);
     }
 }

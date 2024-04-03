@@ -585,7 +585,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (emergencyShutdown) return 0;
 
         // Compute necessary data regarding current state of the vault
-        uint256 vaultTotalAssets = _totalAccountedAssets();
+        uint256 vaultTotalAssets = _totalDeposits();
         uint256 vaultDebtLimit = _computeDebtLimit(debtRatio, vaultTotalAssets);
         uint256 vaultTotalDebt = totalDebt;
 
@@ -684,7 +684,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         // If debt ratio configured in vault is zero or emergency shutdown, any amount of debt in the strategy should be returned
         if (debtRatio == 0 || emergencyShutdown) return strategyTotalDebt;
 
-        uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalAccountedAssets());
+        uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalDeposits());
 
         // There will not be debt outstanding if strategy total debt is smaller or equal to the current debt limit
         if (strategyDebtLimit >= strategyTotalDebt) {
@@ -806,7 +806,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Returns the total quantity of all assets under control of this Vault,
     /// whether they're loaned out to a Strategy, or currently held in the Vault
     /// @return totalAssets_ The total assets under control of this Vault
-    function _totalAccountedAssets() internal view returns (uint256 totalAssets_) {
+    function _totalDeposits() internal view returns (uint256 totalAssets_) {
         assembly {
             let totalDebt_ := sload(totalDebt.slot)
             totalAssets_ := add(sload(totalIdle.slot), totalDebt_)
@@ -841,8 +841,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
 
     /// @notice Returns the total amount of accounted idle and strategy debt assets
-    function totalAccountedAssets() public view returns (uint256) {
-        return _totalAccountedAssets();
+    function totalDeposits() public view returns (uint256) {
+        return _totalDeposits();
     }
 
     /// @notice Returns the maximum amount of the underlying asset that can be deposited
