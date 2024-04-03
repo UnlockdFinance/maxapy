@@ -2555,7 +2555,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy)), previousStrategyBalance - 40 * _1_USDC);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), previousVaultBalance + 40 * _1_USDC);
         /// - Assert returned debt is vault's `estimatedTotalAssets`
-        assertEq(vault.totalAccountedAssets(), 100 * _1_USDC);
+        assertEq(vault.totalDeposits(), 100 * _1_USDC);
         assertEq(vault.totalAssets(), 140 * _1_USDC);
     }
 
