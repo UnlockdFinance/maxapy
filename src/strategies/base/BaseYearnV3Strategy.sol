@@ -164,7 +164,13 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @dev calculates estunated the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewLiquidate(uint256 requestedAmount) public view virtual override returns (uint256 liquidatedAmount) {
+    function previewLiquidate(uint256 requestedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 liquidatedAmount)
+    {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover

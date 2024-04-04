@@ -20,7 +20,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
 
     function setUp() public {
-        setupVault("MAINNET");
+        setupVault("MAINNET", USDC_MAINNET);
 
         /// Alice approval
         IERC20(USDC_MAINNET).approve(address(vault), type(uint256).max);
