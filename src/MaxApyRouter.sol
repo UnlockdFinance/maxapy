@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {IWrappedToken} from "src/interfaces/IWrappedToken.sol";
 import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {IERC20Permit} from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 
 /// @title MaxApy Vault Universal Router
 /// @notice A helper contract to safely and easily interact with MaxApy universal vaults
@@ -36,7 +37,10 @@ contract MaxApyRouter {
     /// @param amount The amount of underlying assets to deposit
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
-    function deposit(IMaxApyVaultV2 vault, uint256 amount, address recipient, uint256 minSharesOut) external returns(uint256 sharesOut) {
+    function deposit(IMaxApyVaultV2 vault, uint256 amount, address recipient, uint256 minSharesOut)
+        external
+        returns (uint256 sharesOut)
+    {
         address asset = vault.asset();
         address cachedVault = address(vault);
         asset.safeTransferFrom(msg.sender, address(this), amount);
@@ -80,7 +84,64 @@ contract MaxApyRouter {
         }
     }
 
-    
+    /// @notice Deposits `amount` tokens in the vault, issuing shares to `recipient`
+    /// @param vault The MaxApy vault to interact with
+    /// @param amount The amount of underlying assets to deposit
+    /// @param recipient The address to issue the shares from MaxApy's Vault to
+    /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
+    function depositWithPermit(
+        IMaxApyVaultV2 vault,
+        uint256 amount,
+        address recipient,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        uint256 minSharesOut
+    ) external returns (uint256 sharesOut) {
+        address asset = vault.asset();
+        address cachedVault = address(vault);
+        IERC20Permit(asset).permit(msg.sender, address(this), amount, deadline, v, r, s);
+        asset.safeTransferFrom(msg.sender, address(this), amount);
+        _approveMax(cachedVault, asset);
+        assembly ("memory-safe") {
+            // Cache the free memory pointer
+            let m := mload(0x40)
+            // Store MaxApy vault's `deposit()` function selector:
+            // `bytes4(keccak256("deposit(uint256,address)"))`
+            mstore(0x00, 0x6e553f65)
+            mstore(0x20, amount) // Append the `amount` argument
+            mstore(0x40, recipient) // Append the `recipient` argument
+
+            // Deposit into MaxApy vault
+            if iszero(
+                call(
+                    gas(), // Remaining amount of gas
+                    cachedVault, // Address of `vault`
+                    0, // `msg.value`
+                    0x1c, // byte offset in memory where calldata starts
+                    0x44, // size of the calldata to copy
+                    0x00, // byte offset in memory to store the return data
+                    0x20 // size of the return data
+                )
+            ) {
+                // If call failed, throw the error thrown in the previous `call`
+                revert(0x00, 0x04)
+            }
+
+            // cache shares
+            sharesOut := mload(0x00)
+
+            // check that shares aren't fewer than requested
+            if lt(sharesOut, minSharesOut) {
+                // throw the `InsufficientShares` error
+                mstore(0x00, 0x39996567)
+                revert(0x1c, 0x04)
+            }
+
+            mstore(0x40, m) // Restore the free memory pointer
+        }
+    }
 
     /// @notice  Deposits `msg.value` of `_wrappedToken`, issuing shares to `recipient`
     /// @param vault The MaxApy vault to interact with
@@ -169,7 +230,7 @@ contract MaxApyRouter {
 
     /// @notice Withdraws the calling account's tokens from MaxApy's Vault, redeeming
     /// amount `shares` for the corresponding amount of tokens, which will be transferred to
-    /// `recipient` 
+    /// `recipient`
     /// @param vault The MaxApy vault to interact with
     /// @param shares How many shares to try and redeem for tokens
     /// @param recipient The address to issue the shares from MaxApy's Vault to
@@ -217,12 +278,10 @@ contract MaxApyRouter {
                 revert(0x1c, 0x04)
             }
 
-            
             mstore(0x60, 0) // Restore the zero slot
             mstore(0x40, m) // Restore the free memory pointer
         }
     }
-
 
     /// @notice Withdraws the calling account's tokens from MaxApy's Vault, redeeming
     /// amount `shares` for the corresponding amount of tokens, which will be transferred to

@@ -14,11 +14,14 @@ import {MockLossyUSDCStrategy} from "../mock/MockLossyUSDCStrategy.sol";
 import {MockERC777, IERC1820Registry} from "../mock/MockERC777.sol";
 import {ReentrantERC777AttackerDeposit} from "../mock/ReentrantERC777AttackerDeposit.sol";
 import {ReentrantERC777AttackerWithdraw} from "../mock/ReentrantERC777AttackerWithdraw.sol";
-
+import {SigUtils} from "../utils/SigUtils.sol";
+import {IERC20Permit} from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract MaxApyRouterTest is BaseVaultV2Test {
     IMaxApyRouter public router;
+    SigUtils internal sigUtils;
+    uint256 internal bobPrivateKey;
 
     ////////////////////////////////////////////////////////////////
     ///                      SETUP                               ///
@@ -35,8 +38,11 @@ contract MaxApyRouterTest is BaseVaultV2Test {
 
         vm.stopPrank();
         /// Bob approval
+        /// Prepare signature tests
+        sigUtils = new SigUtils(IERC20Permit(USDC_MAINNET).DOMAIN_SEPARATOR());
+        bobPrivateKey = 0xA11CE;
+        users.bob = payable(vm.addr(bobPrivateKey));
         vm.startPrank(users.bob);
-        IERC20(WETH_MAINNET).approve(address(router), type(uint256).max);
         vault.approve(address(router), type(uint256).max);
 
         /// Eve approval
@@ -57,7 +63,8 @@ contract MaxApyRouterTest is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
 
     function testMaxApyRouter__Deposit() public {
-        router.deposit(vault, 10 ether, users.alice, 1e25);
+        uint256 shares = router.deposit(vault, 10 ether, users.alice, 1e25);
+        assertEq(shares, 1e25);
         assertEq(vault.totalDeposits(), 10 ether);
         assertEq(vault.totalSupply(), 1e25);
     }
@@ -70,16 +77,41 @@ contract MaxApyRouterTest is BaseVaultV2Test {
     }
 
     function testMaxApyRouter__Deposit_Native() public {
-        router.depositNative{value:10 ether}(vault, users.alice, 1e25);
+        uint256 shares = router.depositNative{value: 10 ether}(vault, users.alice, 1e25);
+        assertEq(shares, 1e25);
         assertEq(vault.totalDeposits(), 10 ether);
         assertEq(vault.totalSupply(), 1e25);
     }
 
     function testMaxApyRouter__Deposit_Native_InsufficientShares() public {
         vm.expectRevert(abi.encodeWithSignature("InsufficientShares()"));
-        router.depositNative{value:10 ether}(vault, users.alice, 1e25 +1);
+        router.depositNative{value: 10 ether}(vault, users.alice, 1e25 + 1);
         assertEq(vault.totalDeposits(), 0);
-        assertEq(vault.totalSupply(), 0 );
+        assertEq(vault.totalSupply(), 0);
+    }
+
+    function testMaxApyRouter__Deposit_Permit() public {
+        // Deploy the USDC vault
+        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        IMaxApyVaultV2 _vault = IMaxApyVaultV2(address(maxApyVault));
+        deal(USDC_MAINNET, users.bob, 1_000 * _1_USDC);
+        vm.startPrank(users.bob);
+
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            owner: users.bob,
+            spender: address(router),
+            value: 100 * _1_USDC,
+            nonce: 0,
+            deadline: block.timestamp + 1 days
+        });
+
+        bytes32 digest = sigUtils.getTypedDataHash(permit);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(bobPrivateKey, digest);
+        uint256 shares = router.depositWithPermit(_vault, permit.value, users.bob, permit.deadline, v, r, s, 1e14);
+        assertEq(shares, 1e14);
+        assertEq(_vault.totalDeposits(), 100 * _1_USDC);
+        assertEq(_vault.totalSupply(), 1e14);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -87,7 +119,7 @@ contract MaxApyRouterTest is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
 
     function testMaxApyRouter__Redeem() public {
-        router.deposit(vault, 10 ether, users.alice, 1e25);  
+        router.deposit(vault, 10 ether, users.alice, 1e25);
         uint256 assets = router.redeem(vault, 1e25, users.alice, 10 ether);
         assertEq(assets, 10 ether);
         assertEq(vault.totalDeposits(), 0);
@@ -95,7 +127,7 @@ contract MaxApyRouterTest is BaseVaultV2Test {
     }
 
     function testMaxApyRouter__Redeem_InsufficientAssets() public {
-        router.deposit(vault, 10 ether, users.alice, 1e25);  
+        router.deposit(vault, 10 ether, users.alice, 1e25);
         vm.expectRevert(abi.encodeWithSignature("InsufficientAssets()"));
         router.redeem(vault, 1e25, users.alice, 10 ether + 1);
         assertEq(vault.totalDeposits(), 10 ether);
@@ -103,7 +135,7 @@ contract MaxApyRouterTest is BaseVaultV2Test {
     }
 
     function testMaxApyRouter__Redeem_Native() public {
-        router.deposit(vault, 10 ether, users.alice, 1e25);  
+        router.deposit(vault, 10 ether, users.alice, 1e25);
         uint256 assets = router.redeemNative(vault, 1e25, users.alice, 10 ether);
         assertEq(assets, 10 ether);
         assertEq(vault.totalDeposits(), 0);
@@ -111,14 +143,10 @@ contract MaxApyRouterTest is BaseVaultV2Test {
     }
 
     function testMaxApyRouter__Redeem_Native_InsufficientAssets() public {
-        router.deposit(vault, 10 ether, users.alice, 1e25);  
+        router.deposit(vault, 10 ether, users.alice, 1e25);
         vm.expectRevert(abi.encodeWithSignature("InsufficientAssets()"));
         router.redeemNative(vault, 1e25, users.alice, 10 ether + 1);
         assertEq(vault.totalDeposits(), 10 ether);
         assertEq(vault.totalSupply(), 1e25);
     }
-
-    ////////////////////////////////////////////////////////////////
-    ///                      Test withdraw()                     ///
-    ////////////////////////////////////////////////////////////////
 }

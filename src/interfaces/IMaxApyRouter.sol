@@ -21,4 +21,15 @@ interface IMaxApyRouter {
     function redeemNative(IMaxApyVaultV2 vault, uint256 shares, address recipient, uint256 minAmountOut)
         external
         returns (uint256);
+
+    function depositWithPermit(
+        IMaxApyVaultV2 vault,
+        uint256 amount,
+        address recipient,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        uint256 minSharesOut
+    ) external returns (uint256 sharesOut);
 }
