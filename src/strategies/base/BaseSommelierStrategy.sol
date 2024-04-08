@@ -79,7 +79,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function requestWithdraw(uint256 amountNeeded)
+    function liquidateExact(uint256 amountNeeded)
         external
         virtual
         override
@@ -95,6 +95,7 @@ contract BaseSommelierStrategy is BaseStrategy {
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
+        _snapshotEstimatedTotalAssets();
     }
 
     /////////////////////////////////////////////////////////////////
@@ -105,7 +106,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @dev calculates estunated the real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view virtual override returns (uint256 liquidatedAmount) {
+    function previewLiquidate(uint256 requestedAmount) public view virtual override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -126,7 +127,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount)
+    function previewLiquidateExact(uint256 liquidatedAmount)
         public
         view
         virtual
@@ -142,12 +143,12 @@ contract BaseSommelierStrategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public view virtual override returns (uint256) {
+    function maxLiquidate() public view virtual override returns (uint256) {
         return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public view virtual override returns (uint256) {
+    function maxLiquidateExact() public view virtual override returns (uint256) {
         // only can request harvested assets
         return _underlyingBalance() + cellar.maxWithdraw(address(this));
     }
@@ -393,8 +394,8 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
         assembly {
-            // return cellar.convertToAssets(shares);
-            mstore(0x00, 0x07a2d13a)
+            // return cellar.previewRedeem(shares);
+            mstore(0x00, 0x4cdad506)
             mstore(0x20, shares)
             if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _assets := mload(0x00)

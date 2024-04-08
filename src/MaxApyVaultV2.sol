@@ -122,6 +122,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint16 newPerformanceFee
     );
 
+    /// @notice Emitted when a strategy is exited
+    event StrategyExited(address indexed strategy, uint256 withdrawn);
+
     /// @notice Emitted when the withdrawal queue is updated
     event WithdrawalQueueUpdated(address[MAXIMUM_STRATEGIES] withdrawalQueue);
 
@@ -208,6 +211,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     uint256 private constant _WITHDRAW_EVENT_SIGNATURE =
         0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db;
+
+    uint256 private constant _STRATEGY_EXITED_EVENT_SIGNATURE =
+        0x2e8aac9e73a32a1b5926e2c5a2820a51deb01ed40212b6346d96db2a178cf433;
 
     ////////////////////////////////////////////////////////////////
     ///               VAULT GLOBAL STATE VARIABLES               ///
@@ -579,7 +585,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (emergencyShutdown) return 0;
 
         // Compute necessary data regarding current state of the vault
-        uint256 vaultTotalAssets = _totalAccountedAssets();
+        uint256 vaultTotalAssets = _totalDeposits();
         uint256 vaultDebtLimit = _computeDebtLimit(debtRatio, vaultTotalAssets);
         uint256 vaultTotalDebt = totalDebt;
 
@@ -678,7 +684,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         // If debt ratio configured in vault is zero or emergency shutdown, any amount of debt in the strategy should be returned
         if (debtRatio == 0 || emergencyShutdown) return strategyTotalDebt;
 
-        uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalAccountedAssets());
+        uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalDeposits());
 
         // There will not be debt outstanding if strategy total debt is smaller or equal to the current debt limit
         if (strategyDebtLimit >= strategyTotalDebt) {
@@ -800,7 +806,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Returns the total quantity of all assets under control of this Vault,
     /// whether they're loaned out to a Strategy, or currently held in the Vault
     /// @return totalAssets_ The total assets under control of this Vault
-    function _totalAccountedAssets() internal view returns (uint256 totalAssets_) {
+    function _totalDeposits() internal view returns (uint256 totalAssets_) {
         assembly {
             let totalDebt_ := sload(totalDebt.slot)
             totalAssets_ := add(sload(totalIdle.slot), totalDebt_)
@@ -835,8 +841,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
 
     /// @notice Returns the total amount of accounted idle and strategy debt assets
-    function totalAccountedAssets() public view returns (uint256) {
-        return _totalAccountedAssets();
+    function totalDeposits() public view returns (uint256) {
+        return _totalDeposits();
     }
 
     /// @notice Returns the maximum amount of the underlying asset that can be deposited
@@ -854,16 +860,16 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Returns the maximum amount of the underlying asset that can be withdrawn
     /// from the `owner`'s balance in the Vault, via a withdraw call.
     function maxWithdraw(address owner) public view override returns (uint256 maxAssets) {
-        uint256 maxRequestableAssets = totalIdle;
+        uint256 maxLiquidableAssets = totalIdle;
         for (uint256 i; i < MAXIMUM_STRATEGIES; i++) {
             address strategy = withdrawalQueue[i];
             if (strategy == address(0)) break;
-            maxRequestableAssets += IStrategy(strategy).maxRequest();
+            maxLiquidableAssets += IStrategy(strategy).maxLiquidateExact();
         }
         uint256 totalSupply = totalSupply();
         // prevent division by zero
         if (totalSupply == 0) return 0;
-        maxAssets = Math.fullMulDiv(maxRequestableAssets, maxRedeem(owner), totalSupply);
+        maxAssets = Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply);
     }
 
     /// @notice Returns the estimate price of 1 vault share
@@ -913,8 +919,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (assets > vaultBalance) {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
             // from strategies until requested value amount is covered.
-            // During forced withdrawal, a Strategy may realize a loss, which is reported back to the
-            // Vault. This will affect the withdrawer, affecting the amount of shares that will
+            // During forced withdrawal, the vault will do exact amount requests to the strategies
+            // and account the losses needed to achieve those amounts. Those 
+            // losses are reported back to the vault This will affect the withdrawer, affecting the amount of shares that will
             // burn in order to withdraw exactly @param assets assets
 
             uint256 totalLoss;
@@ -928,28 +935,29 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Check if the vault balance is finally enough to cover the requested withdrawal
                 if (vaultBalance >= assets) break;
 
-                // Compute remaining amount to withdraw considering the current balance of the vault
-                uint256 amountNeeded = assets - vaultBalance;
-                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxRequest());
+                // Compute remaining amount to request considering the current balance of the vault
+                uint256 amountRequested = assets - vaultBalance;
+                // Can't request more than allowed by the strategy
+                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidateExact());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
-                if (amountNeeded == 0) {
+                if (amountRequested == 0) {
                     unchecked {
                         ++i;
                     }
                     continue;
                 }
 
-                // Withdraw from strategy. Compute amount withdrawn
+                // Withdraw from strategy. Compute amount withdrawn(should be requestedAmount)
                 // considering the difference between balances pre/post withdrawal
-                uint256 withdrawn = IStrategy(strategy).previewWithdrawRequest(amountNeeded);
-                uint256 loss = withdrawn - amountNeeded;
+                uint256 withdrawn = IStrategy(strategy).previewLiquidateExact(amountRequested);
+                uint256 loss = withdrawn - amountRequested;
 
-                // increase the vault balance by the needed amount
-                vaultBalance += withdrawn;
+                // increase the vault balance by requested amount
+                vaultBalance += amountRequested;
 
                 // If loss has been realised, withdrawer will incur it, affecting to the amount
-                // of shasers that the user will burn
+                // of shares that the user will burn
                 if (loss != 0) {
                     totalLoss += loss;
                 }
@@ -993,17 +1001,17 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 if (vaultBalance >= assets) break;
 
                 // Compute remaining amount to withdraw considering the current balance of the vault
-                uint256 amountNeeded;
+                uint256 amountRequested;
                 assembly ("memory-safe") {
-                    // amountNeeded = assets - vaultBalance;
-                    amountNeeded := sub(assets, vaultBalance)
+                    // amountRequested = assets - vaultBalance;
+                    amountRequested := sub(assets, vaultBalance)
                 }
 
                 // ask for the min between the needed amount and max withdraw of the strategy
-                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxWithdraw());
+                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
-                if (amountNeeded == 0) {
+                if (amountRequested == 0) {
                     unchecked {
                         ++i;
                     }
@@ -1012,8 +1020,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
                 // Withdraw from strategy. Compute amount withdrawn
                 // considering the difference between balances pre/post withdrawal
-                uint256 withdrawn = IStrategy(strategy).previewWithdraw(amountNeeded);
-                uint256 loss = amountNeeded - withdrawn;
+                uint256 withdrawn = IStrategy(strategy).previewLiquidate(amountRequested);
+                uint256 loss = amountRequested - withdrawn;
 
                 // Increase cached vault balance to track the newly withdrawn amount
                 vaultBalance += withdrawn;
@@ -1268,17 +1276,17 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
 
                 // Compute remaining amount to withdraw considering the current balance of the vault
-                uint256 amountNeeded;
+                uint256 amountRequested;
                 assembly ("memory-safe") {
-                    // amountNeeded = assets - vaultBalance;
-                    amountNeeded := sub(assets, vaultBalance)
+                    // amountRequested = assets - vaultBalance;
+                    amountRequested := sub(assets, vaultBalance)
                 }
 
                 // ask for the min between the needed amount and max withdraw of the strategy
-                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxWithdraw());
+                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
-                if (amountNeeded == 0) {
+                if (amountRequested == 0) {
                     unchecked {
                         ++i;
                     }
@@ -1288,7 +1296,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Withdraw from strategy. Compute amount withdrawn
                 // considering the difference between balances pre/post withdrawal
                 uint256 preBalance = SafeTransferLib.balanceOf(underlying, address(this));
-                uint256 loss = IStrategy(strategy).withdraw(amountNeeded);
+                uint256 loss = IStrategy(strategy).liquidate(amountRequested);
                 uint256 withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
                 if (withdrawn == 0) continue;
 
@@ -1376,8 +1384,9 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         if (assets > vaultBalance) {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
             // from strategies until requested value amount is covered.
-            // During forced withdrawal, a Strategy may realize a loss, which is reported back to the
-            // Vault. This will affect the withdrawer, affecting the amount of shares that will
+            // During forced withdrawal, the vault will do exact amount requests to the strategies
+            // and account the losses needed to achieve those amounts. Those 
+            // losses are reported back to the vault This will affect the withdrawer, affecting the amount of shares that will
             // burn in order to withdraw exactly @param assets assets
 
             uint256 totalLoss;
@@ -1400,21 +1409,22 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
 
                 // Compute remaining amount to withdraw considering the current balance of the vault
-                uint256 amountNeeded = assets - vaultBalance;
-                amountNeeded = Math.min(amountNeeded, IStrategy(strategy).maxRequest());
+                uint256 amountRequested = assets - vaultBalance;
+                // Can't request more than allowed by the strategy
+                amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidateExact());
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
-                if (amountNeeded == 0) {
+                if (amountRequested == 0) {
                     unchecked {
                         ++i;
                     }
                     continue;
                 }
 
-                // Withdraw from strategy. Compute amount withdrawn
+                // Withdraw from strategy. Compute amount withdrawn(should be requestedAmount)
                 // considering the difference between balances pre/post withdrawal
                 uint256 preBalance = underlying.balanceOf(address(this));
-                uint256 loss = IStrategy(strategy).requestWithdraw(amountNeeded);
+                uint256 loss = IStrategy(strategy).liquidateExact(amountRequested);
 
                 uint256 withdrawn = underlying.balanceOf(address(this)) - preBalance;
 
@@ -1424,7 +1434,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 vaultBalance += withdrawn;
 
                 // If loss has been realised, withdrawer will incur it, affecting to the amount
-                // of shasers that the user will burn
+                // of shares that the user will burn
                 if (loss != 0) {
                     totalLoss += loss;
                     _reportLoss(strategy, loss);
@@ -1819,6 +1829,64 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
         // Revoke the strategy
         _revokeStrategy(strategy, cachedStrategyDebtRatio);
+    }
+
+    /// @notice Fully exit a strategy
+    /// @dev This is the most aggressive strategy exit plan, it liquidates all the positions
+    /// from the strategy, revoke the strategy role, and remove it from the withdrawal queue
+    /// as well
+    /// @param strategy The strategy to revoke
+    function exitStrategy(address strategy) external checkRoles(ADMIN_ROLE) {
+        // Liquidate the strategy fully
+        IStrategy _strategy = IStrategy(strategy);
+        uint256 _maxWithdraw = _strategy.maxLiquidate();
+        uint256 loss = _strategy.liquidate(_maxWithdraw);
+        uint256 withdrawn = _maxWithdraw - loss;
+        uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
+        uint256 strategyDebtRatio = strategies[strategy].strategyDebtRatio;
+        totalIdle += withdrawn;
+        // Cannot underflow
+        unchecked {
+            totalDebt -= strategyTotalDebt;
+            debtRatio -= strategyDebtRatio;
+        }
+        // Clear debt of strategy
+        strategies[strategy].autoPilot = false;
+        strategies[strategy].strategyActivation = 0;
+        strategies[strategy].strategyTotalDebt = 0;
+        strategies[strategy].strategyDebtRatio = 0;
+
+        // Remove `STRATEGY_ROLE` from strategy
+        _removeRoles(strategy, STRATEGY_ROLE);
+
+        // Remove the strategy from the queue
+        address[MAXIMUM_STRATEGIES] memory cachedWithdrawalQueue = withdrawalQueue;
+        for (uint256 i; i < MAXIMUM_STRATEGIES;) {
+            if (cachedWithdrawalQueue[i] == strategy) {
+                // The strategy was found and can be removed
+                withdrawalQueue[i] = address(0);
+
+                _removeRoles(strategy, STRATEGY_ROLE);
+
+                // Update withdrawal queue
+                _organizeWithdrawalQueue();
+
+                assembly {
+                    // Emit the `StrategyRemoved` event
+                    log2(0x00, 0x00, _STRATEGY_REMOVED_EVENT_SIGNATURE, strategy)
+
+                    // Emit the `StrategyRemoved` event
+                    mstore(0x00, withdrawn)
+                    log2(0x00, 0x20, _STRATEGY_EXITED_EVENT_SIGNATURE, strategy)
+                }
+
+                return;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @notice Updates a given strategy configured data

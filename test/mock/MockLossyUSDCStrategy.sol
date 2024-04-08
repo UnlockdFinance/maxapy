@@ -28,30 +28,30 @@ contract MockLossyUSDCStrategy {
         estimatedTotalAssets = _estimatedTotalAssets;
     }
 
-    function withdraw(uint256 amount) external returns (uint256) {
+    function liquidate(uint256 amount) external returns (uint256) {
         if (amount <= _1_USDC) return (0);
         IERC20(underlyingAsset).transfer(msg.sender, amount - _1_USDC);
         return _1_USDC;
     }
 
-    function requestWithdraw(uint256 amount) external returns (uint256) {
+    function liquidateExact(uint256 amount) external returns (uint256) {
         IERC20(underlyingAsset).transfer(msg.sender, amount);
         return _1_USDC;
     }
 
-    function previewWithdrawRequest(uint256 amount) external pure returns (uint256) {
+    function previewLiquidateExact(uint256 amount) external pure returns (uint256) {
         return amount + _1_USDC;
     }
 
-    function previewWithdraw(uint256 amount) external pure returns (uint256) {
+    function previewLiquidate(uint256 amount) external pure returns (uint256) {
         return amount - _1_USDC;
     }
 
-    function maxRequest() external view returns (uint256) {
+    function maxLiquidateExact() external view returns (uint256) {
         return estimatedTotalAssets == 0 ? 0 : estimatedTotalAssets - _1_USDC;
     }
 
-    function maxWithdraw() external view returns (uint256) {
+    function maxLiquidate() external view returns (uint256) {
         return estimatedTotalAssets;
     }
 

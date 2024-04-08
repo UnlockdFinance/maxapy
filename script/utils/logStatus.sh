@@ -26,7 +26,7 @@ unharvestedAmountSommelier2=$(cast call $YEARN_ST_ETH_DEPOSIT_ST_ETH_STRATEGY "u
 totalAssets=$(cast call $VAULT "totalAssets()(uint256)")
 
 # 3.5.- [Vault] totalAccountedAssets
-totalAccountedAssets=$(cast call $VAULT "totalAccountedAssets()(uint256)")
+totalAccountedAssets=$(cast call $VAULT "totalDeposits()(uint256)")
 
 # 4.- [Vault] balanceOf(user)
 balanceUser=$(cast call $VAULT "balanceOf(address)(uint256)" $DEPLOYER_ADDRESS)
@@ -64,7 +64,7 @@ echo "[SSTRAT2] unharvestedAmount: $unharvestedAmountSommelier2"
 echo "----------------------------------------------------------------"
 echo "[VAULT] totalIdle:" $totalIdle
 echo "[VAULT] totalDebt:" $totalDebt
-echo "[VAULT] totalAccountedAssets:" $totalAccountedAssets
+echo "[VAULT] totalDeposits:" $totalAccountedAssets
 echo "----------------------------------------------------------------"
 echo "[VAULT] totalAssets (rewards included):" $totalAssets
 echo "[VAULT] balanceOf(user) (shares):" $balanceUser

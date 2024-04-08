@@ -30,6 +30,9 @@ contract StrategyEvents is BaseStrategyEvents {
         uint16 strategyDebtRatio
     );
 
+    /// @notice Emitted when a strategy is exited
+    event StrategyExited(address indexed strategy, uint256 withdrawn);
+
     /// @notice Emitted when the strategy is harvested
     event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
 

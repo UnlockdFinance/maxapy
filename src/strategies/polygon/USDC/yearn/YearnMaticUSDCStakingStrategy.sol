@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 import {
     BaseYearnV3Strategy,
     SafeTransferLib,
-    IERC20,
     IMaxApyVaultV2,
     IYVaultV3
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
@@ -23,7 +22,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Ethereum mainnet's Matic Token
-    IERC20 public constant wmatic = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
+    address public constant wmatic = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
     /// @notice Router to perform WMATIC-USDC swaps
     IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
@@ -60,7 +59,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
 
         /// Perform needed approvals
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
-        address(wmatic).safeApprove(address(router), type(uint256).max);
+        wmatic.safeApprove(address(router), type(uint256).max);
         address(_yVault).safeApprove(address(yearnStakingRewards), type(uint256).max);
 
         minSingleTrade = 1e4;
@@ -76,7 +75,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
     /// @return loss Any realized losses
-    function requestWithdraw(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+    function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
@@ -87,6 +86,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
+        _snapshotEstimatedTotalAssets();
     }
 
     ////////////////////////////////////////////////////////////////
@@ -342,7 +342,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
         if (wmaticBalance > minSwapMatic) {
             router.exactInputSingle(
                 IRouter.ExactInputSingleParams({
-                    tokenIn: address(wmatic),
+                    tokenIn: wmatic,
                     tokenOut: underlyingAsset,
                     fee: 10000,
                     recipient: address(this),

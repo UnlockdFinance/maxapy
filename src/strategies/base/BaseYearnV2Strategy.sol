@@ -1,43 +1,50 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    BaseSommelierStrategy,
-    ICellar,
-    IWETH,
-    IMaxApyVaultV2,
-    SafeTransferLib
-} from "src/strategies/base/BaseSommelierStrategy.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-import {ICurve} from "src/interfaces/ICurve.sol";
+import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
+import {IYVault} from "src/interfaces/IYVault.sol";
 
-/// @title SommelierStEthDepositTurboStEthStrategy
-/// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `SommelierStEthDepositTurboStEthStrategy` supplies an underlying token into a generic Sommelier Vault,
-/// earning the Sommelier Vault's yield
-contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import "forge-std/console.sol";
+
+/// @author MaxApy
+/// @notice `BaseYearnV2Strategy` sets the base functionality to be implemented by MaxApy YearnV3 strategies.
+/// @dev Some functions can be overriden if needed
+contract BaseYearnV2Strategy is BaseStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
-    ///                         CONSTANTS                        ///
+    ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
+    uint256 internal constant DEGRADATION_COEFFICIENT = 10 ** 18;
 
-    /// @notice Ethereum mainnet's StETH Token
-    address public constant stEth = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+    ////////////////////////////////////////////////////////////////
+    ///                         ERRORS                           ///
+    ////////////////////////////////////////////////////////////////
+    error NotEnoughFundsToInvest();
+    error InvalidZeroAddress();
+    error InvalidHarvestedProfit();
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice Emitted when the strategy's max single trade value is updated
-    event MaxSingleTradeUpdated(uint256 maxSingleTrade);
+    /// @notice Emitted when underlying asset is deposited into the Yearn Vault
+    event Invested(address indexed strategy, uint256 amountInvested);
+
+    /// @notice Emitted when the `requestedShares` are divested from the Yearn Vault
+    event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
 
     /// @notice Emitted when the strategy's min single trade value is updated
     event MinSingleTradeUpdated(uint256 minSingleTrade);
 
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
-    uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
+    // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
+    uint256 internal constant _INVESTED_EVENT_SIGNATURE =
+        0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
+
+    // @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
+    uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
+        0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
     // @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
@@ -46,10 +53,9 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
-    /// @notice The Curve pool
-    ICurve public constant pool = ICurve(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
-    /// @notice The maximum single trade allowed in the strategy
-    uint256 public maxSingleTrade;
+
+    /// @notice The Yearn Vault the strategy interacts with
+    IYVault public yVault;
     /// @notice Minimun trade size within the strategy
     uint256 public minSingleTrade;
 
@@ -62,73 +68,27 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _cellar The address of the Sommelier Turbo-stETH cellar
+    /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
         IMaxApyVaultV2 _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
-        ICellar _cellar
-    ) public override initializer {
+        IYVault _yVault
+    ) public initializer {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        cellar = _cellar;
+        yVault = _yVault;
 
-        /// Approve pool to perform swaps
-        underlyingAsset.safeApprove(address(pool), type(uint256).max);
-        stEth.safeApprove(address(pool), type(uint256).max);
-        /// Approve Cellar Vault to transfer underlying
-        stEth.safeApprove(address(_cellar), type(uint256).max);
-        maxSingleTrade = 1_000 * 1e18;
-        minSingleTrade = 1e4;
-    }
+        /// Approve Yearn Vault to transfer underlying
+        underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
 
-    ////////////////////////////////////////////////////////////////
-    ///                STRATEGY CORE LOGIC                       ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Withdraws exactly `amountNeeded` to `vault`.
-    /// @dev This may only be called by the respective Vault.
-    /// @param amountNeeded How much `underlyingAsset` to withdraw.
-    /// @return loss Any realized losses
-    /// NOTE : while in the {withdraw} function the vault gets `amountNeeded` - `loss`
-    /// in {liquidate} the vault always gets `amountNeeded` and `loss` is the amount
-    /// that had to be lost in order to withdraw exactly `amountNeeded`
-    function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
-        uint256 amountRequested = previewLiquidateExact(amountNeeded);
-        uint256 amountFreed;
-        // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
-        (amountFreed, loss) = _liquidatePosition(amountRequested);
-        // Send it directly back to vault
-        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
-        // something didn't work as expected
-        // this should NEVER happen in normal conditions
-        else revert();
-        // Note: Reinvest anything leftover on next `harvest`
-        _snapshotEstimatedTotalAssets();
+        /// Mininmum single trade is 0.01 token units
+        minSingleTrade = 10 ** IERC20(underlyingAsset).decimals() / 100;
     }
 
     ////////////////////////////////////////////////////////////////
     ///                 STRATEGY CONFIGURATION                   ///
     ////////////////////////////////////////////////////////////////
-
-    /// @notice Sets the maximum single trade amount allowed
-    /// @param _maxSingleTrade The new maximum single trade value
-    function setMaxSingleTrade(uint256 _maxSingleTrade) external checkRoles(ADMIN_ROLE) {
-        assembly ("memory-safe") {
-            // revert if `_maxSingleTrade` is zero
-            if iszero(_maxSingleTrade) {
-                // throw the `InvalidZeroAmount` error
-                mstore(0x00, 0xdd484e70)
-                revert(0x1c, 0x04)
-            }
-
-            sstore(maxSingleTrade.slot, _maxSingleTrade) // set the max single trade value in storage
-
-            // Emit the `MaxSingleTradeUpdated` event
-            mstore(0x00, _maxSingleTrade)
-            log1(0x00, 0x20, _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
-        }
-    }
 
     /// @notice Sets the minimum single trade amount allowed
     /// @param _minSingleTrade The new minimum single trade value
@@ -147,7 +107,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         }
     }
 
-    /////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
 
@@ -159,16 +119,19 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Cellar Vault
+        // the requested amount, we divest from the Yearn Vault
         if (underlyingBalance < requestedAmount) {
             uint256 amountToWithdraw;
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
-            uint256 shares = cellar.convertToShares(amountToWithdraw);
-            uint256 withdrawn = cellar.previewRedeem(shares);
-            withdrawn = pool.get_dy(1, 0, withdrawn);
-            if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
+
+            uint256 shares = _sharesForAmount(amountToWithdraw);
+            uint256 withdrawn = _shareValue(shares);
+            assembly {
+                // if withdrawn < amountToWithdraw
+                if lt(withdrawn, amountToWithdraw) { loss := sub(amountToWithdraw, withdrawn) }
+            }
         }
         liquidatedAmount = requestedAmount - loss;
     }
@@ -178,6 +141,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
     function previewLiquidateExact(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
+        // we cannot predict losses so return as if there were not
         // increase 1% to be pessimistic
         return previewLiquidate(liquidatedAmount) * 101 / 100;
     }
@@ -189,9 +153,9 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
+        // make sure it doesnt revert when increaseing it 1% in the withdraw
         return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
     }
-
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
@@ -215,12 +179,12 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
+
     function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        if (cellar.isPaused()) return (0, 0, 0, 0);
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
@@ -256,15 +220,15 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
             uint256 amountToWithdraw = realizedProfit + debtOutstanding;
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
-            // If not, divest from Cellar
+            // If not, divest from yVault
             if (amountToWithdraw > underlyingBalance) {
-                uint256 expectedAmountToWithdraw = Math.min(maxSingleTrade, amountToWithdraw - underlyingBalance);
+                uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
 
                 uint256 withdrawn = _divest(sharesToWithdraw);
 
-                // Account for loss occured on withdrawal from Cellar
+                // Account for loss occured on withdrawal from yVault
                 if (withdrawn < expectedAmountToWithdraw) {
                     unchecked {
                         loss = expectedAmountToWithdraw - withdrawn;
@@ -311,44 +275,31 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
             }
         }
     }
+
     /// @notice Performs any adjustments to the core position(s) of this Strategy given
     /// what change the MaxApy Vault made in the "investable capital" available to the
     /// Strategy.
     /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-
     function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
         uint256 toInvest = _underlyingBalance();
         if (toInvest > minSingleTrade) {
-            toInvest = Math.min(maxSingleTrade, toInvest);
             _invest(toInvest, minOutputAfterInvestment);
         }
     }
 
-    /// @notice Invests `amount` of underlying, depositing it in the Cellar Vault
+    /// @notice Invests `amount` of underlying, depositing it in the Yearn Vault
     /// @param amount The amount of underlying to be deposited in the vault
-    /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Cellar receipt tokens)
+    /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
-        internal
-        override
-        returns (uint256 depositedAmount)
-    {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal returns (uint256 depositedAmount) {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
-        // Dont't do anything if cellar is paused or shutdown
-        if (cellar.isShutdown() || cellar.isPaused()) return 0;
-        uint256 maxDeposit = cellar.maxDeposit(address(this));
-        amount = Math.min(amount, maxDeposit);
 
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        IWETH(underlyingAsset).withdraw(amount);
-
-        uint256 stEthReceived = pool.exchange{value: amount}(0, 1, amount, 0);
-
-        uint256 shares = cellar.deposit(stEthReceived, address(this));
+        uint256 shares = yVault.deposit(amount);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -368,20 +319,28 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         }
     }
 
-    /// @notice Divests amount `shares` from Cellar Vault
-    /// Note that divesting from Cellar could potentially cause loss (set to 0.01% as default in
+    /// @notice Divests amount `shares` from Yearn Vault
+    /// Note that divesting from Yearn could potentially cause loss (set to 0.01% as default in
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of cellar shares
+    /// but in terms of yvault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
-    function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
-        // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) return 0;
-        uint256 stEthWithdrawn = cellar.redeem(shares, address(this), address(this));
-        withdrawn = pool.exchange(1, 0, stEthWithdrawn, 0);
-        IWETH(underlyingAsset).deposit{value: withdrawn}();
-        emit Divested(address(this), shares, withdrawn);
+    function _divest(uint256 shares) internal returns (uint256 withdrawn) {
+        // return uint256 withdrawn = yVault.withdraw(shares);
+        assembly {
+            // store selector and parameters in memory
+            mstore(0x00, 0x2e1a7d4d)
+            mstore(0x20, shares)
+            // call yVault.withdraw(shares)
+            if iszero(call(gas(), sload(yVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            withdrawn := mload(0x00)
+
+            // Emit the `Divested` event
+            mstore(0x00, shares)
+            mstore(0x20, withdrawn)
+            log2(0x00, 0x40, _DIVESTED_EVENT_SIGNATURE, address())
+        }
     }
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
@@ -394,20 +353,15 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override
         returns (uint256 liquidatedAmount, uint256 loss)
     {
         uint256 underlyingBalance = _underlyingBalance();
-        // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) {
-            uint256 amountOut = Math.min(underlyingBalance, amountNeeded);
-            return (amountOut, amountNeeded - amountOut);
-        }
-
         // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Cellar Vault
+        // the requested amount, we divest from the Yearn Vault
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw;
             unchecked {
@@ -426,6 +380,120 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         }
     }
 
-    /// @notice Allow to receive native assets
-    receive() external payable {}
+    /// @notice Liquidates everything and returns the amount that got freed.
+    /// @dev This function is used during emergency exit instead of `_prepareReturn()` to
+    /// liquidate all of the Strategy's positions back to the MaxApy Vault.
+    function _liquidateAllPositions() internal override returns (uint256 amountFreed) {
+        _divest(_shareBalance());
+        amountFreed = _underlyingBalance();
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                 INTERNAL VIEW FUNCTIONS                  ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice Determines the current value of `shares`.
+    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
+    /// @return returns the estimated amount of underlying computed from shares `shares`
+    function _shareValue(uint256 shares) internal view returns (uint256) {
+        uint256 vaultTotalSupply;
+        assembly {
+            // get yVault.totalSupply()
+            mstore(0x00, 0x18160ddd)
+            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            vaultTotalSupply := mload(0x00)
+        }
+        if (vaultTotalSupply == 0) return shares;
+
+        return Math.mulDiv(shares, _freeFunds(), vaultTotalSupply);
+    }
+
+    /// @notice Determines how many shares depositor of `amount` of underlying would receive.
+    /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
+    function _sharesForAmount(uint256 amount) internal view returns (uint256 shares) {
+        uint256 freeFunds = _freeFunds();
+        assembly {
+            // if freeFunds != 0 return amount
+            if gt(freeFunds, 0) {
+                // get yVault.totalSupply()
+                mstore(0x00, 0x18160ddd)
+                if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+                let totalSupply := mload(0x00)
+
+                // Overflow check equivalent to require(totalSupply == 0 || amount <= type(uint256).max / totalSupply)
+                if iszero(iszero(mul(totalSupply, gt(amount, div(not(0), totalSupply))))) { revert(0, 0) }
+
+                shares := div(mul(amount, totalSupply), freeFunds)
+            }
+        }
+    }
+
+    /// @notice Calculates the yearn vault free funds considering the locked profit
+    /// @return returns the computed yearn vault free funds
+    function _freeFunds() internal view returns (uint256) {
+        return yVault.totalAssets() - _calculateLockedProfit();
+    }
+
+    /// @notice Calculates the yearn vault locked profit i.e. how much profit is locked and cant be withdrawn
+    /// @return lockedProfit returns the computed locked profit value
+    function _calculateLockedProfit() internal view returns (uint256 lockedProfit) {
+        assembly {
+            let _yVault := sload(yVault.slot)
+
+            // get yVault.lastReport()
+            mstore(0x00, 0xc3535b52)
+            if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            let lastReport := mload(0x00)
+            // get yVault.lockedProfitDegradation()
+            mstore(0x00, 0x42232716)
+            if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            let lockedProfitDegradation := mload(0x00)
+
+            // Check overflow
+            if gt(lastReport, timestamp()) { revert(0, 0) }
+
+            //temporal value to save gas
+            let lockedFundsRatio := sub(timestamp(), lastReport)
+
+            // Overflow check equivalent to require(lockedProfitDegradation == 0 || lockedFundsRatio <= type(uint256).max / lockedProfitDegradation)
+            if iszero(iszero(mul(lockedProfitDegradation, gt(lockedFundsRatio, div(not(0), lockedProfitDegradation)))))
+            {
+                revert(0, 0)
+            }
+
+            lockedFundsRatio := mul(lockedFundsRatio, lockedProfitDegradation)
+
+            //if (lockedFundsRatio < DEGRADATION_COEFFICIENT)
+            if lt(lockedFundsRatio, DEGRADATION_COEFFICIENT) {
+                // get yVault.lockedProfit()
+                mstore(0x00, 0x44b81396)
+                if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+                lockedProfit := mload(0x00)
+
+                // Overflow check equivalent to require(lockedProfit == 0 || lockedFundsRatio <= type(uint256).max / lockedProfit)
+                if iszero(iszero(mul(lockedProfit, gt(lockedFundsRatio, div(not(0), lockedProfit))))) { revert(0, 0) }
+
+                //return lockedProfit - ((lockedFundsRatio * lockedProfit) / DEGRADATION_COEFFICIENT);
+                lockedProfit := sub(lockedProfit, div(mul(lockedFundsRatio, lockedProfit), DEGRADATION_COEFFICIENT))
+            }
+        }
+    }
+
+    /// @notice Returns the current strategy's amount of yearn vault shares
+    /// @return _balance balance the strategy's balance of yearn vault shares
+    function _shareBalance() internal view returns (uint256 _balance) {
+        assembly {
+            // return yVault.balanceOf(address(this));
+            mstore(0x00, 0x70a08231)
+            mstore(0x20, address())
+            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            _balance := mload(0x00)
+        }
+    }
+
+    /// @notice Returns the real time estimation of the value in assets held by the strategy
+    /// @return the strategy's total assets(idle + investment positions)
+    function _estimatedTotalAssets() internal view override returns (uint256) {
+        return _underlyingBalance() + _shareValue(_shareBalance());
+    }
 }

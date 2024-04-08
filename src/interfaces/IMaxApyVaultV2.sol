@@ -113,6 +113,8 @@ interface IMaxApyVaultV2 is IERC4626 {
 
     function removeStrategy(address strategy) external;
 
+    function exitStrategy(address strategy) external;
+
     function updateStrategyData(
         address strategy,
         uint256 newDebtRatio,
@@ -148,7 +150,7 @@ interface IMaxApyVaultV2 is IERC4626 {
 
     function totalAssets() external view returns (uint256);
 
-    function totalAccountedAssets() external view returns (uint256);
+    function totalDeposits() external view returns (uint256);
 
     function lastReport() external view returns (uint256);
 

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {
-TransparentUpgradeableProxy,
-ITransparentUpgradeableProxy
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
@@ -22,13 +22,13 @@ import {ConvexdETHFrxETHStrategyEvents} from "../helpers/ConvexdETHFrxETHStrateg
 
 import {SommelierMorphoEthMaximizerStrategyWrapper} from "../mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
 import {SommelierMorphoEthMaximizerStrategy} from
-"src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
+    "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 
 import {SommelierTurboStEthStrategy} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import {SommelierTurboStEthStrategyWrapper} from "../mock/SommelierTurboStEthStrategyWrapper.sol";
 
 import {SommelierStEthDepositTurboStEthStrategyWrapper} from
-"../mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
+    "../mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
 
 import {YearnWETHStrategyWrapper} from "../mock/YearnWETHStrategyWrapper.sol";
 import {MockRevertingStrategy} from "../mock/MockRevertingStrategy.sol";
@@ -134,7 +134,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         // Deploy strategy3
         SommelierStEthDepositTurboStEthStrategyWrapper implementation3 =
-                    new SommelierStEthDepositTurboStEthStrategyWrapper();
+            new SommelierStEthDepositTurboStEthStrategyWrapper();
         _proxy = new TransparentUpgradeableProxy(
             address(implementation3),
             address(proxyAdmin),
@@ -190,6 +190,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
         vm.startPrank(users.alice);
     }
+
+    ////////////////////////////////////////////////////////////////
+    ///                  TEST previews                           ///
+    ////////////////////////////////////////////////////////////////
 
     function testMaxApyVaultV2_ERC4626__PreviewDeposit() public {
         /// 1.deposit when the vault is empty
@@ -388,40 +392,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.revertTo(snapshotId);
     }
 
-    function testMaxApyVaultV2_ERC4626_RedeemMax() public {
-        deal(WETH_MAINNET, users.alice, 500 ether);
-
-        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
-        vault.deposit(500 ether, users.alice);
-
-        vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
-        vm.stopPrank();
-
-        vm.startPrank(users.alice);
-        vault.redeem(type(uint256).max, users.alice, users.alice);
-    }
-
-    function testMaxApyVaultV2_ERC4626_WithdrawMax() public {
-        deal(WETH_MAINNET, users.alice, 500 ether);
-
-        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
-        vault.deposit(500 ether, users.alice);
-
-        vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
-        vm.stopPrank();
-
-        vm.startPrank(users.alice);
-        vault.withdraw(type(uint256).max, users.alice, users.alice);
-    }
-
     /*     function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
         vm.assume(amount > 1 ether / 10 && amount < 10_000 ether);
         vault.deposit(20 ether, users.alice);
@@ -457,6 +427,48 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertLe(shares, expectedShares);
         vm.stopPrank();
     } */
+
+    ////////////////////////////////////////////////////////////////
+    ///                  TEST redeem/withdraw max amount         ///
+    ////////////////////////////////////////////////////////////////
+
+    function testMaxApyVaultV2_ERC4626_RedeemMax() public {
+        deal(WETH_MAINNET, users.alice, 500 ether);
+
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
+        vault.deposit(500 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(users.alice);
+        vault.redeem(type(uint256).max, users.alice, users.alice);
+    }
+
+    function testMaxApyVaultV2_ERC4626_WithdrawMax() public {
+        deal(WETH_MAINNET, users.alice, 500 ether);
+
+        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
+        vault.deposit(500 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        strategy1.harvest(0, 0, 0, address(0));
+        strategy2.harvest(0, 0, 0, address(0));
+        strategy3.harvest(0, 0, 0, address(0));
+        strategy4.harvest(0, 0, 0, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(users.alice);
+        vault.withdraw(type(uint256).max, users.alice, users.alice);
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                  TEST sharePrice()                       ///
+    ////////////////////////////////////////////////////////////////
 
     function testMaxApyVaultV2__SharePrice() external {
         vault.deposit(20 ether, users.alice);
@@ -494,6 +506,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // the share price gets back to the initial value approx
         assertApproxEq(vault.sharePrice(), 1 ether, 0.03 ether);
     }
+
+    ////////////////////////////////////////////////////////////////
+    ///                  TEST setAutoPilot()                     ///
+    ////////////////////////////////////////////////////////////////
 
     function testMaxApyVaultV2_AutoPilot() public {
         MockRevertingStrategy revertingStrategy = new MockRevertingStrategy(address(vault), WETH_MAINNET);
@@ -539,12 +555,80 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.deposit(20 ether, users.bob);
     }
 
-    function testIntegrationHarvest() public {
-        deal(WETH_MAINNET, users.alice, 100 ether);
+    ////////////////////////////////////////////////////////////////
+    ///                  TEST exitStrategy()                     ///
+    ////////////////////////////////////////////////////////////////
 
-        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
-        vault.deposit(100 ether, users.alice);
+    function testMaxApyVaultV2__ExitStrategy() public {
+        uint256 snapshotId = vm.snapshot();
+        /// ⭕️ SCENARIO 1: exit empty strategies
 
+        // Strategy 1: Yearn
+        assertEq(vault.strategies(address(strategy1)).strategyDebtRatio, 2250);
+        assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 0);
+        assertEq(vault.withdrawalQueue(0), address(strategy1));
+        vm.expectEmit();
+        emit StrategyExited(address(strategy1), 0);
+        vault.exitStrategy(address(strategy1));
+        assertEq(strategy1.estimatedTotalAssets(), 0);
+        assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 0);
+        assertEq(vault.strategies(address(strategy1)).strategyDebtRatio, 0);
+        assertFalse(vault.strategies(address(strategy1)).autoPilot);
+        assertEq(vault.strategies(address(strategy1)).strategyActivation, 0);
+        // The strategy should no longer be in the queue
+        assertFalse(vault.withdrawalQueue(0) == address(strategy1));
+
+        // Strategy 2: Sommelier
+        assertEq(vault.strategies(address(strategy2)).strategyDebtRatio, 2250);
+        assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 0);
+        assertEq(vault.withdrawalQueue(0), address(strategy2));
+        vm.expectEmit();
+        emit StrategyExited(address(strategy2), 0);
+        vault.exitStrategy(address(strategy2));
+        assertEq(strategy2.estimatedTotalAssets(), 0);
+        assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 0);
+        assertEq(vault.strategies(address(strategy2)).strategyDebtRatio, 0);
+        assertFalse(vault.strategies(address(strategy2)).autoPilot);
+        assertEq(vault.strategies(address(strategy2)).strategyActivation, 0);
+        // The strategy should no longer be in the queue
+        assertFalse(vault.withdrawalQueue(0) == address(strategy2));
+
+        // Strategy 3: Sommelier
+        assertEq(vault.strategies(address(strategy3)).strategyDebtRatio, 2250);
+        assertEq(vault.strategies(address(strategy3)).strategyTotalDebt, 0);
+        assertEq(vault.withdrawalQueue(0), address(strategy3));
+        vm.expectEmit();
+        emit StrategyExited(address(strategy3), 0);
+        vault.exitStrategy(address(strategy3));
+        assertEq(strategy3.estimatedTotalAssets(), 0);
+        assertEq(vault.strategies(address(strategy3)).strategyTotalDebt, 0);
+        assertEq(vault.strategies(address(strategy3)).strategyDebtRatio, 0);
+        assertFalse(vault.strategies(address(strategy3)).autoPilot);
+        assertEq(vault.strategies(address(strategy3)).strategyActivation, 0);
+        // The strategy should no longer be in the queue
+        assertFalse(vault.withdrawalQueue(0) == address(strategy3));
+
+        // Strategy 4: Sommelier
+        assertEq(vault.strategies(address(strategy4)).strategyDebtRatio, 2250);
+        assertEq(vault.strategies(address(strategy4)).strategyTotalDebt, 0);
+        assertEq(vault.withdrawalQueue(0), address(strategy4));
+        vm.expectEmit();
+        emit StrategyExited(address(strategy4), 0);
+        vault.exitStrategy(address(strategy4));
+        assertEq(strategy4.estimatedTotalAssets(), 0);
+        assertEq(vault.strategies(address(strategy4)).strategyTotalDebt, 0);
+        assertEq(vault.strategies(address(strategy4)).strategyDebtRatio, 0);
+        assertFalse(vault.strategies(address(strategy4)).autoPilot);
+        assertEq(vault.strategies(address(strategy4)).strategyActivation, 0);
+        // The strategy should no longer be in the queue
+        assertFalse(vault.withdrawalQueue(0) == address(strategy4));
+        vm.revertTo(snapshotId);
+
+        /// ⭕️ SCENARIO 2: exit a strategy with funds
+        snapshotId = vm.snapshot();
+
+        /// Deposit and harvest funds
+        vault.deposit(10 ether, users.alice);
         vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, 0, address(0));
         strategy2.harvest(0, 0, 0, address(0));
@@ -553,109 +637,99 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
 
         vm.startPrank(users.alice);
-        vault.updateStrategyData(
-            address(strategy2),
-            0,
-            type(uint256).max,
-            0,
-            0
-        );
 
-        vault.updateStrategyData(
-            address(strategy3),
-            0,
-            type(uint256).max,
-            0,
-            0
-        );
+        // check vault data
+        assertEq(vault.debtRatio(), 9000);
+        assertEq(vault.totalDebt(), 9 ether);
+        assertEq(vault.totalDeposits(), 10 ether);
+        assertEq(vault.totalIdle(), 1 ether);
 
-        vault.updateStrategyData(
-            address(strategy4),
-            0,
-            type(uint256).max,
-            0,
-            0
-        );
+        // Strategy 1: Yearn
+        assertEq(vault.strategies(address(strategy1)).strategyDebtRatio, 2250);
+        assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 2.25 ether);
+        assertEq(vault.withdrawalQueue(0), address(strategy1));
 
-        vault.updateStrategyData(
-            address(strategy1),
-            8999,
-            type(uint256).max,
-            0,
-            0
-        );
-        vm.startPrank(users.keeper);
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
-        strategy1.harvest(0, 0, 0, address(0));
-        console.log("idle : ", vault.totalIdle());
-        console.log("yearn:", strategy1.estimatedTotalAssets());
-    }
+        vm.expectEmit();
+        emit StrategyExited(address(strategy1), 2.249999999999999998 ether);
+        vault.exitStrategy(address(strategy1));
+        assertApproxEq(strategy1.estimatedTotalAssets(), 0, 1);
+        assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 0);
+        assertEq(vault.strategies(address(strategy1)).strategyDebtRatio, 0);
+        assertFalse(vault.strategies(address(strategy1)).autoPilot);
+        assertEq(vault.strategies(address(strategy1)).strategyActivation, 0);
+        // The strategy should no longer be in the queue
+        assertFalse(vault.withdrawalQueue(0) == address(strategy1));
 
-    // Remove strategy test
-    function testRemoveStrategy() public {
-        deal(WETH_MAINNET, users.alice, 100 ether);
+        // check vault data
+        assertEq(vault.debtRatio(), 6750);
+        assertEq(vault.totalDebt(), 6.75 ether);
+        assertEq(vault.totalDeposits(), 9.999999999999999998 ether);
+        assertEq(vault.totalIdle(), 3.249999999999999998 ether);
 
-        IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
-        vault.deposit(100 ether, users.alice);
+        // Strategy 2: Sommelier
+        assertEq(vault.strategies(address(strategy2)).strategyDebtRatio, 2250);
+        assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 2.25 ether);
+        assertEq(vault.withdrawalQueue(0), address(strategy2));
 
-        vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
-        vm.stopPrank();
+        emit StrategyExited(address(strategy1), 2.249999999999999998 ether);
+        vault.exitStrategy(address(strategy2));
+        // some dust could be left
+        assertApproxEq(strategy2.estimatedTotalAssets(), 0, 0.01 ether);
+        assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 0);
+        assertEq(vault.strategies(address(strategy2)).strategyDebtRatio, 0);
+        assertFalse(vault.strategies(address(strategy2)).autoPilot);
+        assertEq(vault.strategies(address(strategy2)).strategyActivation, 0);
+        // The strategy should no longer be in the queue
+        assertFalse(vault.withdrawalQueue(0) == address(strategy2));
 
-        // ------------------------------------------------------------------------
+        // check vault data
+        assertEq(vault.debtRatio(), 4500);
+        assertEq(vault.totalDebt(), 4.5 ether);
+        assertEq(vault.totalDeposits(), 9.998755009497361781 ether); // slight losses from withdraw
+        assertEq(vault.totalIdle(), 5.498755009497361781 ether);
 
-        // removeStrategy.sh
-        vm.startPrank(users.alice);
-        vault.updateStrategyData(address(strategy1), 0, type(uint256).max, 0, 0);
-        vm.stopPrank();
+        // Strategy 3: Sommelier
+        assertEq(vault.strategies(address(strategy3)).strategyDebtRatio, 2250);
+        assertEq(vault.strategies(address(strategy3)).strategyTotalDebt, 2.25 ether);
+        assertEq(vault.withdrawalQueue(0), address(strategy3));
 
-        vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        vm.stopPrank();
+        emit StrategyExited(address(strategy1), 2.249999999999999998 ether);
+        vault.exitStrategy(address(strategy3));
+        // some dust could be left
+        assertApproxEq(strategy3.estimatedTotalAssets(), 0, 0.01 ether);
+        assertEq(vault.strategies(address(strategy3)).strategyTotalDebt, 0);
+        assertEq(vault.strategies(address(strategy3)).strategyDebtRatio, 0);
+        assertFalse(vault.strategies(address(strategy3)).autoPilot);
+        assertEq(vault.strategies(address(strategy3)).strategyActivation, 0);
+        // The strategy should no longer be in the queue
+        assertFalse(vault.withdrawalQueue(0) == address(strategy3));
 
-        vm.startPrank(users.alice);
-        vault.removeStrategy(address(strategy1));
-        vm.stopPrank();
-        // eof
+        // check vault data
+        assertEq(vault.debtRatio(), 2250);
+        assertEq(vault.totalDebt(), 2.25 ether);
+        assertEq(vault.totalDeposits(), 9.996511336157465263 ether); // slight losses from withdraw
+        assertEq(vault.totalIdle(), 7.746511336157465263 ether);
 
-        console.log('[YEARN] DEBT_RATIO: ',vault.strategies(address(strategy1)).strategyDebtRatio);
-        console.log('[SOM1] DEBT_RATIO: ',vault.strategies(address(strategy2)).strategyDebtRatio);
-        console.log('[SOM2] DEBT_RATIO: ',vault.strategies(address(strategy3)).strategyDebtRatio);
-        console.log('[CONVEX] DEBT_RATIO: ',vault.strategies(address(strategy4)).strategyDebtRatio);
+        // Strategy 4: Sommelier
+        assertEq(vault.strategies(address(strategy4)).strategyDebtRatio, 2250);
+        assertEq(vault.strategies(address(strategy4)).strategyTotalDebt, 2.25 ether);
+        assertEq(vault.withdrawalQueue(0), address(strategy4));
 
-        // Now do a reallocation
-        /**
-         '0x59c7d03d2e9893fb7baa89da50a9452e1e9b8b90' => { allocation: 425, apr: 0.1251496531527067 },
-         '0x6ffa22292b86d678ff6621eedc9b15e68dc44dcd' => { allocation: 8124, apr: 0.1224751938642816 },
-         '0x8cea85ec7f3d314c4d144e34f2206c8ac0bbada1' => { allocation: 451, apr: 0.10859648210667133 }
-        */
+        emit StrategyExited(address(strategy1), 2.249999999999999998 ether);
+        vault.exitStrategy(address(strategy4));
+        // some dust could be left
+        assertApproxEq(strategy4.estimatedTotalAssets(), 0, 0.01 ether);
+        assertEq(vault.strategies(address(strategy4)).strategyTotalDebt, 0);
+        assertEq(vault.strategies(address(strategy4)).strategyDebtRatio, 0);
+        assertFalse(vault.strategies(address(strategy4)).autoPilot);
+        assertEq(vault.strategies(address(strategy4)).strategyActivation, 0);
+        // The strategy should no longer be in the queue
+        assertFalse(vault.withdrawalQueue(0) == address(strategy4));
 
-        // script TypeScript
-        vm.startPrank(users.alice);
-        vault.updateStrategyData(address(strategy4), 425, type(uint256).max, 0, 0);
-        vault.updateStrategyData(address(strategy3), 451, type(uint256).max, 0, 0);
-        vault.updateStrategyData(address(strategy2), 8124, type(uint256).max, 0, 0);
-        vm.stopPrank();
-
-        vm.startPrank(users.keeper);
-        strategy4.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        vm.stopPrank();
-
-        console.log('----------------------------------------------------------------');
-        console.log('[YEARN] DEBT_RATIO: ',vault.strategies(address(strategy1)).strategyDebtRatio);
-        console.log('[SOM1] DEBT_RATIO: ',vault.strategies(address(strategy2)).strategyDebtRatio);
-        console.log('[SOM2] DEBT_RATIO: ',vault.strategies(address(strategy3)).strategyDebtRatio);
-        console.log('[CONVEX] DEBT_RATIO: ',vault.strategies(address(strategy4)).strategyDebtRatio);
-        console.log('----------------------------------------------------------------');
-
-        console.log("idle : ", vault.totalIdle());
-        console.log("yearn:", strategy1.estimatedTotalAssets());
+        // check vault data
+        assertEq(vault.debtRatio(), 0);
+        assertEq(vault.totalDebt(), 0);
+        assertEq(vault.totalDeposits(), 9.990466618247177147 ether); // slight losses from withdraw
+        assertEq(vault.totalIdle(), 9.990466618247177147 ether);
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
+import {BaseStrategy, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
 import {IConvexBooster} from "src/interfaces/IConvexBooster.sol";
 import {IConvexRewards} from "src/interfaces/IConvexRewards.sol";
 import {IUniswapV2Router02 as IRouter} from "src/interfaces/IUniswap.sol";
@@ -22,11 +22,11 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Ethereum mainnet's CRV Token
-    IERC20 public constant crv = IERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);
+    address public constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     /// @notice Ethereum mainnet's CVX Token
-    IERC20 public constant cvx = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
+    address public constant cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     /// @notice Ethereum mainnet's frxETH Token
-    IERC20 public constant frxETH = IERC20(0x5E8422345238F34275888049021821E8E08CAa1f);
+    address public constant frxETH = 0x5E8422345238F34275888049021821E8E08CAa1f;
     /// @notice Main Convex's deposit contract for LP tokens
     IConvexBooster public constant convexBooster = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
     /// @notice Router to perform CRV-WETH swaps
@@ -103,9 +103,9 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @notice Main Convex's reward contract for all Convex LP pools
     IConvexRewards public convexRewardPool;
     /// @notice Convex pool's lp token address
-    IERC20 public convexLpToken;
+    address public convexLpToken;
     /// @notice Main reward token for `convexRewardPool`
-    IERC20 public rewardToken;
+    address public rewardToken;
 
     /*==================CURVE-RELATED STORAGE VARIABLES==================*/
     /// @notice Main Curve pool for this Strategy
@@ -158,8 +158,8 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         }
 
         convexRewardPool = IConvexRewards(_crvRewards);
-        convexLpToken = IERC20(_token);
-        rewardToken = IERC20(IConvexRewards(_crvRewards).rewardToken());
+        convexLpToken = _token;
+        rewardToken = IConvexRewards(_crvRewards).rewardToken();
 
         // Curve init
         curveLpPool = _curveLpPool;
@@ -171,10 +171,10 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         // Set router
         router = _router;
 
-        address(crv).safeApprove(address(_router), type(uint256).max);
-        address(cvx).safeApprove(address(cvxWethPool), type(uint256).max);
-        address(frxETH).safeApprove(address(curveLpPool), type(uint256).max);
-        address(frxETH).safeApprove(address(curveEthFrxEthPool), type(uint256).max);
+        crv.safeApprove(address(_router), type(uint256).max);
+        cvx.safeApprove(address(cvxWethPool), type(uint256).max);
+        frxETH.safeApprove(address(curveLpPool), type(uint256).max);
+        frxETH.safeApprove(address(curveEthFrxEthPool), type(uint256).max);
 
         maxSingleTrade = 1_000 * 1e18;
 
@@ -234,9 +234,9 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @param _newRouter The new router address
     function setRouter(address _newRouter) external checkRoles(ADMIN_ROLE) {
         // Remove previous router allowance
-        address(crv).safeApprove(address(router), 0);
+        crv.safeApprove(address(router), 0);
         // Set new router allowance
-        address(crv).safeApprove(_newRouter, type(uint256).max);
+        crv.safeApprove(_newRouter, type(uint256).max);
 
         assembly ("memory-safe") {
             sstore(router.slot, _newRouter) // set the new router in storage
@@ -255,7 +255,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewWithdraw(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
+    function previewLiquidate(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -277,24 +277,24 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewWithdrawRequest(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
+    function previewLiquidateExact(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
         uint256 underlyingBalance = _underlyingBalance();
         requestedAmount = liquidatedAmount;
         if (underlyingBalance < liquidatedAmount) {
             // increase 1% to be pessimistic
-            requestedAmount = previewWithdraw(liquidatedAmount) * 101 / 100;
+            requestedAmount = previewLiquidate(liquidatedAmount) * 101 / 100;
         }
         return requestedAmount + underlyingBalance;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxWithdraw() public view override returns (uint256) {
-        return estimatedTotalAssets();
+    function maxLiquidate() public view override returns (uint256) {
+        return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxRequest() public view override returns (uint256) {
-        return previewWithdraw(estimatedTotalAssets()) * 99 / 100;
+    function maxLiquidateExact() public view override returns (uint256) {
+        return previewLiquidate(_estimatedTotalAssets()) * 99 / 100;
     }
     /// @notice Returns the amount of Curve LP tokens staked in Convex
     /// @return the amount of staked LP tokens
@@ -387,13 +387,11 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
 
                 uint256 stakedBalance = _stakedBalance(convexRewardPool);
 
-                if(lpToWithdraw > stakedBalance) {
+                if (lpToWithdraw > stakedBalance) {
                     lpToWithdraw = stakedBalance;
                 }
 
                 uint256 withdrawn = _divest(lpToWithdraw);
-
-
 
                 // Account for loss occured on withdrawal from Convex
                 if (withdrawn < expectedAmountToWithdraw) {
@@ -606,7 +604,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         uint256 crvBalance = _crvBalance();
         if (crvBalance > minSwapCrv) {
             address[] memory path = new address[](2);
-            path[0] = address(crv);
+            path[0] = crv;
             path[1] = underlyingAsset;
             router.swapExactTokensForTokens(crvBalance, 0, path, address(this), block.timestamp);
         }
