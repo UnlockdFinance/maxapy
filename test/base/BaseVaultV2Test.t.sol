@@ -26,11 +26,11 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
     IMaxApyVaultV2 public vault;
     address public TREASURY;
 
-    function setupVault(string memory chain) public {
+    function setupVault(string memory chain, address asset) public {
         super._setUp(chain);
         /// Fork mode activated
         TREASURY = makeAddr("treasury");
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(asset, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
         vault = IMaxApyVaultV2(address(maxApyVault));
     }
 
