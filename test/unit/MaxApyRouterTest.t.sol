@@ -83,12 +83,13 @@ contract MaxApyRouterTest is BaseVaultV2Test {
     }
 
     ////////////////////////////////////////////////////////////////
-    ///                      Test redeem()                        ///
+    ///                      Test redeem()                       ///
     ////////////////////////////////////////////////////////////////
 
     function testMaxApyRouter__Redeem() public {
         router.deposit(vault, 10 ether, users.alice, 1e25);  
-        router.redeem(vault, 1e25, users.alice, 10 ether);
+        uint256 assets = router.redeem(vault, 1e25, users.alice, 10 ether);
+        assertEq(assets, 10 ether);
         assertEq(vault.totalDeposits(), 0);
         assertEq(vault.totalSupply(), 0);
     }
@@ -100,4 +101,24 @@ contract MaxApyRouterTest is BaseVaultV2Test {
         assertEq(vault.totalDeposits(), 10 ether);
         assertEq(vault.totalSupply(), 1e25);
     }
+
+    function testMaxApyRouter__Redeem_Native() public {
+        router.deposit(vault, 10 ether, users.alice, 1e25);  
+        uint256 assets = router.redeemNative(vault, 1e25, users.alice, 10 ether);
+        assertEq(assets, 10 ether);
+        assertEq(vault.totalDeposits(), 0);
+        assertEq(vault.totalSupply(), 0);
+    }
+
+    function testMaxApyRouter__Redeem_Native_InsufficientAssets() public {
+        router.deposit(vault, 10 ether, users.alice, 1e25);  
+        vm.expectRevert(abi.encodeWithSignature("InsufficientAssets()"));
+        router.redeemNative(vault, 1e25, users.alice, 10 ether + 1);
+        assertEq(vault.totalDeposits(), 10 ether);
+        assertEq(vault.totalSupply(), 1e25);
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                      Test withdraw()                     ///
+    ////////////////////////////////////////////////////////////////
 }

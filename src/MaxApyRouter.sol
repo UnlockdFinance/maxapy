@@ -36,7 +36,7 @@ contract MaxApyRouter {
     /// @param amount The amount of underlying assets to deposit
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
-    function deposit(IMaxApyVaultV2 vault, uint256 amount, address recipient, uint256 minSharesOut) external returns(uint256) {
+    function deposit(IMaxApyVaultV2 vault, uint256 amount, address recipient, uint256 minSharesOut) external returns(uint256 sharesOut) {
         address asset = vault.asset();
         address cachedVault = address(vault);
         asset.safeTransferFrom(msg.sender, address(this), amount);
@@ -67,18 +67,16 @@ contract MaxApyRouter {
             }
 
             // cache shares
-            let shares := mload(0x00)
+            sharesOut := mload(0x00)
 
             // check that shares aren't fewer than requested
-            if lt(shares, minSharesOut) {
+            if lt(sharesOut, minSharesOut) {
                 // throw the `InsufficientShares` error
                 mstore(0x00, 0x39996567)
                 revert(0x1c, 0x04)
             }
 
             mstore(0x40, m) // Restore the free memory pointer
-
-            return(0x00, 0x20) // Return `shares` value stored in 0x00 from previous from call's
         }
     }
 
@@ -91,7 +89,7 @@ contract MaxApyRouter {
     function depositNative(IMaxApyVaultV2 vault, address recipient, uint256 minSharesOut)
         external
         payable
-        returns (uint256)
+        returns (uint256 sharesOut)
     {
         // Cache `wrappedToken` and `vault` due to assembly's immutable access restrictions
         address cachedWrappedToken = address(wrappedToken);
@@ -156,18 +154,16 @@ contract MaxApyRouter {
             }
 
             // cache shares
-            let shares := mload(0x00)
+            sharesOut := mload(0x00)
 
             // check that shares aren't fewer than requested
-            if lt(shares, minSharesOut) {
+            if lt(sharesOut, minSharesOut) {
                 // throw the `InsufficientShares` error
                 mstore(0x00, 0x39996567)
                 revert(0x1c, 0x04)
             }
 
             mstore(0x40, m) // Restore the free memory pointer
-
-            return(0x00, 0x20) // Return `shares` value stored in 0x00 from previous from call's
         }
     }
 
@@ -180,12 +176,10 @@ contract MaxApyRouter {
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
     function redeem(IMaxApyVaultV2 vault, uint256 shares, address recipient, uint256 minAmountOut)
         external
-        returns (uint256)
+        returns (uint256 amountOut)
     {
         // Cache `wrappedToken` and `vault` due to assembly's immutable access restrictions
         address cachedVault = address(vault);
-
-        uint256 amountWithdrawn;
 
         assembly ("memory-safe") {
             // Cache the free memory pointer
@@ -195,8 +189,8 @@ contract MaxApyRouter {
             // `bytes4(keccak256("redeem(uint256,address,address)"))`
             mstore(0x00, 0xba087652)
             mstore(0x20, shares) // append the `shares` argument
-            mstore(0x40, caller()) // append the `operator` argument
-            mstore(0x60, recipient) // append the `recipient` argument
+            mstore(0x40, recipient) // append the `recipient` argument
+            mstore(0x60, caller()) // append the `operator` argument
 
             // Withdraw from MaxApy vault
             if iszero(
@@ -214,10 +208,10 @@ contract MaxApyRouter {
                 revert(0x00, 0x04)
             }
 
-            // Store `amountWithdrawn` returned by the previous call to `withdraw()`
-            amountWithdrawn := mload(0x00)
+            // Store `amountOut` returned by the previous call to `withdraw()`
+            amountOut := mload(0x00)
 
-            if lt(amountWithdrawn, minAmountOut) {
+            if lt(amountOut, minAmountOut) {
                 // Throw the `InsufficientAssets` error
                 mstore(0x00, 0x96d80433)
                 revert(0x1c, 0x04)
@@ -226,8 +220,6 @@ contract MaxApyRouter {
             
             mstore(0x60, 0) // Restore the zero slot
             mstore(0x40, m) // Restore the free memory pointer
-
-            return(0x20, 0x20) // Return `amountWithdrawn` value stored in 0x00 from previous from call's
         }
     }
 
@@ -241,13 +233,11 @@ contract MaxApyRouter {
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
     function redeemNative(IMaxApyVaultV2 vault, uint256 shares, address recipient, uint256 minAmountOut)
         external
-        returns (uint256)
+        returns (uint256 amountOut)
     {
         // Cache `wrappedToken` and `vault` due to assembly's immutable access restrictions
         address cachedWrappedToken = address(wrappedToken);
         address cachedVault = address(vault);
-
-        uint256 amountWithdrawn;
 
         assembly ("memory-safe") {
             // Cache the free memory pointer
@@ -255,10 +245,10 @@ contract MaxApyRouter {
 
             // Store `vault`'s `redeem()` function selector:
             // `bytes4(keccak256("redeem(uint256,address,address)"))`
-            mstore(0x00, 0xe63697c8)
+            mstore(0x00, 0xba087652)
             mstore(0x20, shares) // append the `shares` argument
-            mstore(0x40, caller()) // append the `operator` argument
-            mstore(0x60, address()) // append the `recipient` argument
+            mstore(0x40, address()) // append the `recipient` argument
+            mstore(0x60, caller()) // append the `operator` argument
 
             // Withdraw from MaxApy vault
             if iszero(
@@ -276,10 +266,10 @@ contract MaxApyRouter {
                 revert(0x00, 0x04)
             }
 
-            // Store `amountWithdrawn` returned by the previous call to `withdraw()`
-            amountWithdrawn := mload(0x00)
+            // Store `amountOut` returned by the previous call to `withdraw()`
+            amountOut := mload(0x00)
 
-            if lt(amountWithdrawn, minAmountOut) {
+            if lt(amountOut, minAmountOut) {
                 // Throw the `InsufficientAssets` error
                 mstore(0x00, 0x96d80433)
                 revert(0x1c, 0x04)
@@ -288,7 +278,7 @@ contract MaxApyRouter {
             // Store `wrappedToken`'s `withdraw()` function selector:
             // `bytes4(keccak256("withdraw(uint256)"))`
             mstore(0x00, 0x2e1a7d4d)
-            mstore(0x20, amountWithdrawn) // append the `amountWithdrawn` argument
+            mstore(0x20, amountOut) // append the `amountOut` argument
 
             // Withdraw from wrapped token
             if iszero(
@@ -307,7 +297,7 @@ contract MaxApyRouter {
             }
 
             // Transfer native token back to user
-            if iszero(call(gas(), recipient, amountWithdrawn, 0x00, 0x00, 0x00, 0x00)) {
+            if iszero(call(gas(), recipient, amountOut, 0x00, 0x00, 0x00, 0x00)) {
                 // If call failed, throw the `FailedNativeTransfer()` error
                 mstore(0x00, 0x3c3f4130)
                 revert(0x1c, 0x04)
@@ -315,8 +305,6 @@ contract MaxApyRouter {
 
             mstore(0x60, 0) // Restore the zero slot
             mstore(0x40, m) // Restore the free memory pointer
-
-            return(0x20, 0x20) // Return `amountWithdrawn` value stored in 0x00 from previous from call's
         }
     }
 
