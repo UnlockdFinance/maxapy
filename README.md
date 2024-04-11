@@ -37,6 +37,7 @@ src
         ├─ DAI — "DAI strategies" 
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnAjnaDAIStakingStrategy
+                ├─YearnDAIStrategy
         ├─ USDC — "USDC strategies" 
             ├─ sommelier — "Strategies interacting with Sommelier Finance"
                 ├─SommelierTurboGHOStrategy
