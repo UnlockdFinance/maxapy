@@ -75,7 +75,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
         bytes32 _strategyName,
         address _strategist,
         IYVault _yVault
-    ) public initializer {
+    ) public virtual initializer {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
@@ -281,7 +281,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// Strategy.
     /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
+    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal virtual override {
         uint256 toInvest = _underlyingBalance();
         if (toInvest > minSingleTrade) {
             _invest(toInvest, minOutputAfterInvestment);
@@ -292,7 +292,11 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal returns (uint256 depositedAmount) {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+        internal
+        virtual
+        returns (uint256 depositedAmount)
+    {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
 
@@ -326,7 +330,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
     /// but in terms of yvault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
-    function _divest(uint256 shares) internal returns (uint256 withdrawn) {
+    function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
         // return uint256 withdrawn = yVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
@@ -395,7 +399,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @notice Determines the current value of `shares`.
     /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view returns (uint256) {
+    function _shareValue(uint256 shares) internal view virtual returns (uint256) {
         uint256 vaultTotalSupply;
         assembly {
             // get yVault.totalSupply()
@@ -410,7 +414,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view returns (uint256 shares) {
+    function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
         uint256 freeFunds = _freeFunds();
         assembly {
             // if freeFunds != 0 return amount
