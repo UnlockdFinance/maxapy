@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /// @author adapted from Uniswap V3 https://github.com/Uniswap/v3-periphery/blob/main/contracts/libraries/OracleLibrary.sol
+pragma solidity ^0.8.19;
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
