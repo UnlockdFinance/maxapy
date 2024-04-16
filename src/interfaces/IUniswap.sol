@@ -231,3 +231,10 @@ interface IUniswapV3Router {
 
     function exactOutput(ExactOutputParams calldata params) external payable returns (uint256 amountIn);
 }
+
+interface IUniswapV3Pool {
+    function observe(uint32[] calldata secondsAgos)
+        external
+        view
+        returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s);
+}

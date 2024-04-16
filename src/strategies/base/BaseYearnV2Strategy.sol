@@ -38,6 +38,9 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @notice Emitted when the strategy's min single trade value is updated
     event MinSingleTradeUpdated(uint256 minSingleTrade);
 
+    /// @notice Emitted when the strategy's max single trade value is updated
+    event MaxSingleTradeUpdated(uint256 maxSingleTrade);
+
     // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
@@ -50,6 +53,10 @@ contract BaseYearnV2Strategy is BaseStrategy {
     uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
 
+    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
+    uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
+        0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
+
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
@@ -58,6 +65,8 @@ contract BaseYearnV2Strategy is BaseStrategy {
     IYVault public yVault;
     /// @notice Minimun trade size within the strategy
     uint256 public minSingleTrade;
+    /// @notice Maximum trade size within the strategy
+    uint256 public maxSingleTrade;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -75,7 +84,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
         bytes32 _strategyName,
         address _strategist,
         IYVault _yVault
-    ) public initializer {
+    ) public virtual initializer {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
@@ -107,6 +116,25 @@ contract BaseYearnV2Strategy is BaseStrategy {
         }
     }
 
+    /// @notice Sets the maximum single trade amount allowed
+    /// @param _maxSingleTrade The new maximum single trade value
+    function setMaxSingleTrade(uint256 _maxSingleTrade) external checkRoles(ADMIN_ROLE) {
+        assembly ("memory-safe") {
+            // revert if `_maxSingleTrade` is zero
+            if iszero(_maxSingleTrade) {
+                // throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
+            }
+
+            sstore(maxSingleTrade.slot, _maxSingleTrade) // set the max single trade value in storage
+
+            // Emit the `MaxSingleTradeUpdated` event
+            mstore(0x00, _maxSingleTrade)
+            log1(0x00, 0x20, _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
+        }
+    }
+
     ////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
@@ -115,7 +143,13 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewLiquidate(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
+    function previewLiquidate(uint256 requestedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 liquidatedAmount)
+    {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
@@ -140,7 +174,13 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewLiquidateExact(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
+    function previewLiquidateExact(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
         // we cannot predict losses so return as if there were not
         // increase 1% to be pessimistic
         return previewLiquidate(liquidatedAmount) * 101 / 100;
@@ -281,7 +321,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// Strategy.
     /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
+    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal virtual override {
         uint256 toInvest = _underlyingBalance();
         if (toInvest > minSingleTrade) {
             _invest(toInvest, minOutputAfterInvestment);
@@ -292,7 +332,11 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal returns (uint256 depositedAmount) {
+    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+        internal
+        virtual
+        returns (uint256 depositedAmount)
+    {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
 
@@ -326,7 +370,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
     /// but in terms of yvault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
-    function _divest(uint256 shares) internal returns (uint256 withdrawn) {
+    function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
         // return uint256 withdrawn = yVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
@@ -395,7 +439,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @notice Determines the current value of `shares`.
     /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view returns (uint256) {
+    function _shareValue(uint256 shares) internal view virtual returns (uint256) {
         uint256 vaultTotalSupply;
         assembly {
             // get yVault.totalSupply()
@@ -410,7 +454,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view returns (uint256 shares) {
+    function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
         uint256 freeFunds = _freeFunds();
         assembly {
             // if freeFunds != 0 return amount
