@@ -22,6 +22,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
     /// @notice LUSD token address in mainnet
+
     address public constant lusd = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
     /// @notice Router to perform USDC-LUSD swaps
     IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
@@ -65,7 +66,13 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewLiquidate(uint256 requestedAmount) public view virtual override returns (uint256 liquidatedAmount) {
+    function previewLiquidate(uint256 requestedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 liquidatedAmount)
+    {
         // account pessimistically, we want the expected to always be lesser than the actual
         return super.previewLiquidate(requestedAmount) * 99 / 100;
     }
@@ -74,13 +81,17 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewLiquidateExact(uint256 liquidatedAmount) public view virtual override returns (uint256 requestedAmount) {
+    function previewLiquidateExact(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
         // we cannot predict losses so return as if there were not
         // increase 1% to be pessimistic
         return super.previewLiquidate(liquidatedAmount) * 101 / 100;
     }
-
-
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
@@ -147,7 +158,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         // check that shares is not greater than actual shares balance
         uint256 sharesBalance = yVault.balanceOf(address(this));
-        if(shares > sharesBalance) shares = sharesBalance;
+        if (shares > sharesBalance) shares = sharesBalance;
         // return uint256 withdrawn = yVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
@@ -220,12 +231,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
         // estimate the LUSD value of the underlying amount
-        amount = _estimateAmountOut(
-            underlyingAsset,
-            lusd,
-            uint128(amount), 
-            10
-        ); 
+        amount = _estimateAmountOut(underlyingAsset, lusd, uint128(amount), 10);
         uint256 freeFunds = _freeFunds();
         assembly {
             // if freeFunds != 0 return amount
@@ -256,7 +262,6 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         view
         returns (uint256 amountOut)
     {
-        
         // Code copied from OracleLibrary.sol, consult()
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[0] = secondsAgo;
