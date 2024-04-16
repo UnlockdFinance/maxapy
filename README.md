@@ -30,6 +30,7 @@ src
     ├─ ERC20 — "Abstract ERC20 implementation"
     ├─ Initializable — "Base contract for proxy initialization"
     ├─ ReentrancyGuard — "Efficient Solidity & assembly version of ReentrancyGuard"
+    ├─ OracleLibrary — "Adapted from UniswapV3 OracleLibrary library"
 ├─ strategies
     ├─ base
         ├─ BaseStrategy — "Base vault strategy implementation"
