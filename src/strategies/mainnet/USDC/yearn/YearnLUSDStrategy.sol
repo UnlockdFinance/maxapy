@@ -11,7 +11,6 @@ import {
 } from "src/strategies/base/BaseYearnV2Strategy.sol";
 import {IUniswapV3Router as IRouter, IUniswapV3Pool} from "src/interfaces/IUniswap.sol";
 import {OracleLibrary} from "src/lib/OracleLibrary.sol";
-import "forge-std/console.sol";
 
 /// @title YearnLUSDStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -19,16 +18,6 @@ import "forge-std/console.sol";
 /// earning the Yearn Vault's yield
 contract YearnLUSDStrategy is BaseYearnV2Strategy {
     using SafeTransferLib for address;
-    ////////////////////////////////////////////////////////////////
-    ///                         EVENTS                           ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Emitted when the strategy's max single trade value is updated
-    event MaxSingleTradeUpdated(uint256 maxSingleTrade);
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
-
-    uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
@@ -38,12 +27,6 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
     /// @notice Address of Uniswap V3 USDC-LUSD pool
     address public constant pool = 0x4e0924d3a751bE199C426d52fb1f2337fa96f736;
-
-    ////////////////////////////////////////////////////////////////
-    ///            STRATEGY GLOBAL STATE VARIABLES               ///
-    ////////////////////////////////////////////////////////////////
-    /// @notice Maximum trade size within the strategy
-    uint256 public maxSingleTrade;
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -70,31 +53,8 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         /// Mininmum single trade is 0.01 token units
         minSingleTrade = 10 ** IERC20(underlyingAsset).decimals() / 100;
 
-        /// Max single treade
+        /// Max single trade
         maxSingleTrade = 10 ** IERC20(underlyingAsset).decimals() * 10_000;
-    }
-
-    ////////////////////////////////////////////////////////////////
-    ///                 STRATEGY CONFIGURATION                   ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Sets the maximum single trade amount allowed
-    /// @param _maxSingleTrade The new maximum single trade value
-    function setMaxSingleTrade(uint256 _maxSingleTrade) external checkRoles(ADMIN_ROLE) {
-        assembly ("memory-safe") {
-            // revert if `_maxSingleTrade` is zero
-            if iszero(_maxSingleTrade) {
-                // throw the `InvalidZeroAmount` error
-                mstore(0x00, 0xdd484e70)
-                revert(0x1c, 0x04)
-            }
-
-            sstore(maxSingleTrade.slot, _maxSingleTrade) // set the max single trade value in storage
-
-            // Emit the `MaxSingleTradeUpdated` event
-            mstore(0x00, _maxSingleTrade)
-            log1(0x00, 0x20, _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
-        }
     }
 
     ////////////////////////////////////////////////////////////////

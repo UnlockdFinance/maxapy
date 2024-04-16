@@ -38,6 +38,9 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @notice Emitted when the strategy's min single trade value is updated
     event MinSingleTradeUpdated(uint256 minSingleTrade);
 
+    /// @notice Emitted when the strategy's max single trade value is updated
+    event MaxSingleTradeUpdated(uint256 maxSingleTrade);
+
     // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
@@ -50,6 +53,10 @@ contract BaseYearnV2Strategy is BaseStrategy {
     uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
 
+    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
+    uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
+        0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
+
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
@@ -58,6 +65,8 @@ contract BaseYearnV2Strategy is BaseStrategy {
     IYVault public yVault;
     /// @notice Minimun trade size within the strategy
     uint256 public minSingleTrade;
+    /// @notice Maximum trade size within the strategy
+    uint256 public maxSingleTrade;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -106,6 +115,26 @@ contract BaseYearnV2Strategy is BaseStrategy {
             log1(0x00, 0x20, _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
         }
     }
+
+    /// @notice Sets the maximum single trade amount allowed
+    /// @param _maxSingleTrade The new maximum single trade value
+    function setMaxSingleTrade(uint256 _maxSingleTrade) external checkRoles(ADMIN_ROLE) {
+        assembly ("memory-safe") {
+            // revert if `_maxSingleTrade` is zero
+            if iszero(_maxSingleTrade) {
+                // throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
+            }
+
+            sstore(maxSingleTrade.slot, _maxSingleTrade) // set the max single trade value in storage
+
+            // Emit the `MaxSingleTradeUpdated` event
+            mstore(0x00, _maxSingleTrade)
+            log1(0x00, 0x20, _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
+        }
+    }
+
 
     ////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
