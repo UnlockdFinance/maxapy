@@ -967,7 +967,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidate()               ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaDAI_Staking__PreviewWithraw() public {
+    function testYearnAjnaDAI_Staking__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -980,7 +980,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 30 ether - loss);
     }
 
-    /*     function testYearnAjnaDAI_Staking__PreviewWithraw__FUZZY(uint256 amount) public {
+    /*     function testYearnAjnaDAI_Staking__PreviewLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(DAI_MAINNET, users.alice, amount * 2);
@@ -998,7 +998,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidateExact()        ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaDAI_Staking__PreviewWithrawRequest() public {
+    function testYearnAjnaDAI_Staking__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1015,7 +1015,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn - 30 ether, requestedAmount - 30 ether);
     }
 
-    /*     function testYearnAjnaDAI_Staking__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+    /*     function testYearnAjnaDAI_Staking__PreviewLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(DAI_MAINNET, users.alice, amount * 2);
@@ -1079,7 +1079,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     ///                     TEST maxWithdraw()                   ///
     ////////////////////////////////////////////////////////////////
 
-    function testYearnAjnaDAI_Staking__MaxWithdraw() public {
+    function testYearnAjnaDAI_Staking__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1093,7 +1093,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
-    /*     function testYearnAjnaDAI_Staking__MaxWithdraw__FUZZY(uint256 amount) public {
+    /*     function testYearnAjnaDAI_Staking__MaxLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(DAI_MAINNET, users.alice, amount * 2);

@@ -70,6 +70,8 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         vm.label(YVAULT_LUSD_MAINNET, "yVault");
         vm.label(address(proxy), "YearnLUSDStrategy");
         vm.label(address(USDC_MAINNET), "USDC");
+        vm.label(LUSD_MAINNET, "LUSD");
+        vm.label(0xE592427A0AEce92De3Edee1F18E0157C05861564, "UniswapV3Router");
 
         strategy = IStrategyWrapper(address(_proxy));
 
@@ -316,9 +318,9 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         ///     - `debtPayment` -> 1 * _1_USDC (value passed as `debtOutstanding`)
         snapshotId = vm.snapshot();
 
-        deal({token: USDC_MAINNET, to: address(strategy), give: 60 * _1_USDC});
+        deal({token: LUSD_MAINNET, to: address(strategy), give: 60 ether});
         /// Perform initial investment in yearn from the strategy side
-        strategy.investYearn(60 * _1_USDC);
+        strategy.investYearn(60 ether);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
@@ -332,23 +334,23 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 0);
         assertEq(realizedProfit, 0);
-        assertEq(unrealizedProfit, 59999999);
+        assertEq(unrealizedProfit, 59772602);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
 
-        assertEq(realizedProfit, 59999998);
-        assertEq(unrealizedProfit, 59999999);
+        assertEq(realizedProfit, 59762840);
+        assertEq(unrealizedProfit, 59772602);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
 
         vm.revertTo(beforeReturnSnapshotId);
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 5000);
 
-        assertEq(realizedProfit, 29999999);
-        assertEq(unrealizedProfit, 59999999);
+        assertEq(realizedProfit, 29886301);
+        assertEq(unrealizedProfit, 59772602);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
 
@@ -408,7 +410,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Invested(address(strategy), 10 * _1_USDC);
         strategy.adjustPosition();
-        assertApproxEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedShares / 1000);
+        assertApproxEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedShares / 100);
 
         /// Perform 100 ETH investment
         deal({token: USDC_MAINNET, to: address(strategy), give: 100 * _1_USDC});
@@ -416,7 +418,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Invested(address(strategy), 100 * _1_USDC);
         strategy.adjustPosition();
-        assertApproxEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedShares / 1000);
+        assertApproxEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedShares / 100);
 
         /// Perform 500 ETH investment
         deal({token: USDC_MAINNET, to: address(strategy), give: 500 * _1_USDC});
@@ -424,7 +426,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Invested(address(strategy), 500 * _1_USDC);
         strategy.adjustPosition();
-        assertApproxEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedShares / 1000);
+        assertApproxEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedShares / 100);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -465,14 +467,14 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         strategy.invest(10 * _1_USDC, 0);
-        assertEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)));
+        assertApproxEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedShares / 1000);
 
         /// Divest
         uint256 strategyBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(strategy));
         vm.expectEmit();
-        emit Divested(address(strategy), expectedShares, 10 * _1_USDC - 1);
+        emit Divested(address(strategy), IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), 9990002);
         uint256 amountDivested = strategy.divest(expectedShares);
-        assertEq(amountDivested, 10 * _1_USDC - 1);
+        assertEq(amountDivested, 9990002);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
@@ -498,18 +500,18 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         strategy.invest(5 * _1_USDC, 0);
         deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
         (liquidatedAmount, loss) = strategy.liquidatePosition(15 * _1_USDC);
-        assertEq(liquidatedAmount, 14999999);
+        assertEq(liquidatedAmount, 15 * _1_USDC);
         /// 14.99 * _1_USDC
-        assertEq(loss, 1);
+        assertEq(loss, 0);
 
         /// Scenario 2
         deal({token: USDC_MAINNET, to: address(strategy), give: 1000 * _1_USDC});
         strategy.invest(1000 * _1_USDC, 0);
         deal({token: USDC_MAINNET, to: address(strategy), give: 500 * _1_USDC});
         (liquidatedAmount, loss) = strategy.liquidatePosition(1000 * _1_USDC);
-        assertEq(liquidatedAmount, 999999999);
+        assertEq(liquidatedAmount, 1000 * _1_USDC);
         /// 99.99 * _1_USDC
-        assertEq(loss, 1);
+        assertEq(loss, 0);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -518,31 +520,29 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
     function testYearnLUSD__LiquidateAllPositions() public {
         /// Perform 10 ETH investment
         deal({token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC});
-        uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         strategy.invest(10 * _1_USDC, 0);
-        assertEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)));
+        assertEq(8985645551792277568, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)));
 
         /// Liquidate
         uint256 strategyBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(strategy));
         uint256 amountFreed = strategy.liquidateAllPositions();
-        assertEq(amountFreed, 9999999);
+        assertEq(amountFreed, 9990002);
         /// 1 wei loss divesting
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + 9999999);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + 9990002);
         /// 1 wei loss divesting
         assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Perform 500 ETH investment
         deal({token: USDC_MAINNET, to: address(strategy), give: 500 * _1_USDC});
-        expectedShares = strategy.sharesForAmount(500 * _1_USDC);
         strategy.invest(500 * _1_USDC, 0);
-        assertEq(expectedShares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)));
+        assertEq(449281972299904088519, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)));
 
         /// Liquidate
         strategyBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
-        assertEq(amountFreed, 499999999);
+        assertEq(amountFreed, 499500125);
         /// 1 wei loss divesting
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + 499999999);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + 499500125);
         /// 1 wei loss divesting
         assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), 0);
     }
@@ -608,7 +608,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
 
         uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
-        assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertApproxEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, expectedStrategyShareBalance / 100);
 
         /// 2. Strategy takes 10 ETH profit
 
@@ -647,7 +647,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
         /// the strategy reinvests all the profit
         uint256 shares = strategy.sharesForAmount(10 * _1_USDC);
-        assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "1");
+        assertApproxEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)) / 100);
 
         vm.revertTo(beforeReportSnapshotId);
 
@@ -683,7 +683,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC + 4523000);
         /// the strategy reinvests the profit partially          // 5.477 * _1_USDC
         shares = strategy.sharesForAmount(5477000);
-        assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "2");
+        assertApproxEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)) / 100);
 
         vm.revertTo(snapshotId);
 
@@ -733,7 +733,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
-        assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, "3");
+        assertApproxEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, expectedStrategyShareBalance / 100);
 
         /// Step #2
         vm.startPrank(users.alice);
@@ -748,16 +748,16 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49999999,
-            /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
+            49960010,
+            /// vault gain - all of strategy's funds (40 initial ETH + 9.96 ETH gain)
             0,
-            /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
+            /// vault gain - all of strategy's funds (40 initial ETH + 9.96 ETH gain)
             0,
             /// vault loss
             0,
             /// vault debtPayment
-            uint128(49999999),
-            /// strategy gain - 9.99999 ETH
+            uint128(49960010),
+            /// strategy gain - 9.96 ETH
             0,
             /// strategy loss
             uint128(40 * _1_USDC),
@@ -769,11 +769,11 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49999999, 0, 0, 0);
+        emit Harvested(49960010, 0, 0, 0);
 
         /// only harvest 50% of profit, but it wont have any effect since its an emergency exit
         strategy.harvest(0, 0, 5000, address(0));
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109999999);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109960010);
         assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
@@ -819,7 +819,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
-        assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, "4");
+        assertApproxEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, expectedStrategyShareBalance / 100);
 
         /// 2. Strategy loses 10 ETH
         /// - Expected a 1000 reduction in debt ratio, 30% of total funds should be in the strategy
@@ -838,13 +838,13 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
             0,
             /// vault gain,
             0,
-            10 * _1_USDC,
-            /// vault loss - 10 * _1_USDC
+            10  * _1_USDC,
+            /// vault loss - 10 USDC
             0,
             /// vault debtPayment
             0,
             /// strategy gain
-            uint128(10 * _1_USDC),
+            uint128(10  * _1_USDC),
             /// strategy loss - 10 ETH
             uint128(30 * _1_USDC),
             /// strategy total debt: 10 ETH less than initial debt
@@ -855,7 +855,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         /// debtratio reduced
 
         vm.expectEmit();
-        emit Harvested(0, 10 * _1_USDC, 0, 3 * _1_USDC);
+        emit Harvested(0, 10  * _1_USDC, 0, 3 * _1_USDC);
         /// 10 ETH loss
         /// if we request to harvest only 30% of profit it wont have any effect neither,
         /// since the strategy has loses only
@@ -875,13 +875,13 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
             0,
             /// vault gain,
             0,
-            1,
-            /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt should be 27 ETH but was 30 ETH), causing 1 wei loss
-            2999999,
+            1481,
+            /// vault loss - > 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt should be 27 ETH but was 30 ETH), causing 1 wei loss
+            2998519,
             /// vault debtPayment (3 ETH - 1 wei loss)
             0,
             /// strategy gain
-            uint128(10 * _1_USDC + 1),
+            uint128(10 * _1_USDC + 1481),
             /// strategy loss - 10 ETH previously lost + 1 wei loss
             uint128(27 * _1_USDC),
             /// strategy total debt: 27 ETH, back to regular values
@@ -892,12 +892,12 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         /// debtratio: 30% of funds shared with strategy
 
         vm.expectEmit();
-        emit Harvested(0, 1 wei, 2999999, 1);
+        emit Harvested(0, 1481, 2998519, 445);
         /// 10 ETH loss
 
         uint256 vaultBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy));
-        uint256 expectedShareDecrease = strategy.sharesForAmount(2999999);
+        uint256 expectedShareDecrease = strategy.sharesForAmount(2998519);
         // here requesting 20% wont have any effect neither
         strategy.harvest(0, 0, 2000, address(0));
 
@@ -907,8 +907,8 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         assertEq(vault.totalDebt(), 27 * _1_USDC);
         assertEq(data.strategyDebtRatio, 3000);
         assertEq(data.strategyTotalDebt, 27 * _1_USDC);
-        assertEq(data.strategyTotalLoss, 10 * _1_USDC + 1);
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), vaultBalanceBefore + 2999999);
+        assertEq(data.strategyTotalLoss, 10 * _1_USDC + 1481);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), vaultBalanceBefore + 2998519);
         assertLe(
             IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
         );
@@ -917,7 +917,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidate()               ///
     ////////////////////////////////////////////////////////////////
-    function testYearnLUSD__PreviewWithraw() public {
+    function testYearnLUSD__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -926,12 +926,12 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         uint256 expected = strategy.previewLiquidate(30 * _1_USDC);
         vm.startPrank(address(vault));
         uint256 loss = strategy.liquidate(30 * _1_USDC);
-        // expect the Sommelier's {previewRedeem} to be fully precise
-        assertEq(expected, 30 * _1_USDC - loss);
+        // expected should not be greater than actual
+        assertLe(expected, 30 * _1_USDC - loss);
     }
 
-    /*     function testYearnLUSD__PreviewWithraw__FUZZY(uint256 amount) public {
-        vm.assume(amount > 1e16 && amount <= 1000 * _1_USDC);
+   /*  function testYearnLUSD__PreviewLiquidate__FUZZY(uint256 amount) public {
+        vm.assume(amount > 1e4 && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);
@@ -941,14 +941,14 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         uint256 expected = strategy.previewLiquidate(amount);
         vm.startPrank(address(vault));
         uint256 loss = strategy.liquidate(amount);
-        // expect the Sommelier's {previewRedeem} to be fully precise
-        assertEq(expected, amount - loss);
+        // expected should not be greater than actual
+        assertLe(expected, amount - loss);
     } */
 
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidateExact()        ///
     ////////////////////////////////////////////////////////////////
-    function testYearnLUSD__PreviewWithrawRequest() public {
+    function testYearnLUSD__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -965,8 +965,8 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn - 30 * _1_USDC, requestedAmount - 30 * _1_USDC);
     }
 
-    /*     function testYearnLUSD__PreviewWithrawRequest__FUZZY(uint256 amount) public {
-        vm.assume(amount > 1e16 && amount <= 1000 * _1_USDC);
+  /*   function testYearnLUSD__PreviewLiquidateExact__FUZZY(uint256 amount) public {
+        vm.assume(amount > 1e4 && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);       
@@ -1004,9 +1004,9 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         // losses are equal or fewer than expected
         assertLe(losses, requestedAmount - maxLiquidateExact);
     }
-    /* 
-    function testYearnLUSD__maxLiquidateExact__FUZZY(uint256 amount) public {
-        vm.assume(amount > 1e16 && amount <= 1000 * _1_USDC);
+    
+    /* function testYearnLUSD__maxLiquidateExact__FUZZY(uint256 amount) public {
+        vm.assume(amount > 1e4 && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);       
@@ -1023,13 +1023,13 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
         assertLe(losses, requestedAmount - maxLiquidateExact);
-    }
-    */
+    } */
+   
     ////////////////////////////////////////////////////////////////
     ///                     TEST maxWithdraw()                   ///
     ////////////////////////////////////////////////////////////////
 
-    function testYearnLUSD__MaxWithdraw() public {
+    function testYearnLUSD__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -1043,8 +1043,8 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
-    /*     function testYearnLUSD__MaxWithdraw__FUZZY(uint256 amount) public {
-        vm.assume(amount > 1e16 && amount <= 1000 * _1_USDC);
+  /*   function testYearnLUSD__MaxLiquidate__FUZZY(uint256 amount) public {
+        vm.assume(amount > 1e4 && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
         vault.deposit(amount * 2,users.alice);

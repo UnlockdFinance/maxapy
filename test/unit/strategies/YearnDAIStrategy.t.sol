@@ -914,7 +914,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidate()               ///
     ////////////////////////////////////////////////////////////////
-    function testYearnDAI__PreviewWithraw() public {
+    function testYearnDAI__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -927,7 +927,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 30 ether - loss);
     }
 
-    /*     function testYearnDAI__PreviewWithraw__FUZZY(uint256 amount) public {
+    /*     function testYearnDAI__PreviewLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(DAI_MAINNET, users.alice, amount * 2);
@@ -945,7 +945,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidateExact()        ///
     ////////////////////////////////////////////////////////////////
-    function testYearnDAI__PreviewWithrawRequest() public {
+    function testYearnDAI__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -962,7 +962,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn - 30 ether, requestedAmount - 30 ether);
     }
 
-    /*     function testYearnDAI__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+    /*     function testYearnDAI__PreviewLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(DAI_MAINNET, users.alice, amount * 2);
@@ -1026,7 +1026,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
     ///                     TEST maxWithdraw()                   ///
     ////////////////////////////////////////////////////////////////
 
-    function testYearnDAI__MaxWithdraw() public {
+    function testYearnDAI__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1040,7 +1040,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
-    /*     function testYearnDAI__MaxWithdraw__FUZZY(uint256 amount) public {
+    /*     function testYearnDAI__MaxLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(DAI_MAINNET, users.alice, amount * 2);

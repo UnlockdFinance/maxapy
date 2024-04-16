@@ -98,6 +98,31 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     }
 
     ////////////////////////////////////////////////////////////////
+    ///                    VIEW FUNCTIONS                        ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
+    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
+    /// @return liquidatedAmount output in assets
+    function previewLiquidate(uint256 requestedAmount) public view virtual override returns (uint256 liquidatedAmount) {
+        // account pessimistically, we want the expected to always be lesser than the actual
+        return super.previewLiquidate(requestedAmount) * 99 / 100;
+    }
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewLiquidateExact(uint256 liquidatedAmount) public view virtual override returns (uint256 requestedAmount) {
+        // we cannot predict losses so return as if there were not
+        // increase 1% to be pessimistic
+        return super.previewLiquidate(liquidatedAmount) * 101 / 100;
+    }
+
+
+
+    ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
@@ -160,6 +185,9 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// but in terms of yvault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
+        // check that shares is not greater than actual shares balance
+        uint256 sharesBalance = yVault.balanceOf(address(this));
+        if(shares > sharesBalance) shares = sharesBalance;
         // return uint256 withdrawn = yVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
@@ -184,7 +212,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
             })
         );
 
-        withdrawn = _lusdBalance();
+        withdrawn = _underlyingBalance();
 
         assembly {
             // Emit the `Divested` event
@@ -262,6 +290,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     }
 
     /// @notice returns the estimated result of a Uniswap V3 swap
+    /// @dev use TWAP oracle for more safety
     function _estimateAmountOut(address tokenIn, address tokenOut, uint128 amountIn, uint32 secondsAgo)
         internal
         view
