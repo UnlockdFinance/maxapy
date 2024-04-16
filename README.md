@@ -43,6 +43,7 @@ src
                 ├─SommelierTurboGHOStrategy
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDCStrategy
+                ├─YearnLUSDStrategy
         ├─ WETH — "Wrapped Ether strategies" 
             ├─ convex — "Strategies interacting with Convex Finance"
                 ├─ConvexdETHFrxETHStrategy 
