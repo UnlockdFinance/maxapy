@@ -5,7 +5,6 @@ import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strateg
 import {IYVault} from "src/interfaces/IYVault.sol";
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-import "forge-std/console.sol";
 
 /// @author MaxApy
 /// @notice `BaseYearnV2Strategy` sets the base functionality to be implemented by MaxApy YearnV3 strategies.

@@ -11,12 +11,14 @@ contract Tokens {
     address public constant ST_ETH_MAINNET = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address public constant DAI_MAINNET = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address public constant LUSD_MAINNET = 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0;
+    address public constant USDT_MAINNET = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
     /// @notice polygon tokens
     address public constant USDC_POLYGON = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
 
     /// @notice token units
     uint256 public _1_USDC = 1e6;
+    uint256 public _1_USDT = _1_USDC;
     uint256 public _1_DAI = 1 ether;
 
     /// @notice Getter function for tokens
