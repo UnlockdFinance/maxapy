@@ -45,6 +45,9 @@ src
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDCStrategy
                 ├─YearnLUSDStrategy
+        ├─ USDC — "USDC strategies" 
+            ├─ yearn — "Strategies interacting with Yearn"
+                ├─YearnUSDTStrategy
         ├─ WETH — "Wrapped Ether strategies" 
             ├─ convex — "Strategies interacting with Convex Finance"
                 ├─ConvexdETHFrxETHStrategy 
