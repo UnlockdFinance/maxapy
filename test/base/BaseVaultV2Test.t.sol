@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Unlicense
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import {IMaxApyVaultV2} from "../../src/interfaces/IMaxApyVaultV2.sol";
 import {MaxApyVaultV2, StrategyData} from "../../src/MaxApyVaultV2.sol";

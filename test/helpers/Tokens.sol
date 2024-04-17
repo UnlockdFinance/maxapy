@@ -24,11 +24,12 @@ contract Tokens {
     /// @notice Getter function for tokens
     function getTokensList(string memory chain) public pure returns (address[] memory) {
         if (keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("MAINNET"))) {
-            address[] memory tokens = new address[](4);
+            address[] memory tokens = new address[](5);
             tokens[0] = WETH_MAINNET;
             tokens[1] = USDC_MAINNET;
             tokens[2] = DAI_MAINNET;
             tokens[3] = LUSD_MAINNET;
+            tokens[4] = USDT_MAINNET;
             return tokens;
         } else if (keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("POLYGON"))) {
             address[] memory tokens = new address[](1);
