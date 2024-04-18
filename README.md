@@ -45,7 +45,7 @@ src
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDCStrategy
                 ├─YearnLUSDStrategy
-        ├─ USDC — "USDC strategies" 
+        ├─ USDT — "USDT strategies" 
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDTStrategy
         ├─ WETH — "Wrapped Ether strategies" 
@@ -66,6 +66,9 @@ src
         ├─ USDC — "USDC strategies" 
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnMaticUSDCStakingStrategy
+        ├─ USDT — "USDT strategies" 
+            ├─ yearn — "Strategies interacting with Yearn"
+                ├─YearnUSDTStrategy
 ├─ MaxApyVaultV2 — "Yield farming vault"
 ```
 
