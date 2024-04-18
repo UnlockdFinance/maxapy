@@ -15,6 +15,7 @@ contract Tokens {
 
     /// @notice polygon tokens
     address public constant USDC_POLYGON = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
+    address public constant USDT_POLYGON = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F;
 
     /// @notice token units
     uint256 public _1_USDC = 1e6;
@@ -32,8 +33,9 @@ contract Tokens {
             tokens[4] = USDT_MAINNET;
             return tokens;
         } else if (keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("POLYGON"))) {
-            address[] memory tokens = new address[](1);
+            address[] memory tokens = new address[](2);
             tokens[0] = USDC_POLYGON;
+            tokens[1] = USDT_POLYGON;
             return tokens;
         } else {
             revert("InvalidChain");
