@@ -66,6 +66,7 @@ src
         ├─ USDC — "USDC strategies" 
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnMaticUSDCStakingStrategy
+                ├─YearnAjnaUSDCStrategy
         ├─ USDT — "USDT strategies" 
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDTStrategy
