@@ -10,6 +10,7 @@ import {IStrategy} from "../../interfaces/IStrategy.sol";
 import {IMaxApyVaultV2} from "../../interfaces/IMaxApyVaultV2.sol";
 import {Initializable} from "../../lib/Initializable.sol";
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import "forge-std/console.sol";
 
 /// @title BaseStrategy
 /// @author Forked and adapted from https://github.com/yearn/yearn-vaults/blob/master/contracts/BaseStrategy.sol
@@ -306,9 +307,10 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             mstore(0x60, 0) // Restore the zero slot
             mstore(0x40, m) // Restore the free memory pointer
         }
-
+        console.log("GOOD");
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, minOutputAfterInvestment);
+        console.log("GOOD BAD");
         _snapshotEstimatedTotalAssets();
 
         assembly ("memory-safe") {
