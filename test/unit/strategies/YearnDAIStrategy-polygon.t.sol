@@ -40,7 +40,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
     function setUp() public {
         super._setUp("POLYGON");
         vm.rollFork(53869145);
-        
+
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVaultV2
