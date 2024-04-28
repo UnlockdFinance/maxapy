@@ -126,12 +126,13 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
-            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
-            uint256 withdrawn = _exitPool(amountToWithdraw);
+            // calculate the amount of LP tokens to withdraw
+            uint256 lpToWithdraw = ((amountNeeded - underlyingBalance) * 1e18 / _lpPrice()) * 101 / 100; // account pessimistically
+            uint256 burntShares = cellar.withdraw(lpToWithdraw, address(this), address(this));
+            _exitPool(lpToWithdraw);
             // use sub zero because shares could be fewer than expected and underflow
             uint256 lpTokens = cellar.convertToAssets(burntShares);
-            loss = _sub0(_lpValue(lpTokens), amountNeeded);
+            loss = _sub0(amountNeeded - underlyingBalance, _lpValue(lpTokens));
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
@@ -211,12 +212,12 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         uint256 underlyingBalance = _underlyingBalance();
         uint256 loss;
         if (underlyingBalance < liquidatedAmount) {
-            uint256 amountToWithdraw = liquidatedAmount - underlyingBalance;
-            uint256 burntShares = cellar.previewWithdraw(amountToWithdraw);
+            // calculate the amount of LP tokens to withdraw
+            uint256 lpToWithdraw = ((liquidatedAmount - underlyingBalance) * 1e18 / _lpPrice()) * 101 / 100; // account pessimistically
+            uint256 burntShares = cellar.previewWithdraw(lpToWithdraw);
             // use sub zero because shares could be fewer than expected and underflow
             uint256 lpTokens = cellar.convertToAssets(burntShares);
-            // account losses pessimistically so real losses are never greater
-            loss = _sub0(_lpValue(lpTokens), liquidatedAmount) * 101 / 100;
+            loss = _sub0(liquidatedAmount - underlyingBalance, _lpValue(lpTokens));
         }
         requestedAmount = liquidatedAmount + loss;
     }
@@ -228,7 +229,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
-        return _underlyingBalance() + cellar.maxWithdraw(address(this));
+        return _underlyingBalance() + (_lpValue(cellar.maxWithdraw(address(this)))) * 99 / 100;
     }
 
     ////////////////////////////////////////////////////////////////
