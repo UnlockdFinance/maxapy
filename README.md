@@ -63,10 +63,18 @@ src
                 ├─YearnWETHStrategy
                 ├─YearnAjnaWETHStakingStrategy
     ├─ polygon — "Polygon chain strategies" 
+       ├─ DAI — "DAI strategies" 
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnDAIStrategy
+                ├─YearnDAILendingStrategy
         ├─ USDC — "USDC strategies" 
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnMaticUSDCStakingStrategy
                 ├─YearnAjnaUSDCStrategy
+        ├─ USDCe — "USDCe strategies" 
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnUSDCeStrategy            
+                ├─YearnUSDCeLendingStrategy                
         ├─ USDT — "USDT strategies" 
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDTStrategy
