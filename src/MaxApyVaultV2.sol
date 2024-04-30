@@ -1845,7 +1845,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
         uint256 strategyDebtRatio = strategies[strategy].strategyDebtRatio;
         totalIdle += withdrawn;
-        // Cannot undeflow
+        // Cannot underflow
         unchecked {
             totalDebt -= strategyTotalDebt;
             debtRatio -= strategyDebtRatio;
