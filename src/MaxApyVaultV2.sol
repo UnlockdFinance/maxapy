@@ -920,7 +920,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
             // from strategies until requested value amount is covered.
             // During forced withdrawal, the vault will do exact amount requests to the strategies
-            // and account the losses needed to achieve those amounts. Those 
+            // and account the losses needed to achieve those amounts. Those
             // losses are reported back to the vault This will affect the withdrawer, affecting the amount of shares that will
             // burn in order to withdraw exactly @param assets assets
 
@@ -1385,7 +1385,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
             // from strategies until requested value amount is covered.
             // During forced withdrawal, the vault will do exact amount requests to the strategies
-            // and account the losses needed to achieve those amounts. Those 
+            // and account the losses needed to achieve those amounts. Those
             // losses are reported back to the vault This will affect the withdrawer, affecting the amount of shares that will
             // burn in order to withdraw exactly @param assets assets
 

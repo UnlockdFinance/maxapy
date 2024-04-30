@@ -30,13 +30,24 @@ src
     ├─ ERC20 — "Abstract ERC20 implementation"
     ├─ Initializable — "Base contract for proxy initialization"
     ├─ ReentrancyGuard — "Efficient Solidity & assembly version of ReentrancyGuard"
+    ├─ OracleLibrary — "Adapted from UniswapV3 OracleLibrary library"
 ├─ strategies
     ├─ base
         ├─ BaseStrategy — "Base vault strategy implementation"
     ├─ mainnet — "Mainent chain strategies" 
+        ├─ DAI — "DAI strategies" 
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnAjnaDAIStakingStrategy
+                ├─YearnDAIStrategy
         ├─ USDC — "USDC strategies" 
             ├─ sommelier — "Strategies interacting with Sommelier Finance"
                 ├─SommelierTurboGHOStrategy
+            ├─ yearn — "Strategies interacting with Yearn"
+                ├─YearnUSDCStrategy
+                ├─YearnLUSDStrategy
+        ├─ USDT — "USDT strategies" 
+            ├─ yearn — "Strategies interacting with Yearn"
+                ├─YearnUSDTStrategy
         ├─ WETH — "Wrapped Ether strategies" 
             ├─ convex — "Strategies interacting with Convex Finance"
                 ├─ConvexdETHFrxETHStrategy 
@@ -49,9 +60,21 @@ src
                 ├─YearnWETHStrategy
                 ├─YearnAjnaWETHStakingStrategy
     ├─ polygon — "Polygon chain strategies" 
+       ├─ DAI — "DAI strategies" 
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnDAIStrategy
+                ├─YearnDAILendingStrategy
         ├─ USDC — "USDC strategies" 
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnMaticUSDCStakingStrategy
+                ├─YearnAjnaUSDCStrategy
+        ├─ USDCe — "USDCe strategies" 
+            ├─ yearn — "Strategies interacting with Yearn Finance"
+                ├─YearnUSDCeStrategy            
+                ├─YearnUSDCeLendingStrategy                
+        ├─ USDT — "USDT strategies" 
+            ├─ yearn — "Strategies interacting with Yearn"
+                ├─YearnUSDTStrategy
 ├─ MaxApyVaultV2 — "Yield farming vault"
 ```
 

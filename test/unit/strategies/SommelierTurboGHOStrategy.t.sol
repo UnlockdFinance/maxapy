@@ -886,7 +886,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidate()               ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierTurboGHO__PreviewWithraw() public {
+    function testSommelierTurboGHO__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -899,7 +899,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 30 * _1_USDC - loss);
     }
 
-    /*  function testSommelierTurboGHO__PreviewWithraw__FUZZY(uint256 amount) public {
+    /*  function testSommelierTurboGHO__PreviewLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
@@ -917,7 +917,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidateExact()        ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierTurboGHO__PreviewWithrawRequest() public {
+    function testSommelierTurboGHO__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -934,7 +934,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn - 30 * _1_USDC, requestedAmount - 30 * _1_USDC);
     }
     /* 
-    function testSommelierTurboGHO__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+    function testSommelierTurboGHO__PreviewLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
@@ -998,7 +998,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST maxWithdraw()                   ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierTurboGHO__MaxWithdraw() public {
+    function testSommelierTurboGHO__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -1012,7 +1012,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
-    /*     function testSommelierTurboGHO__MaxWithdraw__FUZZY(uint256 amount) public {
+    /*     function testSommelierTurboGHO__MaxLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount >= _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);

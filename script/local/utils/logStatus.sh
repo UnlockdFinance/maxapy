@@ -7,20 +7,20 @@ sharePrice=$(cast call $VAULT "sharePrice()(uint256)")
 # 2.- [4eStrategy] estimatedTotalAssets
 estimatedTotalAssetsYearn=$(cast call $YEARN_STRATEGY "estimatedTotalAssets()(uint256)")
 estimatedTotalAssetsConvex=$(cast call $CONVEX_STRATEGY "estimatedTotalAssets()(uint256)")
-estimatedTotalAssetsSommelier1=$(cast call $YEARN_ST_ETH_STRATEGY "estimatedTotalAssets()(uint256)")
-estimatedTotalAssetsSommelier2=$(cast call $YEARN_ST_ETH_DEPOSIT_ST_ETH_STRATEGY "estimatedTotalAssets()(uint256)")
+estimatedTotalAssetsSommelier1=$(cast call $SOMMELIER_ST_ETH_STRATEGY "estimatedTotalAssets()(uint256)")
+estimatedTotalAssetsSommelier2=$(cast call $SOMMELIER_ST_ETH_DEPOSIT_ST_ETH_STRATEGY "estimatedTotalAssets()(uint256)")
 
 # 2.5.- [4eStrategy] getStrategyTotalDebt
 getStrategyTotalDebtYearn=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $YEARN_STRATEGY)
 getStrategyTotalDebtConvex=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $CONVEX_STRATEGY)
-getStrategyTotalDebtSommelier1=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $YEARN_ST_ETH_STRATEGY)
-getStrategyTotalDebtSommelier2=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $YEARN_ST_ETH_DEPOSIT_ST_ETH_STRATEGY)
+getStrategyTotalDebtSommelier1=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $SOMMELIER_ST_ETH_STRATEGY)
+getStrategyTotalDebtSommelier2=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $SOMMELIER_ST_ETH_DEPOSIT_ST_ETH_STRATEGY)
 
 # 4.- [4eStrategy] unharvestedAmount
 unharvestedAmountYearn=$(cast call $YEARN_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
 unharvestedAmountConvex=$(cast call $CONVEX_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
-unharvestedAmountSommelier1=$(cast call $YEARN_ST_ETH_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
-unharvestedAmountSommelier2=$(cast call $YEARN_ST_ETH_DEPOSIT_ST_ETH_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
+unharvestedAmountSommelier1=$(cast call $SOMMELIER_ST_ETH_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
+unharvestedAmountSommelier2=$(cast call $SOMMELIER_ST_ETH_DEPOSIT_ST_ETH_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
 
 # 3.- [Vault] totalAssets
 totalAssets=$(cast call $VAULT "totalAssets()(uint256)")

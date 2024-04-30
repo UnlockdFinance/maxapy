@@ -917,7 +917,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidate()               ///
     ////////////////////////////////////////////////////////////////
-    function testYearnUSDC__PreviewWithraw() public {
+    function testYearnUSDC__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -930,7 +930,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, 30 * _1_USDC - loss);
     }
 
-    /*     function testYearnUSDC__PreviewWithraw__FUZZY(uint256 amount) public {
+    /*     function testYearnUSDC__PreviewLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
@@ -948,7 +948,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidateExact()        ///
     ////////////////////////////////////////////////////////////////
-    function testYearnUSDC__PreviewWithrawRequest() public {
+    function testYearnUSDC__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -965,7 +965,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn - 30 * _1_USDC, requestedAmount - 30 * _1_USDC);
     }
 
-    /*     function testYearnUSDC__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+    /*     function testYearnUSDC__PreviewLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
@@ -1029,7 +1029,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
     ///                     TEST maxWithdraw()                   ///
     ////////////////////////////////////////////////////////////////
 
-    function testYearnUSDC__MaxWithdraw() public {
+    function testYearnUSDC__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -1043,7 +1043,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
-    /*     function testYearnUSDC__MaxWithdraw__FUZZY(uint256 amount) public {
+    /*     function testYearnUSDC__MaxLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);

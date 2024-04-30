@@ -1195,7 +1195,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidate()               ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierTurboDivEth__PreviewWithraw() public {
+    function testSommelierTurboDivEth__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1207,7 +1207,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         assertGe(30 ether - loss, expected);
     }
 
-    /*  function testSommelierTurboDivEth__PreviewWithraw__FUZZY(uint256 amount) public {
+    /*  function testSommelierTurboDivEth__PreviewLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH_MAINNET, users.alice, amount * 2);
@@ -1224,7 +1224,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidateExact()        ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierTurboDivEth__PreviewWithrawRequest() public {
+    function testSommelierTurboDivEth__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1241,7 +1241,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         assertLe(losses, requestedAmount - 30 ether);
     }
 
-    /*  function testSommelierTurboDivEth__PreviewWithrawRequest__FUZZY(uint256 amount) public {
+    /*  function testSommelierTurboDivEth__PreviewLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH_MAINNET, users.alice, amount * 2);
@@ -1304,7 +1304,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST maxWithdraw()                   ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierTurboDivEth__MaxWithdraw() public {
+    function testSommelierTurboDivEth__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -1318,7 +1318,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
-    /* function testSommelierTurboDivEth__MaxWithdraw__FUZZY(uint256 amount) public {
+    /* function testSommelierTurboDivEth__MaxLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.00001 ether && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(WETH_MAINNET, users.alice, amount * 2);

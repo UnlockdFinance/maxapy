@@ -18,7 +18,7 @@ contract VaultPermiTest is BaseVaultV2Test {
     address internal owner;
 
     function setUp() public {
-        setupVault("MAINNET");
+        setupVault("MAINNET", USDC_MAINNET);
 
         /// Prepare signature tests
         sigUtils = new SigUtils(IERC20Permit(USDC_MAINNET).DOMAIN_SEPARATOR());

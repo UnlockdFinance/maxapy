@@ -306,7 +306,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             mstore(0x60, 0) // Restore the zero slot
             mstore(0x40, m) // Restore the free memory pointer
         }
-
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, minOutputAfterInvestment);
         _snapshotEstimatedTotalAssets();
