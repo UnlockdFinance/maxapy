@@ -486,13 +486,12 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
     }
 
-    /**
-     *  @notice Provides an indication of whether this strategy is currently "active"
-     *  in that it is managing an active position, or will manage a position in
-     *  the future. This should correlate to `harvest()` activity, so that Harvest
-     *  events can be tracked externally by indexing agents.
-     *  @return True if the strategy is actively managing a position.
-     */
+    
+    /// @notice Provides an indication of whether this strategy is currently "active"
+    /// in that it is managing an active position, or will manage a position in
+    /// the future. This should correlate to `harvest()` activity, so that Harvest
+    /// events can be tracked externally by indexing agents.
+    /// @return True if the strategy is actively managing a position.
     function isActive() public view returns (bool) {
         return estimatedTotalAssets() != 0;
     }
@@ -525,6 +524,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
     }
 
+    /// @notice caches estimated total assets
     function _snapshotEstimatedTotalAssets() internal {
         // snapshot of the estimated total assets
         lastEstimatedTotalAssets = _estimatedTotalAssets();
