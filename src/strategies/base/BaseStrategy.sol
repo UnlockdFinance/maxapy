@@ -486,7 +486,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         return Math.min(lastEstimatedTotalAssets, _estimatedTotalAssets());
     }
 
-    
     /// @notice Provides an indication of whether this strategy is currently "active"
     /// in that it is managing an active position, or will manage a position in
     /// the future. This should correlate to `harvest()` activity, so that Harvest
