@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {YearnV3WETH2Strategy, SafeTransferLib} from "src/strategies/mainnet/WETH/yearn/YearnV3WETH2Strategy.sol";
+import { YearnV3WETH2Strategy, SafeTransferLib } from "src/strategies/mainnet/WETH/yearn/YearnV3WETH2Strategy.sol";
 
 contract YearnV3WETH2StrategyWrapper is YearnV3WETH2Strategy {
     using SafeTransferLib for address;
@@ -14,7 +14,11 @@ contract YearnV3WETH2StrategyWrapper is YearnV3WETH2Strategy {
         vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
-    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)
+    function prepareReturn(
+        uint256 debtOutstanding,
+        uint256 minExpectedBalance,
+        uint256 harvestedProvitBPS
+    )
         external
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {

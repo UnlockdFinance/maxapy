@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
-import {IConvexBooster} from "src/interfaces/IConvexBooster.sol";
-import {IConvexRewards} from "src/interfaces/IConvexRewards.sol";
-import {IUniswapV2Router02 as IRouter} from "src/interfaces/IUniswap.sol";
-import {ICurve} from "src/interfaces/ICurve.sol";
-import {IWETH} from "src/interfaces/IWETH.sol";
+import { BaseStrategy, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
+import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
+import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
+import { ICurve } from "src/interfaces/ICurve.sol";
+import { IWETH } from "src/interfaces/IWETH.sol";
 
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title ConvexdETHFrxETHStrategy
 /// @author MaxApy
@@ -125,7 +125,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -142,7 +142,10 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         ICurve _curveLpPool,
         ICurve _curveEthFrxEthPool,
         IRouter _router
-    ) public initializer {
+    )
+        public
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
 
         // Fetch convex pool data
@@ -176,7 +179,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         frxETH.safeApprove(address(curveLpPool), type(uint256).max);
         frxETH.safeApprove(address(curveEthFrxEthPool), type(uint256).max);
 
-        maxSingleTrade = 1_000 * 1e18;
+        maxSingleTrade = 1000 * 1e18;
 
         minSwapCrv = 1e17;
         minSwapCvx = 1e18;
@@ -326,7 +329,11 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
+    function _prepareReturn(
+        uint256 debtOutstanding,
+        uint256 minExpectedBalance,
+        uint256 harvestedProfitBPS
+    )
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
@@ -484,7 +491,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         IWETH(address(underlyingAsset)).withdraw(amount);
 
         // Swap ETH for frxETH
-        uint256 frxEthReceivedAmount = curveEthFrxEthPool.exchange{value: amount}(0, 1, amount, 0);
+        uint256 frxEthReceivedAmount = curveEthFrxEthPool.exchange{ value: amount }(0, 1, amount, 0);
 
         // Add liquidity to the dETH-frxETH pool in frxETH [coin1 -> frxETH]
         uint256 lpReceived = curveLpPool.add_liquidity([0, frxEthReceivedAmount], 0);
@@ -498,7 +505,8 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
             }
         }
 
-        // Deposit Curve LP into Convex pool with id `DETH_FRXETH_CONVEX_POOL_ID` and immediately stake convex LP tokens into the rewards contract
+        // Deposit Curve LP into Convex pool with id `DETH_FRXETH_CONVEX_POOL_ID` and immediately stake convex LP tokens
+        // into the rewards contract
         convexBooster.deposit(DETH_FRXETH_CONVEX_POOL_ID, lpReceived, true);
 
         emit Invested(address(this), amount);
@@ -507,7 +515,8 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     }
 
     /// @notice Divests amount `amount` from the Convex pool
-    /// Note that divesting from the pool could potentially cause loss, so the divested amount might actually be different from
+    /// Note that divesting from the pool could potentially cause loss, so the divested amount might actually be
+    /// different from
     /// the requested `amount` to divest
     /// @dev care should be taken, as the `amount` parameter is not in terms of underlying,
     /// but in terms of Curve's LP tokens
@@ -530,7 +539,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         uint256 ethReceived = curveEthFrxEthPool.exchange(1, 0, amountWithdrawn, 0);
 
         // Wrap ETH into WETH
-        IWETH(address(underlyingAsset)).deposit{value: ethReceived}();
+        IWETH(address(underlyingAsset)).deposit{ value: ethReceived }();
 
         return ethReceived;
     }
@@ -538,13 +547,15 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @notice Liquidate up to `amountNeeded` of MaxApy vaul's `underlyingAsset` of this strategy's positions,
     /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy vault's `underlyingAsset` tokens made available by the
-    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether the
+    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
+    /// the
     /// difference is due to a realized loss, or if there is some other sitution at play
     /// (e.g. locked funds) where the amount made available is less than what is needed.
     /// NOTE: The invariant `liquidatedAmount + loss <= amountNeeded` should always be maintained
     /// @param amountNeeded amount of MaxApy vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
-    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
+    /// amount
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override
@@ -670,5 +681,5 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     }
 
     //solhint-disable no-empty-blocks
-    receive() external payable {}
+    receive() external payable { }
 }

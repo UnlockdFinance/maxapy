@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
 
 contract MockRevertingStrategy {
     error HarvestFailed();
@@ -32,7 +32,9 @@ contract MockRevertingStrategy {
         uint256 minOutputAfterInvestment,
         uint256 harvestedProfitBPS,
         address harvester
-    ) external {
+    )
+        external
+    {
         revert HarvestFailed();
     }
 

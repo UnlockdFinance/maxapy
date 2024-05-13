@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {StrategyData} from "../helpers/VaultTypes.sol";
+import { StrategyData } from "../helpers/VaultTypes.sol";
 
 interface IStrategy {
     /// Roles
@@ -16,7 +16,8 @@ interface IStrategy {
         uint256 minOutputAfterInvestment,
         uint256 harvestedPreofitBPS,
         address harvester
-    ) external;
+    )
+        external;
 
     function setEmergencyExit(uint256 _emergencyExit) external;
 

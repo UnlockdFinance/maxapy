@@ -9,8 +9,8 @@ import {
     IERC20,
     Math
 } from "src/strategies/base/BaseYearnV2Strategy.sol";
-import {IUniswapV3Router as IRouter, IUniswapV3Pool} from "src/interfaces/IUniswap.sol";
-import {OracleLibrary} from "src/lib/OracleLibrary.sol";
+import { IUniswapV3Router as IRouter, IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 
 /// @title YearnLUSDStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -40,7 +40,11 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         bytes32 _strategyName,
         address _strategist,
         IYVault _yVault
-    ) public override initializer {
+    )
+        public
+        override
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
@@ -101,7 +105,10 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+    function _invest(
+        uint256 amount,
+        uint256 minOutputAfterInvestment
+    )
         internal
         override
         returns (uint256 depositedAmount)
@@ -257,7 +264,12 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
 
     /// @notice returns the estimated result of a Uniswap V3 swap
     /// @dev use TWAP oracle for more safety
-    function _estimateAmountOut(address tokenIn, address tokenOut, uint128 amountIn, uint32 secondsAgo)
+    function _estimateAmountOut(
+        address tokenIn,
+        address tokenOut,
+        uint128 amountIn,
+        uint32 secondsAgo
+    )
         internal
         view
         returns (uint256 amountOut)

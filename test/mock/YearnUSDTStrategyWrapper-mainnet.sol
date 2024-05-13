@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {YearnUSDTStrategy, SafeTransferLib} from "src/strategies/mainnet/USDT/yearn/YearnUSDTStrategy.sol";
+import { YearnUSDTStrategy, SafeTransferLib } from "src/strategies/mainnet/USDT/yearn/YearnUSDTStrategy.sol";
 
 contract YearnUSDTStrategyWrapper is YearnUSDTStrategy {
     using SafeTransferLib for address;
@@ -18,7 +18,11 @@ contract YearnUSDTStrategyWrapper is YearnUSDTStrategy {
         vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
-    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)
+    function prepareReturn(
+        uint256 debtOutstanding,
+        uint256 minExpectedBalance,
+        uint256 harvestedProvitBPS
+    )
         external
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {

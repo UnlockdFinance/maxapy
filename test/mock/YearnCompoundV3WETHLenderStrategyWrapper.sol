@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {YearnCompoundV3WETHLenderStrategy, SafeTransferLib} from "src/strategies/mainnet/WETH/yearn/YearnCompoundV3WETHLenderStrategy.sol";
+import {
+    YearnCompoundV3WETHLenderStrategy,
+    SafeTransferLib
+} from "src/strategies/mainnet/WETH/yearn/YearnCompoundV3WETHLenderStrategy.sol";
 
 contract YearnCompoundV3WETHLenderStrategyWrapper is YearnCompoundV3WETHLenderStrategy {
     using SafeTransferLib for address;
@@ -14,7 +17,11 @@ contract YearnCompoundV3WETHLenderStrategyWrapper is YearnCompoundV3WETHLenderSt
         vault.report(gain, gain, loss, debtPayment, treasury);
     }
 
-    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)
+    function prepareReturn(
+        uint256 debtOutstanding,
+        uint256 minExpectedBalance,
+        uint256 harvestedProvitBPS
+    )
         external
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {

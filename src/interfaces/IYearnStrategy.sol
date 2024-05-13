@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {IStrategy} from "./IStrategy.sol";
+import { IStrategy } from "./IStrategy.sol";
 
 interface IYearnStrategy is IStrategy {
     /// roles

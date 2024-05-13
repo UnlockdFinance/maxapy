@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
-import {DSTest} from "ds-test/test.sol";
-import {Vm} from "forge-std/Vm.sol";
-import {StdCheats} from "forge-std/StdCheats.sol";
-import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import { DSTest } from "ds-test/test.sol";
+import { Vm } from "forge-std/Vm.sol";
+import { StdCheats } from "forge-std/StdCheats.sol";
+import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract Utilities is DSTest, StdCheats {
     Vm internal immutable vm = Vm(HEVM_ADDRESS);
@@ -16,9 +16,9 @@ contract Utilities is DSTest, StdCheats {
     /// @dev Generates an address by hashing the name, labels the address and funds it with test assets.
     function createUser(string memory name, address[] calldata tokens) external returns (address payable addr) {
         addr = payable(makeAddr(name));
-        vm.deal({account: addr, newBalance: 1000 ether});
+        vm.deal({ account: addr, newBalance: 1000 ether });
         for (uint256 i; i < tokens.length;) {
-            deal({token: tokens[i], to: addr, give: 1000 * 10 ** IERC20Metadata(tokens[i]).decimals()});
+            deal({ token: tokens[i], to: addr, give: 1000 * 10 ** IERC20Metadata(tokens[i]).decimals() });
 
             unchecked {
                 ++i;

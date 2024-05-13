@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {IWrappedToken} from "src/interfaces/IWrappedToken.sol";
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {IERC20Permit} from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
+import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
+import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 
 /// @title MaxApy Vault Universal Router
 /// @notice A helper contract to safely and easily interact with MaxApy universal vaults
@@ -37,7 +37,12 @@ contract MaxApyRouter {
     /// @param amount The amount of underlying assets to deposit
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
-    function deposit(IMaxApyVaultV2 vault, uint256 amount, address recipient, uint256 minSharesOut)
+    function deposit(
+        IMaxApyVaultV2 vault,
+        uint256 amount,
+        address recipient,
+        uint256 minSharesOut
+    )
         external
         returns (uint256 sharesOut)
     {
@@ -98,7 +103,10 @@ contract MaxApyRouter {
         bytes32 r,
         bytes32 s,
         uint256 minSharesOut
-    ) external returns (uint256 sharesOut) {
+    )
+        external
+        returns (uint256 sharesOut)
+    {
         address asset = vault.asset();
         address cachedVault = address(vault);
         IERC20Permit(asset).permit(msg.sender, address(this), amount, deadline, v, r, s);
@@ -147,7 +155,11 @@ contract MaxApyRouter {
     /// @param vault The MaxApy vault to interact with
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
-    function depositNative(IMaxApyVaultV2 vault, address recipient, uint256 minSharesOut)
+    function depositNative(
+        IMaxApyVaultV2 vault,
+        address recipient,
+        uint256 minSharesOut
+    )
         external
         payable
         returns (uint256 sharesOut)
@@ -235,7 +247,12 @@ contract MaxApyRouter {
     /// @param shares How many shares to try and redeem for tokens
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
-    function redeem(IMaxApyVaultV2 vault, uint256 shares, address recipient, uint256 minAmountOut)
+    function redeem(
+        IMaxApyVaultV2 vault,
+        uint256 shares,
+        address recipient,
+        uint256 minAmountOut
+    )
         external
         returns (uint256 amountOut)
     {
@@ -290,7 +307,12 @@ contract MaxApyRouter {
     /// @param shares How many shares to try and redeem for tokens
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
-    function redeemNative(IMaxApyVaultV2 vault, uint256 shares, address recipient, uint256 minAmountOut)
+    function redeemNative(
+        IMaxApyVaultV2 vault,
+        uint256 shares,
+        address recipient,
+        uint256 minAmountOut
+    )
         external
         returns (uint256 amountOut)
     {

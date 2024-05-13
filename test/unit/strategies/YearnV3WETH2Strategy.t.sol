@@ -5,15 +5,15 @@ import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import {BaseTest, IERC20, Vm, console} from "../../base/BaseTest.t.sol";
-import {IStrategyWrapper} from "../../interfaces/IStrategyWrapper.sol";
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {YearnV3WETH2StrategyWrapper} from "../../mock/YearnV3WETH2StrategyWrapper.sol";
-import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
+import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { YearnV3WETH2StrategyWrapper } from "../../mock/YearnV3WETH2StrategyWrapper.sol";
+import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 
 contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
@@ -39,7 +39,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
 
     function setUp() public {
         super._setUp("MAINNET");
-        vm.rollFork(19624617);
+        vm.rollFork(19_624_617);
 
         TREASURY = makeAddr("treasury");
 
@@ -316,7 +316,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         ///     - `debtPayment` -> 1 ether (value passed as `debtOutstanding`)
         snapshotId = vm.snapshot();
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 60 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 60 ether });
         /// Perform initial investment in yearn from the strategy side
         strategy.invest(60 ether, 0);
 
@@ -403,7 +403,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Perform 10 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -411,7 +411,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)));
 
         /// Perform 100 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 100 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 100 ether });
         expectedShares += strategy.sharesForAmount(100 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 100 ether);
@@ -419,7 +419,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)));
 
         /// Perform 500 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 500 ether });
         expectedShares += strategy.sharesForAmount(500 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 500 ether);
@@ -441,7 +441,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         returned = strategy.invest(1, 0);
 
         /// Perform 10 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -449,7 +449,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)));
 
         /// Perform 10 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         expectedShares += strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -462,7 +462,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testYearnV3WETH2__Divest() public {
         /// Perform 10 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         strategy.invest(10 ether, 0);
         assertEq(expectedShares, IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)));
@@ -482,7 +482,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
     function testYearnV3WETH2__LiquidatePosition() public {
         /// Liquidate position where underlying balance can cover liquidation
         /// Scenario 1
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 ether);
         assertEq(liquidatedAmount, 1 ether);
         assertEq(loss, 0);
@@ -494,18 +494,18 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
 
         /// Liquidate position where underlying balance can't cover liquidation
         /// Scenario 1
-        deal({token: WETH_MAINNET, to: address(strategy), give: 5 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 5 ether });
         strategy.invest(5 ether, 0);
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         (liquidatedAmount, loss) = strategy.liquidatePosition(15 ether);
         assertEq(liquidatedAmount, 14.999999999999999999 ether);
         /// 14.99 ether
         assertEq(loss, 1);
 
         /// Scenario 2
-        deal({token: WETH_MAINNET, to: address(strategy), give: 1000 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 1000 ether });
         strategy.invest(1000 ether, 0);
-        deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 500 ether });
         (liquidatedAmount, loss) = strategy.liquidatePosition(1000 ether);
         assertEq(liquidatedAmount, 999.999999999999999999 ether);
         /// 14.99 ether
@@ -517,7 +517,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testYearnV3WETH2__LiquidateAllPositions() public {
         /// Perform 10 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         strategy.invest(10 ether, 0);
         assertEq(expectedShares, IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)));
@@ -532,7 +532,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Perform 500 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 500 ether });
         expectedShares = strategy.sharesForAmount(500 ether);
         strategy.invest(500 ether, 0);
         assertEq(expectedShares, IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)));
@@ -615,7 +615,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         /// 2. Strategy takes 10 ETH profit
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 beforeReportSnapshotId = vm.snapshot();
 
         /// Case #1 : we request 0% profit harvest
@@ -684,8 +684,10 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         /// vault balance doesnt increase at all                    // 4.52 ether
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether + 4.523 ether);
         /// the strategy reinvests the profit partially          // 5.477 ether
-        shares = strategy.sharesForAmount(5.477000000000000000 ether);
-        assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "here ");
+        shares = strategy.sharesForAmount(5.477 ether);
+        assertEq(
+            IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "here "
+        );
 
         vm.revertTo(snapshotId);
 
@@ -696,7 +698,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         /// 2. Emergency exit is activated
         /// 2. Strategy earns 10 ETH. Strategy performs second harvest to request more funds.
         /// Due to emergency mode, all funds are returned back to vault
-/*         vm.startPrank(users.alice);
+        /*         vm.startPrank(users.alice);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
@@ -784,7 +786,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         /// 1. Strategy performs initial harvest to request vault funds
         /// 2. Strategy loses 10 ETH. Strategy performs second harvest and its debt ratio gets reduced
         /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 ETH to vault, instead of 10 ETH
- /*        vm.startPrank(users.alice);
+        /*        vm.startPrank(users.alice);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
@@ -828,7 +830,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         /// - Total funds are now 90 ETH, 30% of which must be in strategy
         /// - 30% of 90 ETH = 27 ETH, but strategy still has 30 ETH -> there is a debt outstanding of 3 ETH
         /// Fake loss in strategy
- /*        uint256 expectedShares = strategy.sharesForAmount(10 ether);
+        /*        uint256 expectedShares = strategy.sharesForAmount(10 ether);
 
         vm.startPrank(address(strategy));
         IERC20(YVAULT_WETH_MAINNET).transfer(makeAddr("random"), expectedShares);
@@ -878,7 +880,8 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
             /// vault gain,
             0,
             1,
-            /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt should be 27 ETH but was 30 ETH), causing 1 wei loss
+        /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt should
+        be 27 ETH but was 30 ETH), causing 1 wei loss
             2.999999999999999999 ether,
             /// vault debtPayment (3 ETH - 1 wei loss)
             0,
@@ -912,7 +915,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
         assertEq(data.strategyTotalLoss, 10 ether + 1);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), vaultBalanceBefore + 2.999999999999999999 ether);
         assertLe(
-            IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
+        IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
         ); */
     }
 

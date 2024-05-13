@@ -6,32 +6,34 @@ import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import {BaseTest, IERC20, Vm, console} from "../../test/base/BaseTest.t.sol";
-import {IStrategyWrapper} from "../../test/interfaces/IStrategyWrapper.sol";
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {MaxApyVaultV2, OwnableRoles} from "src/MaxApyVaultV2.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {StrategyEvents} from "../../test/helpers/StrategyEvents.sol";
-import {ICurve} from "src/interfaces/ICurve.sol";
-import {IUniswapV2Router02 as IRouter} from "src/interfaces/IUniswap.sol";
-import {ConvexPools} from "../../test/helpers/ConvexPools.sol";
+import { BaseTest, IERC20, Vm, console } from "../../test/base/BaseTest.t.sol";
+import { IStrategyWrapper } from "../../test/interfaces/IStrategyWrapper.sol";
+import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { MaxApyVaultV2, OwnableRoles } from "src/MaxApyVaultV2.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
+import { ICurve } from "src/interfaces/ICurve.sol";
+import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
+import { ConvexPools } from "../../test/helpers/ConvexPools.sol";
 
 // Convex strategies
-import {ConvexdETHFrxETHStrategyWrapper} from "../../test/mock/ConvexdETHFrxETHStrategyWrapper.sol";
+import { ConvexdETHFrxETHStrategyWrapper } from "../../test/mock/ConvexdETHFrxETHStrategyWrapper.sol";
 // Yearn strategies
-import {YearnWETHStrategyWrapper} from "../../test/mock/YearnWETHStrategyWrapper.sol";
+import { YearnWETHStrategyWrapper } from "../../test/mock/YearnWETHStrategyWrapper.sol";
 // Sommelier strategies
-import {SommelierMorphoEthMaximizerStrategyWrapper} from "../../test/mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
-import {SommelierStEthDepositTurboStEthStrategyWrapper} from "../../test/mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
-import {SommelierTurboDivEthStrategyWrapper} from "../../test/mock/SommelierTurboDivEthStrategyWrapper.sol";
-import {SommelierTurboEEthV2StrategyWrapper} from "../../test/mock/SommelierTurboEEthV2StrategyWrapper.sol";
-import {SommelierTurboEthXStrategyWrapper} from "../../test/mock/SommelierTurboEthXStrategyWrapper.sol";
-import {SommelierTurboEzEthStrategyWrapper} from "../../test/mock/SommelierTurboEzEthStrategyWrapper.sol";
-import {SommelierTurboRsEthStrategyWrapper} from "../../test/mock/SommelierTurboRsEthStrategyWrapper.sol";
-import {SommelierTurboStEthStrategyWrapper} from "../../test/mock/SommelierTurboStEthStrategyWrapper.sol";
-import {SommelierTurboSwEthStrategyWrapper} from "../../test/mock/SommelierTurboSwEthStrategyWrapper.sol";
+import { SommelierMorphoEthMaximizerStrategyWrapper } from
+    "../../test/mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
+import { SommelierStEthDepositTurboStEthStrategyWrapper } from
+    "../../test/mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
+import { SommelierTurboDivEthStrategyWrapper } from "../../test/mock/SommelierTurboDivEthStrategyWrapper.sol";
+import { SommelierTurboEEthV2StrategyWrapper } from "../../test/mock/SommelierTurboEEthV2StrategyWrapper.sol";
+import { SommelierTurboEthXStrategyWrapper } from "../../test/mock/SommelierTurboEthXStrategyWrapper.sol";
+import { SommelierTurboEzEthStrategyWrapper } from "../../test/mock/SommelierTurboEzEthStrategyWrapper.sol";
+import { SommelierTurboRsEthStrategyWrapper } from "../../test/mock/SommelierTurboRsEthStrategyWrapper.sol";
+import { SommelierTurboStEthStrategyWrapper } from "../../test/mock/SommelierTurboStEthStrategyWrapper.sol";
+import { SommelierTurboSwEthStrategyWrapper } from "../../test/mock/SommelierTurboSwEthStrategyWrapper.sol";
 
 /// @notice this is a simple test deployment of a mainnet WETH vault in a local rpc
 contract DeploymentScript is Script, ConvexPools, OwnableRoles {
@@ -48,12 +50,11 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
     address public constant CELLAR_STETH_MAINNET = 0xc7372Ab5dd315606dB799246E8aA112405abAeFf;
     address public constant CELLAR_WETH_MAINNET_DIV_ETH = 0x6c1edce139291Af5b84fB1e496c9747F83E876c9;
     address public constant CELLAR_WETH_MAINNET_EETHV2 = 0xdAdC82e26b3739750E036dFd9dEfd3eD459b877A;
-    address public constant CELLAR_WETH_MAINNET_ETHX =  0x19B8D8FC682fC56FbB42653F68c7d48Dd3fe597E;
+    address public constant CELLAR_WETH_MAINNET_ETHX = 0x19B8D8FC682fC56FbB42653F68c7d48Dd3fe597E;
     address public constant CELLAR_WETH_MAINNET_EZ_ETH = 0x27500De405a3212D57177A789E30bb88b0AdbeC5;
     address public constant CELLAR_WETH_MAINNET_RS_ETH = 0x1dffb366b5c5A37A12af2C127F31e8e0ED86BDbe;
     address public constant CELLAR_WETH_MAINNET_STETH = 0xfd6db5011b171B05E1Ea3b92f9EAcaEEb055e971;
     address public constant CELLAR_WETH_MAINNET_SW_ETH = 0xd33dAd974b938744dAC81fE00ac67cb5AA13958E;
-
 
     IERC20 public constant crv = IERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);
     IERC20 public constant cvx = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
@@ -67,7 +68,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
     // **********STRATS******************
     IStrategyWrapper public strategy1; // convex
     IStrategyWrapper public strategy2; // yearn
-    IStrategyWrapper public strategy3; // sommelier morpho 
+    IStrategyWrapper public strategy3; // sommelier morpho
     IStrategyWrapper public strategy4; // sommelier st-eth deposit turbo-st-eth
     IStrategyWrapper public strategy5; // sommelier div-eth
     IStrategyWrapper public strategy6; // sommelier e-eth-v2
@@ -78,13 +79,13 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
     IStrategyWrapper public strategy11; // sommelier sw-eth
 
     // **********ROLES*******************
-    address [] keepers;
+    address[] keepers;
 
     // **********LOCAL VARIABLES*****************
     // use storage variables to avoid stack too deep
     IMaxApyVaultV2 public vault;
-    ITransparentUpgradeableProxy public proxy; 
-    ProxyAdmin public proxyAdmin; 
+    ITransparentUpgradeableProxy public proxy;
+    ProxyAdmin public proxyAdmin;
     address vaultAdmin;
     address vaultEmergencyAdmin;
     address strategyAdmin;
@@ -109,7 +110,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         strategyEmergencyAdmin = vm.envAddress("STRATEGY_EMERGENCY_ADMIN_ADDRESS");
         treasury = vm.envAddress("TREASURY_ADDRESS");
 
-        vm.startBroadcast(deployerPrivateKey);       
+        vm.startBroadcast(deployerPrivateKey);
 
         /// Deploy MaxApyVaultV2
         vaultDeployment = new MaxApyVaultV2(WETH, "MaxApyWETHVault", "maxApy", treasury);
@@ -184,7 +185,8 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
 
         // Deploy strategy4(StEthDeposit)
 
-        SommelierStEthDepositTurboStEthStrategyWrapper implementation4 = new SommelierStEthDepositTurboStEthStrategyWrapper();
+        SommelierStEthDepositTurboStEthStrategyWrapper implementation4 =
+            new SommelierStEthDepositTurboStEthStrategyWrapper();
         _proxy = new TransparentUpgradeableProxy(
             address(implementation4),
             address(proxyAdmin),
@@ -221,7 +223,6 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         strategy5 = IStrategyWrapper(address(_proxy));
         strategy5.grantRoles(strategyAdmin, strategy5.ADMIN_ROLE());
         strategy5.grantRoles(strategyEmergencyAdmin, strategy5.EMERGENCY_ADMIN_ROLE());
-
 
         // Deploy strategy6(EEth)
         SommelierTurboEEthV2StrategyWrapper implementation6 = new SommelierTurboEEthV2StrategyWrapper();
@@ -261,7 +262,6 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         strategy7.grantRoles(strategyAdmin, strategy7.ADMIN_ROLE());
         strategy7.grantRoles(strategyEmergencyAdmin, strategy7.EMERGENCY_ADMIN_ROLE());
 
-
         // Deploy strategy8(EzEth)
         SommelierTurboStEthStrategyWrapper implementation8 = new SommelierTurboStEthStrategyWrapper();
         _proxy = new TransparentUpgradeableProxy(
@@ -299,7 +299,6 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         strategy9 = IStrategyWrapper(address(_proxy));
         strategy9.grantRoles(strategyAdmin, strategy9.ADMIN_ROLE());
         strategy9.grantRoles(strategyEmergencyAdmin, strategy9.EMERGENCY_ADMIN_ROLE());
-       
 
         // Deploy strategy10(StEth)
         SommelierTurboStEthStrategyWrapper implementation10 = new SommelierTurboStEthStrategyWrapper();
@@ -339,7 +338,6 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         strategy11.grantRoles(strategyAdmin, strategy11.ADMIN_ROLE());
         strategy11.grantRoles(strategyEmergencyAdmin, strategy11.EMERGENCY_ADMIN_ROLE());
 
-
         // Add 4 strategies to the vault
         vault.addStrategy(address(strategy1), 2250, type(uint72).max, 0, 0); // convex
         vault.addStrategy(address(strategy2), 2250, type(uint72).max, 0, 0); // yearn
@@ -347,9 +345,9 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         vault.addStrategy(address(strategy10), 2250, type(uint72).max, 0, 0); // turbo st-eth
 
         console.log("***************************DEPLOYMENT ADDRESSES**********************************");
-        console.log("[MAXAPY] Vault :",address(vault));
-        console.log("[CONVEX] dETh-ETH Strategy:", address(strategy1) );
-        console.log("[YEARN] WETH Strategy:", address(strategy2) );
+        console.log("[MAXAPY] Vault :", address(vault));
+        console.log("[CONVEX] dETh-ETH Strategy:", address(strategy1));
+        console.log("[YEARN] WETH Strategy:", address(strategy2));
         console.log("[SOMMELIER] Morpho Eth Maximizer Strategy:", address(strategy3));
         console.log("[SOMMELIER] (StEth deposit) Turbo StETh Strategy:", address(strategy4));
         console.log("[SOMMELIER] Turbo DivEth Strategy:", address(strategy5));
@@ -361,8 +359,8 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         console.log("[SOMMELIER] Turbo SwEth Strategy :", address(strategy11));
 
         console.log("***************************ADDED TO VAULT**********************************");
-        console.log("[CONVEX] dETh-ETH Strategy:", address(strategy1) );
-        console.log("[YEARN] WETH Strategy:", address(strategy2) );
+        console.log("[CONVEX] dETh-ETH Strategy:", address(strategy1));
+        console.log("[YEARN] WETH Strategy:", address(strategy2));
         console.log("[SOMMELIER] (StEth deposit) Turbo StETh Strategy:", address(strategy4));
         console.log("[SOMMELIER] Turbo StEth Strategy :", address(strategy10));
     }

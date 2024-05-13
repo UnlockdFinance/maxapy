@@ -5,15 +5,15 @@ import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import {BaseTest, IERC20, Vm, console} from "../../base/BaseTest.t.sol";
-import {IStrategyWrapper} from "../../interfaces/IStrategyWrapper.sol";
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {YearnAjnaDAIStakingStrategyWrapper} from "../../mock/YearnAjnaDAIStakingStrategyWrapper.sol";
-import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
+import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { YearnAjnaDAIStakingStrategyWrapper } from "../../mock/YearnAjnaDAIStakingStrategyWrapper.sol";
+import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 
 contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
@@ -40,7 +40,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
 
     function setUp() public {
         super._setUp("MAINNET");
-        vm.rollFork(19286475);
+        vm.rollFork(19_286_475);
 
         TREASURY = makeAddr("treasury");
 
@@ -347,7 +347,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         ///     - `debtPayment` -> 1 ether (value passed as `debtOutstanding`)
         snapshotId = vm.snapshot();
 
-        deal({token: DAI_MAINNET, to: address(strategy), give: 60 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 60 ether });
         /// Perform initial investment in yearn from the strategy side
         strategy.invest(60 ether, 0);
 
@@ -433,7 +433,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), 0);
 
         /// Perform 10 ETH investment
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -441,7 +441,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
         /// Perform 100 ETH investment
-        deal({token: DAI_MAINNET, to: address(strategy), give: 100 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 100 ether });
         expectedShares += strategy.sharesForAmount(100 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 100 ether);
@@ -449,7 +449,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
         /// Perform 500 ETH investment
-        deal({token: DAI_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 500 ether });
         expectedShares += strategy.sharesForAmount(500 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 500 ether);
@@ -471,7 +471,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         returned = strategy.invest(1, 0);
 
         /// Perform 10 ETH investment
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -479,7 +479,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
         /// Perform 10 ETH investment
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
         expectedShares += strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -492,7 +492,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testYearnAjnaDAI_Staking__Divest() public {
         /// Perform 10 ETH investment
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         strategy.invest(10 ether, 0);
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
@@ -512,7 +512,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     function testYearnAjnaDAI_Staking__LiquidatePosition() public {
         /// Liquidate position where underlying balance can cover liquidation
         /// Scenario 1
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
         (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 ether);
         assertEq(liquidatedAmount, 1 ether);
         assertEq(loss, 0);
@@ -524,18 +524,18 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
 
         /// Liquidate position where underlying balance can't cover liquidation
         /// Scenario 1
-        deal({token: DAI_MAINNET, to: address(strategy), give: 5 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 5 ether });
         strategy.invest(5 ether, 0);
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
         (liquidatedAmount, loss) = strategy.liquidatePosition(15 ether);
         /// 15 ether
         assertEq(liquidatedAmount, 14.999999999999999999 ether);
         assertEq(loss, 1); // loss due to rounding down
 
         /// Scenario 2
-        deal({token: DAI_MAINNET, to: address(strategy), give: 1000 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 1000 ether });
         strategy.invest(1000 ether, 0);
-        deal({token: DAI_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 500 ether });
         (liquidatedAmount, loss) = strategy.liquidatePosition(1000 ether);
         /// 1000 ether
         assertEq(liquidatedAmount, 999.999999999999999999 ether);
@@ -547,7 +547,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testYearnAjnaDAI_Staking__LiquidateAllPositions() public {
         /// Perform 10 ETH investment
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         strategy.invest(10 ether, 0);
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
@@ -562,7 +562,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), 0);
 
         /// Perform 500 ETH investment
-        deal({token: DAI_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 500 ether });
         expectedShares = strategy.sharesForAmount(500 ether);
         strategy.invest(500 ether, 0);
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
@@ -582,7 +582,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testYearnAjnaDAI_Staking__UnwindRewards() public {
         /// Perform 10 ETH investment without rewards
-        deal({token: DAI_MAINNET, to: address(strategy), give: 1000 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 1000 ether });
         vm.expectEmit();
         emit Invested(address(strategy), 1000 ether);
         strategy.invest(1000 ether, 0);
@@ -665,7 +665,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         /// 2. Strategy takes 10 ETH profit
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
         uint256 beforeReportSnapshotId = vm.snapshot();
 
         /// Case #1 : we request 0% profit harvest
@@ -795,7 +795,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
-        deal({token: DAI_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: DAI_MAINNET, to: address(strategy), give: 10 ether });
 
         vm.expectEmit();
         emit StrategyReported(
@@ -911,7 +911,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         /// 10 ETH loss
         /// if we request to harvest only 30% of profit it wont have any effect neither,
         /// since the strategy has loses only
-        strategy.harvest(0, 0, 3_000, address(0));
+        strategy.harvest(0, 0, 3000, address(0));
 
         StrategyData memory data = vault.strategies(address(strategy));
 
@@ -928,7 +928,8 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
             /// vault gain,
             0,
             1,
-            /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt should be 27 ETH but was 30 ETH), causing 1 wei loss
+            /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt
+            /// should be 27 ETH but was 30 ETH), causing 1 wei loss
             2.999999999999999999 ether,
             /// vault debtPayment (3 ETH - 1 wei loss)
             0,

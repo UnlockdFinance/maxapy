@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {StrategyData} from "../helpers/VaultTypes.sol";
-import {IERC4626} from "openzeppelin/interfaces/IERC4626.sol";
+import { StrategyData } from "../helpers/VaultTypes.sol";
+import { IERC4626 } from "openzeppelin/interfaces/IERC4626.sol";
 
 /**
  * @notice IMaxApyVaultV2 contains the main interface for MaxApy V2 Vaults
@@ -17,7 +17,9 @@ interface IMaxApyVaultV2 is IERC4626 {
         bytes32 r,
         bytes32 s,
         address receiver
-    ) external returns (uint256 shares);
+    )
+        external
+        returns (uint256 shares);
 
     function mintWithPermit(
         address owner,
@@ -27,7 +29,9 @@ interface IMaxApyVaultV2 is IERC4626 {
         bytes32 r,
         bytes32 s,
         address receiver
-    ) external returns (uint256 assets);
+    )
+        external
+        returns (uint256 assets);
 
     function report(
         uint128 realizedGain,
@@ -35,7 +39,9 @@ interface IMaxApyVaultV2 is IERC4626 {
         uint128 loss,
         uint128 debtPayment,
         address managementFeeReceiver
-    ) external returns (uint256);
+    )
+        external
+        returns (uint256);
 
     /// Ownership
     function transferOwnership(address newOwner) external payable;
@@ -107,7 +113,8 @@ interface IMaxApyVaultV2 is IERC4626 {
         uint256 strategyMaxDebtPerHarvest,
         uint256 strategyMinDebtPerHarvest,
         uint256 strategyPerformanceFee
-    ) external;
+    )
+        external;
 
     function revokeStrategy(address strategy) external;
 
@@ -121,7 +128,8 @@ interface IMaxApyVaultV2 is IERC4626 {
         uint256 newMaxDebtPerHarvest,
         uint256 newMinDebtPerHarvest,
         uint256 newPerformanceFee
-    ) external;
+    )
+        external;
 
     function setWithdrawalQueue(address[20] calldata queue) external;
 

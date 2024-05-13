@@ -5,33 +5,33 @@ import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import {BaseTest, IERC20, Vm, console} from "../base/BaseTest.t.sol";
-import {IStrategyWrapper} from "../interfaces/IStrategyWrapper.sol";
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {StrategyEvents} from "../helpers/StrategyEvents.sol";
-import {ICurve} from "src/interfaces/ICurve.sol";
-import {IUniswapV2Router02 as IRouter} from "src/interfaces/IUniswap.sol";
-import {ConvexPools} from "../helpers/ConvexPools.sol";
+import { BaseTest, IERC20, Vm, console } from "../base/BaseTest.t.sol";
+import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
+import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { StrategyEvents } from "../helpers/StrategyEvents.sol";
+import { ICurve } from "src/interfaces/ICurve.sol";
+import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
+import { ConvexPools } from "../helpers/ConvexPools.sol";
 
-import {ConvexdETHFrxETHStrategyWrapper} from "../mock/ConvexdETHFrxETHStrategyWrapper.sol";
-import {ConvexdETHFrxETHStrategyEvents} from "../helpers/ConvexdETHFrxETHStrategyEvents.sol";
+import { ConvexdETHFrxETHStrategyWrapper } from "../mock/ConvexdETHFrxETHStrategyWrapper.sol";
+import { ConvexdETHFrxETHStrategyEvents } from "../helpers/ConvexdETHFrxETHStrategyEvents.sol";
 
-import {SommelierMorphoEthMaximizerStrategyWrapper} from "../mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
-import {SommelierMorphoEthMaximizerStrategy} from
+import { SommelierMorphoEthMaximizerStrategyWrapper } from "../mock/SommelierMorphoEthMaximizerStrategyWrapper.sol";
+import { SommelierMorphoEthMaximizerStrategy } from
     "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 
-import {SommelierTurboStEthStrategy} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
-import {SommelierTurboStEthStrategyWrapper} from "../mock/SommelierTurboStEthStrategyWrapper.sol";
+import { SommelierTurboStEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
+import { SommelierTurboStEthStrategyWrapper } from "../mock/SommelierTurboStEthStrategyWrapper.sol";
 
-import {SommelierStEthDepositTurboStEthStrategyWrapper} from
+import { SommelierStEthDepositTurboStEthStrategyWrapper } from
     "../mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
 
-import {YearnWETHStrategyWrapper} from "../mock/YearnWETHStrategyWrapper.sol";
-import {MockRevertingStrategy} from "../mock/MockRevertingStrategy.sol";
+import { YearnWETHStrategyWrapper } from "../mock/YearnWETHStrategyWrapper.sol";
+import { MockRevertingStrategy } from "../mock/MockRevertingStrategy.sol";
 
 contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ////////////////////////////////////////////////////////////////
     function _dealStEth(address give, uint256 wethIn) internal returns (uint256 stEthOut) {
         vm.deal(give, wethIn);
-        stEthOut = ICurve(CURVE_POOL).exchange{value: wethIn}(0, 1, wethIn, 0);
+        stEthOut = ICurve(CURVE_POOL).exchange{ value: wethIn }(0, 1, wethIn, 0);
         IERC20(ST_ETH_MAINNET).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
     }
 
@@ -181,7 +181,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.addStrategy(address(strategy3), 2250, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy4), 2250, type(uint72).max, 0, 0);
 
-        vm.rollFork(19267583);
+        vm.rollFork(19_267_583);
         vm.label(address(WETH_MAINNET), "WETH");
         /// Alice approves vault for deposits
         IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);

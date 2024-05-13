@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
-import {IWETH} from "src/interfaces/IWETH.sol";
-import {ICellar} from "src/interfaces/ICellar.sol";
+import { BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { IWETH } from "src/interfaces/IWETH.sol";
+import { ICellar } from "src/interfaces/ICellar.sol";
 
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title BaseSommelierStrategy
 /// @author MaxApy
@@ -50,7 +50,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @dev the initialization function must be defined in each strategy
 
@@ -65,7 +65,11 @@ contract BaseSommelierStrategy is BaseStrategy {
         bytes32 _strategyName,
         address _strategist,
         ICellar _cellar
-    ) public virtual initializer {
+    )
+        public
+        virtual
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         cellar = _cellar;
         /// Approve Cellar Vault to transfer underlying
@@ -182,7 +186,11 @@ contract BaseSommelierStrategy is BaseStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
+    function _prepareReturn(
+        uint256 debtOutstanding,
+        uint256,
+        uint256 harvestedProfitBPS
+    )
         internal
         virtual
         override
@@ -294,7 +302,10 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Cellar receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+    function _invest(
+        uint256 amount,
+        uint256 minOutputAfterInvestment
+    )
         internal
         virtual
         returns (uint256 depositedAmount)
@@ -343,13 +354,15 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
     /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
-    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether the
+    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
+    /// the
     /// difference is due to a realized loss, or if there is some other sitution at play
     /// (e.g. locked funds) where the amount made available is less than what is needed.
     /// NOTE: The invariant `liquidatedAmount + loss <= amountNeeded` should always be maintained
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
-    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
+    /// amount
 
     function _liquidatePosition(uint256 amountNeeded)
         internal

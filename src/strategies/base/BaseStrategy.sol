@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
-import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
-import {IStrategy} from "../../interfaces/IStrategy.sol";
-import {IMaxApyVaultV2} from "../../interfaces/IMaxApyVaultV2.sol";
-import {Initializable} from "../../lib/Initializable.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import { IStrategy } from "../../interfaces/IStrategy.sol";
+import { IMaxApyVaultV2 } from "../../interfaces/IMaxApyVaultV2.sol";
+import { Initializable } from "../../lib/Initializable.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title BaseStrategy
 /// @author Forked and adapted from https://github.com/yearn/yearn-vaults/blob/master/contracts/BaseStrategy.sol
@@ -90,7 +90,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @notice Initialize a new Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -101,7 +101,11 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist
-    ) internal virtual onlyInitializing {
+    )
+        internal
+        virtual
+        onlyInitializing
+    {
         assembly ("memory-safe") {
             // Ensure `_strategist` address is != from address(0)
             if eq(_strategist, 0) {
@@ -189,14 +193,18 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param minOutputAfterInvestment minimum expected output after `_invest()`
     /// strategy unwinding (if applies).
     /// @param harvestedProfitBPS percentage of the profit realize and send to the vault as net profit
-    /// @param harvester only relevant when the harvest is triggered from the vault, is the address of the user that is enduring the harvest gas cost
+    /// @param harvester only relevant when the harvest is triggered from the vault, is the address of the user that is
+    /// enduring the harvest gas cost
     /// from the vault and will receive the managemente fees in return
     function harvest(
         uint256 minExpectedBalance,
         uint256 minOutputAfterInvestment,
         uint256 harvestedProfitBPS,
         address harvester
-    ) external checkRoles(KEEPER_ROLE) {
+    )
+        external
+        checkRoles(KEEPER_ROLE)
+    {
         assembly ("memory-safe") {
             // if harvestedProfitBPS > MAX_BPS
             if gt(harvestedProfitBPS, MAX_BPS) {
@@ -264,7 +272,8 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
                     realizedProfit := sub(amountFreed, debtOutstanding) // set profit = amountFreed - debtOutstanding
                 }
 
-                debtPayment := sub(debtOutstanding, loss) // can not overflow due to `debtOutstanding` being > `loss` in both cases
+                debtPayment := sub(debtOutstanding, loss) // can not overflow due to `debtOutstanding` being > `loss` in
+                    // both cases
             }
         } else {
             // Free up returns for vault to pull
@@ -383,19 +392,22 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
     /// @param debtOutstanding Total principal + interest of debt yet to be paid back
-    /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in receipt tokens obtained after depositing in a third-party protocol)
+    /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in receipt tokens obtained
+    /// after depositing in a third-party protocol)
     function _adjustPosition(uint256 debtOutstanding, uint256 minOutputAfterInvestment) internal virtual;
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
     /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
-    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether the
+    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
+    /// the
     /// difference is due to a realized loss, or if there is some other sitution at play
     /// (e.g. locked funds) where the amount made available is less than what is needed.
     /// NOTE: The invariant `liquidatedAmount + loss <= amountNeeded` should always be maintained
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
-    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
+    /// amount
     function _liquidatePosition(uint256 amountNeeded)
         internal
         virtual
@@ -428,7 +440,11 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ///       withdrawal fees, etc.
     ///
     /// See `MaxApyVault.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
+    function _prepareReturn(
+        uint256 debtOutstanding,
+        uint256 minExpectedBalance,
+        uint256 harvestedProfitBPS
+    )
         internal
         virtual
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);

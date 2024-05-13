@@ -5,17 +5,17 @@ import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import {BaseTest, IERC20, Vm, console} from "../../base/BaseTest.t.sol";
-import {IStrategyWrapper} from "../../interfaces/IStrategyWrapper.sol";
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {ICellar} from "src/interfaces/ICellar.sol";
-import {SommelierTurboEEthV2StrategyWrapper} from "../../mock/SommelierTurboEEthV2StrategyWrapper.sol";
-import {MaxApyVaultV2} from "src/MaxApyVaultV2.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {SommelierTurboEEthV2Strategy} from "src/strategies/mainnet/WETH/sommelier/SommelierTurboEEthV2Strategy.sol";
-import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
+import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { ICellar } from "src/interfaces/ICellar.sol";
+import { SommelierTurboEEthV2StrategyWrapper } from "../../mock/SommelierTurboEEthV2StrategyWrapper.sol";
+import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { SommelierTurboEEthV2Strategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboEEthV2Strategy.sol";
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 
 contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
@@ -77,7 +77,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
 
         /// Alice approves vault for deposits
         IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
-        vm.rollFork(19417251);
+        vm.rollFork(19_417_251);
     }
 
     /*==================INITIALIZATION TESTS===================*/
@@ -266,7 +266,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
 
         /// there are no profits so setting the harvest to 50% wont have any effect
         (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) =
-            strategy.prepareReturn(1 ether, 0, 5_000);
+            strategy.prepareReturn(1 ether, 0, 5000);
         assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
         assertEq(loss, 0);
@@ -294,7 +294,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         ///     - `debtPayment` -> 1 ether (value passed as `debtOutstanding`)
         snapshotId = vm.snapshot();
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 60 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 60 ether });
         /// Perform initial 60 eth investment in sommelier from the strategy side
         strategy.investSommelier(60 ether);
 
@@ -317,7 +317,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
 
-        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 1_000);
+        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 1000);
         assertEq(realizedProfit, 5.994637111197017682 ether); // 5.9 ETH
         assertEq(unrealizedProfit, 59.946371111970176828 ether); // 59.94 ETH
         assertEq(loss, 0);
@@ -354,7 +354,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         strategy.triggerLoss(10 ether);
 
         /// no realizedProfit was made, setting the harvest to 20% has no effect
-        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 2_000);
+        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 2000);
 
         assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
@@ -373,7 +373,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Perform 10 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -381,7 +381,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)));
 
         /// Perform 100 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 100 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 100 ether });
         expectedShares += strategy.sharesForAmount(100 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 100 ether);
@@ -389,7 +389,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)));
 
         /// Perform 500 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 500 ether });
         expectedShares += strategy.sharesForAmount(500 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 500 ether);
@@ -411,7 +411,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         returned = strategy.invest(1, 0);
 
         /// Perform 10 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
@@ -420,7 +420,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     }
 
     function testSommelierTurboEEthV2__Invest_CellarIsShutdown() public {
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 snapshotId = vm.snapshot();
         _shutDownCellar();
         // if cellar is shut down no funds are invested
@@ -430,7 +430,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     }
 
     function testSommelierTurboEEthV2__Invest_CellarIsPaused() public {
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 snapshotId = vm.snapshot();
         _pauseCellar();
         // if cellar is shut down no funds are invested
@@ -444,7 +444,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboEEthV2__Divest() public {
         /// Perform 1000 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 1000 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 1000 ether });
         uint256 expectedShares = strategy.sharesForAmount(1000 ether);
         uint256 amountExpectedFromShares = strategy.shareValue(expectedShares);
         strategy.invest(1000 ether, 0);
@@ -460,7 +460,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     }
 
     function testSommelierTurboEEthV2__Divest_CellarIsPaused() public {
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         strategy.invest(10 ether, 0);
         uint256 snapshotId = vm.snapshot();
         _pauseCellar();
@@ -478,7 +478,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     function testSommelierTurboEEthV2__LiquidatePosition() public {
         /// Liquidate position where underlying balance can cover liquidation
         /// Scenario 1
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 ether);
         assertEq(liquidatedAmount, 1 ether);
         assertEq(loss, 0);
@@ -490,10 +490,10 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
 
         /// Liquidate position where underlying balance can't cover liquidation
         /// Scenario 1
-        deal({token: WETH_MAINNET, to: address(strategy), give: 5 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 5 ether });
         //
         strategy.invest(5 ether, 0);
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
 
         (liquidatedAmount, loss) = strategy.liquidatePosition(15 ether);
 
@@ -503,9 +503,9 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertEq(loss, 15 ether - expectedLiquidatedAmount);
 
         /// Scenario 2
-        deal({token: WETH_MAINNET, to: address(strategy), give: 1000 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 1000 ether });
         strategy.invest(1000 ether, 0);
-        deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 500 ether });
         (liquidatedAmount, loss) = strategy.liquidatePosition(1000 ether);
 
         expectedLiquidatedAmount = 500 ether + strategy.shareValue(strategy.sharesForAmount(500 ether));
@@ -519,7 +519,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     function testSommelierTurboEEthV2__LiquidateAllPositions() public {
         /// Perform 10 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
         strategy.invest(10 ether, 0);
         assertEq(expectedShares, IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)));
@@ -535,7 +535,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         /// Perform 500 ETH investment
-        deal({token: WETH_MAINNET, to: address(strategy), give: 500 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 500 ether });
         expectedShares = strategy.sharesForAmount(500 ether);
         strategy.invest(500 ether, 0);
         assertEq(expectedShares, IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)));
@@ -623,7 +623,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         /// 2. Strategy takes 10 ETH profit
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
         // strategy gets 10 eth more as profit
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 beforeReportSnapshotId = vm.snapshot();
 
         /// Case #1: We harvest 100% of profit
@@ -725,7 +725,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(5 ether, 0, 0, 0);
         /// 9.980 ETH harvested
-        strategy.harvest(0, 0, 5_000, address(0));
+        strategy.harvest(0, 0, 5000, address(0));
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether + 5 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
@@ -789,7 +789,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
 
         vm.expectEmit();
         emit StrategyReported(
@@ -819,7 +819,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         /// 49.99999 ETH harvested
 
         /// no effect since the strategy is in emergency exit
-        strategy.harvest(0, 0, 2_000, address(0));
+        strategy.harvest(0, 0, 2000, address(0));
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 109.964247407980117886 ether);
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
@@ -905,7 +905,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         /// debtratio reduced
 
         vm.expectEmit();
-        emit Harvested(0, 9.991061851995029472 ether, 0, 2997255809788678873);
+        emit Harvested(0, 9.991061851995029472 ether, 0, 2_997_255_809_788_678_873);
         /// 10 ETH loss
         // only losses , no effect
         strategy.harvest(0, 0, 10_000, address(0));
@@ -1056,7 +1056,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertGt(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         // strategy makes profit but cannot harvest because cellar is paused
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         _pauseCellar();
 
         vm.expectEmit();
@@ -1346,7 +1346,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     }
 
     uint32 constant holdingPosition =
-        uint32(uint256(26959946667150639794667015087019630673637144422540572481103610249216));
+        uint32(uint256(26_959_946_667_150_639_794_667_015_087_019_630_673_637_144_422_540_572_481_103_610_249_216));
 
     function _shutDownCellar() internal {
         // keep the other values of the slot the same
@@ -1355,7 +1355,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
             bytes32(uint256(7)),
             bytes32(
                 abi.encodePacked(
-                    uint192(6277101735386680763835789423207666416102355444464034512895),
+                    uint192(6_277_101_735_386_680_763_835_789_423_207_666_416_102_355_444_464_034_512_895),
                     false,
                     true,
                     false,

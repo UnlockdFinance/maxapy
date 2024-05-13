@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
-import {IWETH} from "src/interfaces/IWETH.sol";
-import {ICellar} from "src/interfaces/ICellar.sol";
+import { BaseStrategy, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { IWETH } from "src/interfaces/IWETH.sol";
+import { ICellar } from "src/interfaces/ICellar.sol";
 
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import {
     IBalancerVault,
     IBalancerStablePool,
@@ -90,7 +90,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @notice The Balancer pool id for the underlying LP token
     function initialize(
@@ -99,7 +99,10 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         bytes32 _strategyName,
         address _strategist,
         ICellar _cellar
-    ) public initializer {
+    )
+        public
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         cellar = _cellar;
 
@@ -108,7 +111,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         rEth.safeApprove(address(balancerVault), type(uint256).max);
         /// Approve Cellar Vault to transfer underlying
         balancerLpPool.safeApprove(address(_cellar), type(uint256).max);
-        maxSingleTrade = 1_000 * 1e18;
+        maxSingleTrade = 1000 * 1e18;
         minSingleTrade = 1e4;
     }
 
@@ -127,7 +130,8 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
             // calculate the amount of LP tokens to withdraw
-            uint256 lpToWithdraw = ((amountNeeded - underlyingBalance) * 1e18 / _lpPrice()) * 101 / 100; // account pessimistically
+            uint256 lpToWithdraw = ((amountNeeded - underlyingBalance) * 1e18 / _lpPrice()) * 101 / 100; // account
+                // pessimistically
             uint256 burntShares = cellar.withdraw(lpToWithdraw, address(this), address(this));
             _exitPool(lpToWithdraw);
             // use sub zero because shares could be fewer than expected and underflow
@@ -213,7 +217,8 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         uint256 loss;
         if (underlyingBalance < liquidatedAmount) {
             // calculate the amount of LP tokens to withdraw
-            uint256 lpToWithdraw = ((liquidatedAmount - underlyingBalance) * 1e18 / _lpPrice()) * 101 / 100; // account pessimistically
+            uint256 lpToWithdraw = ((liquidatedAmount - underlyingBalance) * 1e18 / _lpPrice()) * 101 / 100; // account
+                // pessimistically
             uint256 burntShares = cellar.previewWithdraw(lpToWithdraw);
             // use sub zero because shares could be fewer than expected and underflow
             uint256 lpTokens = cellar.convertToAssets(burntShares);
@@ -255,7 +260,11 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
+    function _prepareReturn(
+        uint256 debtOutstanding,
+        uint256,
+        uint256 harvestedProfitBPS
+    )
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
@@ -424,13 +433,15 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
     /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
-    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether the
+    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
+    /// the
     /// difference is due to a realized loss, or if there is some other sitution at play
     /// (e.g. locked funds) where the amount made available is less than what is needed.
     /// NOTE: The invariant `liquidatedAmount + loss <= amountNeeded` should always be maintained
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
-    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
+    /// amount
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override

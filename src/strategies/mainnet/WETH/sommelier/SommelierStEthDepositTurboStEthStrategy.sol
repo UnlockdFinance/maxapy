@@ -8,8 +8,8 @@ import {
     IMaxApyVaultV2,
     SafeTransferLib
 } from "src/strategies/base/BaseSommelierStrategy.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-import {ICurve} from "src/interfaces/ICurve.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { ICurve } from "src/interfaces/ICurve.sol";
 
 /// @title SommelierStEthDepositTurboStEthStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -56,7 +56,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -69,7 +69,11 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         bytes32 _strategyName,
         address _strategist,
         ICellar _cellar
-    ) public override initializer {
+    )
+        public
+        override
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         cellar = _cellar;
 
@@ -78,7 +82,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         stEth.safeApprove(address(pool), type(uint256).max);
         /// Approve Cellar Vault to transfer underlying
         stEth.safeApprove(address(_cellar), type(uint256).max);
-        maxSingleTrade = 1_000 * 1e18;
+        maxSingleTrade = 1000 * 1e18;
         minSingleTrade = 1e4;
     }
 
@@ -215,7 +219,11 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
+    function _prepareReturn(
+        uint256 debtOutstanding,
+        uint256,
+        uint256 harvestedProfitBPS
+    )
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
@@ -329,7 +337,10 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Cellar receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+    function _invest(
+        uint256 amount,
+        uint256 minOutputAfterInvestment
+    )
         internal
         override
         returns (uint256 depositedAmount)
@@ -346,7 +357,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
 
         IWETH(underlyingAsset).withdraw(amount);
 
-        uint256 stEthReceived = pool.exchange{value: amount}(0, 1, amount, 0);
+        uint256 stEthReceived = pool.exchange{ value: amount }(0, 1, amount, 0);
 
         uint256 shares = cellar.deposit(stEthReceived, address(this));
 
@@ -380,20 +391,22 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         if (cellar.isPaused()) return 0;
         uint256 stEthWithdrawn = cellar.redeem(shares, address(this), address(this));
         withdrawn = pool.exchange(1, 0, stEthWithdrawn, 0);
-        IWETH(underlyingAsset).deposit{value: withdrawn}();
+        IWETH(underlyingAsset).deposit{ value: withdrawn }();
         emit Divested(address(this), shares, withdrawn);
     }
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
     /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
-    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether the
+    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
+    /// the
     /// difference is due to a realized loss, or if there is some other sitution at play
     /// (e.g. locked funds) where the amount made available is less than what is needed.
     /// NOTE: The invariant `liquidatedAmount + loss <= amountNeeded` should always be maintained
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
-    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
+    /// amount
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override
@@ -427,5 +440,5 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     }
 
     /// @notice Allow to receive native assets
-    receive() external payable {}
+    receive() external payable { }
 }

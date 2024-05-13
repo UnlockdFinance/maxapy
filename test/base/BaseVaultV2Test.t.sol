@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
-import {IMaxApyVaultV2} from "../../src/interfaces/IMaxApyVaultV2.sol";
-import {MaxApyVaultV2, StrategyData} from "../../src/MaxApyVaultV2.sol";
-import {BaseTest, IERC20, console, Vm} from "../base/BaseTest.t.sol";
-import {MaxApyVaultV2Events} from "../helpers/MaxApyVaultV2Events.sol";
+import { IMaxApyVaultV2 } from "../../src/interfaces/IMaxApyVaultV2.sol";
+import { MaxApyVaultV2, StrategyData } from "../../src/MaxApyVaultV2.sol";
+import { BaseTest, IERC20, console, Vm } from "../base/BaseTest.t.sol";
+import { MaxApyVaultV2Events } from "../helpers/MaxApyVaultV2Events.sol";
 
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
     ////////////////////////////////////////////////////////////////
@@ -69,7 +69,12 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         return assets;
     }
 
-    function _redeem(address user, IMaxApyVaultV2 _vault, uint256 shares, uint256 expectedLoss)
+    function _redeem(
+        address user,
+        IMaxApyVaultV2 _vault,
+        uint256 shares,
+        uint256 expectedLoss
+    )
         internal
         returns (uint256)
     {
@@ -93,7 +98,11 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         return vault.previewDeposit(amount);
     }
 
-    function _calculateExpectedStrategistFees(uint256 computedStrategistFee, uint256 reward, uint256 totalFee)
+    function _calculateExpectedStrategistFees(
+        uint256 computedStrategistFee,
+        uint256 reward,
+        uint256 totalFee
+    )
         internal
         pure
         returns (uint256)
@@ -101,7 +110,11 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         return (computedStrategistFee * reward) / totalFee;
     }
 
-    function _calculateMaxExpectedLoss(uint256 maxLoss, uint256 valueToWithdraw, uint256 totalLoss)
+    function _calculateMaxExpectedLoss(
+        uint256 maxLoss,
+        uint256 valueToWithdraw,
+        uint256 totalLoss
+    )
         internal
         pure
         returns (uint256)
@@ -109,7 +122,11 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         return (maxLoss * (valueToWithdraw + totalLoss)) / MAX_BPS;
     }
 
-    function _computeExpectedRatioChange(IMaxApyVaultV2 _vault, address strategy, uint256 loss)
+    function _computeExpectedRatioChange(
+        IMaxApyVaultV2 _vault,
+        address strategy,
+        uint256 loss
+    )
         internal
         returns (uint256)
     {

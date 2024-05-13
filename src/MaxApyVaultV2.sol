@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
-import {IStrategy} from "src/interfaces/IStrategy.sol";
-import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {ReentrancyGuard} from "./lib/ReentrancyGuard.sol";
-import {ERC4626, ERC20} from "solady/tokens/ERC4626.sol";
-import {IERC20Permit} from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { IStrategy } from "src/interfaces/IStrategy.sol";
+import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
+import { ERC4626, ERC20 } from "solady/tokens/ERC4626.sol";
+import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
@@ -44,8 +44,10 @@ KKKKOoc:;;;;;;;;:ldOKKKKKKKKKKKKKKKKKKKKKKKkl;'......',cx0KK
 KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK0OOOOOOO0KKK*/
 
 /// @title MaxApy Vault V2 Contract
-/// @notice A ERC4626 vault contract deploying `underlyingAsset` to strategies that earn yield and report gains/losses to the vault
-/// @author ERC2626 adaptation of MaxAPYVault: https://github.com/UnlockdFinance/maxapy/blob/development/src/MaxApyVault.sol
+/// @notice A ERC4626 vault contract deploying `underlyingAsset` to strategies that earn yield and report gains/losses
+/// to the vault
+/// @author ERC2626 adaptation of MaxAPYVault:
+/// https://github.com/UnlockdFinance/maxapy/blob/development/src/MaxApyVault.sol
 contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     using SafeTransferLib for address;
     ////////////////////////////////////////////////////////////////
@@ -416,7 +418,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             sstore(
                 strategiesSlot,
                 or(
-                    shr(240, shl(240, sub(strategyDebtRatio, ratioChange))), // Compute strategies[strategy].strategyDebtRatio - ratioChange
+                    shr(240, shl(240, sub(strategyDebtRatio, ratioChange))), // Compute
+                        // strategies[strategy].strategyDebtRatio - ratioChange
                     shl(16, shr(16, slot0Content)) // Obtain previous slot data, removing `strategyDebtRatio`
                 )
             )
@@ -435,7 +438,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             slot2Content :=
                 or(
                     shl(128, strategyTotalLoss),
-                    shr(128, shl(128, sub(strategyTotalDebt, loss))) // Compute strategies[strategy].strategyTotalDebt -= loss;
+                    shr(128, shl(128, sub(strategyTotalDebt, loss))) // Compute strategies[strategy].strategyTotalDebt -=
+                        // loss;
                 )
 
             // Update strategy total loss and total debt, store in slot 2
@@ -497,7 +501,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // computedManagementFee = (gain * managementFee) / MAX_BPS
             computedManagementFee := div(mul(gain, managementFee_), MAX_BPS)
 
-            // Overflow check equivalent to require(strategyPerformanceFee == 0 || gain <= type(uint256).max / strategyPerformanceFee)
+            // Overflow check equivalent to require(strategyPerformanceFee == 0 || gain <= type(uint256).max /
+            // strategyPerformanceFee)
             if iszero(iszero(mul(strategyPerformanceFee, gt(gain, div(not(0), strategyPerformanceFee))))) {
                 revert(0, 0)
             }
@@ -533,7 +538,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             if (computedStrategistFee != 0) {
                 uint256 strategistReward;
                 assembly {
-                    // Overflow check equivalent to require(reward == 0 || computedStrategistFee <= type(uint256).max / reward)
+                    // Overflow check equivalent to require(reward == 0 || computedStrategistFee <= type(uint256).max /
+                    // reward)
                     // No need to check for totalFee == 0 since it is checked in the if clause above
                     if iszero(iszero(mul(reward, gt(computedStrategistFee, div(not(0), reward))))) { revert(0, 0) }
 
@@ -545,7 +551,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 address(this).safeTransfer(IStrategy(strategy).strategist(), strategistReward);
             }
 
-            // Treasury earns remaining shares (performance fee + management fee + any dust leftover from flooring math above)
+            // Treasury earns remaining shares (performance fee + management fee + any dust leftover from flooring math
+            // above)
             uint256 cachedBalance = balanceOf(address(this));
             if (cachedBalance != 0) {
                 // if the harvest was triggered by a regular user send management fee to
@@ -609,7 +616,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Extract strategies[strategy].strategyDebtRatio
             let strategyDebtRatio := shr(240, shl(240, slot0Content))
 
-            // Overflow check equivalent to require(vaultTotalAssets == 0 || strategyDebtRatio <= type(uint256).max / vaultTotalAssets)
+            // Overflow check equivalent to require(vaultTotalAssets == 0 || strategyDebtRatio <= type(uint256).max /
+            // vaultTotalAssets)
             if iszero(iszero(mul(vaultTotalAssets, gt(strategyDebtRatio, div(not(0), vaultTotalAssets))))) {
                 revert(0, 0)
             }
@@ -644,7 +652,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
         if (success) return 0;
 
-        // Obtain strategies[strategy].strategyMaxDebtPerHarvest from the previously loaded slot0Content, this saves one SLOAD
+        // Obtain strategies[strategy].strategyMaxDebtPerHarvest from the previously loaded slot0Content, this saves one
+        // SLOAD
         uint256 strategyMaxDebtPerHarvest;
         assembly {
             strategyMaxDebtPerHarvest := shr(128, slot0Content)
@@ -655,7 +664,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Performs the debt limit calculation
     /// @param _debtRatio The debt ratio to use for computation
     /// @param totalAssets_ The amount of assets
-    /// @return debtLimit The limit amount of assets allowed for the strategy, given the current debt ratio and total assets
+    /// @return debtLimit The limit amount of assets allowed for the strategy, given the current debt ratio and total
+    /// assets
     function _computeDebtLimit(uint256 _debtRatio, uint256 totalAssets_) internal pure returns (uint256 debtLimit) {
         assembly {
             // Overflow check equivalent to require(totalAssets_ == 0 || _debtRatio <= type(uint256).max / totalAssets_)
@@ -681,7 +691,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // Obtain strategies[strategy].strategyDebtRatio from slot 0
             strategyDebtRatio := shr(240, shl(240, sload(slot)))
         }
-        // If debt ratio configured in vault is zero or emergency shutdown, any amount of debt in the strategy should be returned
+        // If debt ratio configured in vault is zero or emergency shutdown, any amount of debt in the strategy should be
+        // returned
         if (debtRatio == 0 || emergencyShutdown) return strategyTotalDebt;
 
         uint256 strategyDebtLimit = _computeDebtLimit(strategyDebtRatio, _totalDeposits());
@@ -921,7 +932,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // from strategies until requested value amount is covered.
             // During forced withdrawal, the vault will do exact amount requests to the strategies
             // and account the losses needed to achieve those amounts. Those
-            // losses are reported back to the vault This will affect the withdrawer, affecting the amount of shares that will
+            // losses are reported back to the vault This will affect the withdrawer, affecting the amount of shares
+            // that will
             // burn in order to withdraw exactly @param assets assets
 
             uint256 totalLoss;
@@ -1044,7 +1056,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// of underlying tokens.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     /// @dev reverts with custom `VaultDepositLimitExceeded` error instead of Solady's `DepositMoreThanMax`
-    function deposit(uint256 assets, address receiver)
+    function deposit(
+        uint256 assets,
+        address receiver
+    )
         public
         virtual
         override
@@ -1066,7 +1081,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Mints `shares` Vault shares to `to` by depositing exactly `assets`
     /// of underlying tokens.
     /// @notice it allows for gasless approvals on deposits
-    /// @param v, @param r, @param s, @param deadline, @param owner @param assets the components of the {Permit} EIP712 signature
+    /// @param v, @param r, @param s, @param deadline, @param owner @param assets the components of the {Permit} EIP712
+    /// signature
     function depositWithPermit(
         address owner,
         uint256 assets,
@@ -1075,7 +1091,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         bytes32 r,
         bytes32 s,
         address receiver
-    ) public noEmergencyShutdown nonReentrant returns (uint256 shares) {
+    )
+        public
+        noEmergencyShutdown
+        nonReentrant
+        returns (uint256 shares)
+    {
         uint256 _maxDeposit = maxDeposit(owner);
         assembly ("memory-safe") {
             if gt(assets, _maxDeposit) {
@@ -1092,7 +1113,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// of underlying tokens.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     /// @dev reverts with custom `VaultDepositLimitExceeded` error instead of Solady's `MinttMoreThanMax`
-    function mint(uint256 shares, address receiver)
+    function mint(
+        uint256 shares,
+        address receiver
+    )
         public
         virtual
         override
@@ -1114,7 +1138,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
     /// of underlying tokens.
     /// @notice it allows for gasless approvals on mints
-    /// @param v, @param r, @param s, @param deadline, @param owner assets(calculated from @param shares ) the components of the {Permit} EIP712 signature
+    /// @param v, @param r, @param s, @param deadline, @param owner assets(calculated from @param shares ) the
+    /// components of the {Permit} EIP712 signature
     function mintWithPermit(
         address owner,
         uint256 shares,
@@ -1123,7 +1148,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         bytes32 r,
         bytes32 s,
         address receiver
-    ) public noEmergencyShutdown nonReentrant returns (uint256 assets) {
+    )
+        public
+        noEmergencyShutdown
+        nonReentrant
+        returns (uint256 assets)
+    {
         uint256 _maxMint = maxMint(msg.sender);
         assembly ("memory-safe") {
             if gt(shares, _maxMint) {
@@ -1196,7 +1226,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Burns `shares` from `owner` and sends exactly `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
-    function withdraw(uint256 assets, address to, address owner)
+    function withdraw(
+        uint256 assets,
+        address to,
+        address owner
+    )
         public
         override
         nonReentrant
@@ -1386,7 +1420,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             // from strategies until requested value amount is covered.
             // During forced withdrawal, the vault will do exact amount requests to the strategies
             // and account the losses needed to achieve those amounts. Those
-            // losses are reported back to the vault This will affect the withdrawer, affecting the amount of shares that will
+            // losses are reported back to the vault This will affect the withdrawer, affecting the amount of shares
+            // that will
             // burn in order to withdraw exactly @param assets assets
 
             uint256 totalLoss;
@@ -1499,8 +1534,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice  Reports the amount of assets the calling Strategy has free (usually in terms of ROI).
     /// The performance fee is determined here, off of the strategy's profits (if any), and sent to governance.
-    /// The strategist's fee is also determined here (off of profits), to be handled according to the strategist on the next harvest.
-    /// @dev For approved strategies, this is the most efficient behavior. The Strategy reports back what it has free, then
+    /// The strategist's fee is also determined here (off of profits), to be handled according to the strategist on the
+    /// next harvest.
+    /// @dev For approved strategies, this is the most efficient behavior. The Strategy reports back what it has free,
+    /// then
     /// Vault "decides" whether to take some back or give it more.
     /// Note that the most it can take is `gain + debtPayment`, and the most it can give is all of the
     /// remaining reserves. Anything outside of those bounds is abnormal behavior
@@ -1509,7 +1546,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @param unrealizedGain Amount Strategy accounted as gain on its investment since its last report
     /// @param loss Amount Strategy has realized as a loss on its investment since its last report, and should be
     /// accounted for on the Vault's balance sheet. The loss will reduce the debtRatio for the strategy and vault.
-    /// The next time the strategy will harvest, it will pay back the debt in an attempt to adjust to the new debt limit.
+    /// The next time the strategy will harvest, it will pay back the debt in an attempt to adjust to the new debt
+    /// limit.
     /// @param debtPayment Amount Strategy has made available to cover outstanding debt
     /// @return debt Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
     function report(
@@ -1518,7 +1556,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint128 loss,
         uint128 debtPayment,
         address managementFeeReceiver
-    ) external checkRoles(STRATEGY_ROLE) returns (uint256) {
+    )
+        external
+        checkRoles(STRATEGY_ROLE)
+        returns (uint256)
+    {
         // Cache underlying asset
         address underlying = asset();
         // Cache strategy balance
@@ -1619,7 +1661,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Adds a new strategy
-    /// @dev The Strategy will be appended to `withdrawalQueue`, and `_organizeWithdrawalQueue` will reorganize the queue order
+    /// @dev The Strategy will be appended to `withdrawalQueue`, and `_organizeWithdrawalQueue` will reorganize the
+    /// queue order
     /// @param newStrategy The new strategy to add
     /// @param strategyDebtRatio The percentage of the total assets in the vault that the `newStrategy` has access to
     /// @param strategyMaxDebtPerHarvest Lower limit on the increase of debt since last harvest
@@ -1631,7 +1674,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 strategyMaxDebtPerHarvest,
         uint256 strategyMinDebtPerHarvest,
         uint256 strategyPerformanceFee
-    ) external checkRoles(ADMIN_ROLE) noEmergencyShutdown {
+    )
+        external
+        checkRoles(ADMIN_ROLE)
+        noEmergencyShutdown
+    {
         uint256 slot; // Slot where strategies[newStrategy] slot will be stored
 
         assembly ("memory-safe") {
@@ -1780,7 +1827,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
 
     /// @notice Removes a strategy from the queue
-    /// @dev  We don't do this with `revokeStrategy` because it should still be possible to withdraw from the Strategy if it's unwinding.
+    /// @dev  We don't do this with `revokeStrategy` because it should still be possible to withdraw from the Strategy
+    /// if it's unwinding.
     /// @param strategy The strategy to remove
     function removeStrategy(address strategy) external checkRoles(ADMIN_ROLE) noEmergencyShutdown {
         address[MAXIMUM_STRATEGIES] memory cachedWithdrawalQueue = withdrawalQueue;
@@ -1810,12 +1858,14 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Revoke a Strategy, setting its debt limit to 0 and preventing any future deposits
     /// @dev This function should only be used in the scenario where the Strategy is being retired but no migration
     /// of the positions is possible, or in the extreme scenario that the Strategy needs to be put into "Emergency Exit"
-    /// mode in order for it to exit as quickly as possible. The latter scenario could be for any reason that is considered
+    /// mode in order for it to exit as quickly as possible. The latter scenario could be for any reason that is
+    /// considered
     /// "critical" that the Strategy exits its position as fast as possible, such as a sudden change in market
     /// conditions leading to losses, or an imminent failure in an external dependency.
     /// @param strategy The strategy to revoke
     function revokeStrategy(address strategy) external checkRoles(ADMIN_ROLE) {
-        uint256 cachedStrategyDebtRatio = strategies[strategy].strategyDebtRatio; // Saves an SLOAD if strategy is != addr(0)
+        uint256 cachedStrategyDebtRatio = strategies[strategy].strategyDebtRatio; // Saves an SLOAD if strategy is !=
+            // addr(0)
         assembly ("memory-safe") {
             // if (strategies[strategy].strategyActivation == 0)
             if iszero(cachedStrategyDebtRatio) {
@@ -1901,7 +1951,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 newMaxDebtPerHarvest,
         uint256 newMinDebtPerHarvest,
         uint256 newPerformanceFee
-    ) external checkRoles(ADMIN_ROLE) {
+    )
+        external
+        checkRoles(ADMIN_ROLE)
+    {
         uint256 slot; // Slot where strategies[strategy] slot will be stored
         uint256 slotContent; // Used to store strategies[strategy] slot content
 
@@ -1976,8 +2029,10 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         }
 
         assembly ("memory-safe") {
-            // Update strategies[strategy] with new updated data: debtRatio, maxDebtPerHarvest, minDebtPerHarvest, performanceFee
-            // Slot 0 and slot 1 will be updated with the new values. Slot 2 is not updated since it stores `strategyTotalDebt`
+            // Update strategies[strategy] with new updated data: debtRatio, maxDebtPerHarvest, minDebtPerHarvest,
+            // performanceFee
+            // Slot 0 and slot 1 will be updated with the new values. Slot 2 is not updated since it stores
+            // `strategyTotalDebt`
             // and `strategyTotalLoss`, which are not updated in `updateStrategyData()`.
 
             // Store data for slot 0 in strategies[strategy]
@@ -1985,7 +2040,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 slot,
                 or(
                     // Obtain old values in slot
-                    and(shl(32, 0xffffffffffffffffffffffff), slotContent), // Extract previously stored `strategyActivation` and `strategyLastReport`
+                    and(shl(32, 0xffffffffffffffffffffffff), slotContent), // Extract previously stored
+                        // `strategyActivation` and `strategyLastReport`
                     // Build new values to store
                     or(
                         shl(128, newMaxDebtPerHarvest),
@@ -2118,7 +2174,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// 1. No users may deposit into the Vault (but may withdraw as usual)
     /// 2. No new Strategies may be added
     /// 3. Each Strategy must pay back their debt as quickly as reasonable to minimally affect their position
-    /// @param _emergencyShutdown If true, the Vault goes into Emergency Shutdown. If false, the Vault goes back into normal operation
+    /// @param _emergencyShutdown If true, the Vault goes into Emergency Shutdown. If false, the Vault goes back into
+    /// normal operation
     function setEmergencyShutdown(bool _emergencyShutdown) external checkRoles(EMERGENCY_ADMIN_ROLE) {
         emergencyShutdown = _emergencyShutdown;
         assembly ("memory-safe") {

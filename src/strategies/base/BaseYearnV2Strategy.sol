@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
-import {IYVault} from "src/interfaces/IYVault.sol";
+import { BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { IYVault } from "src/interfaces/IYVault.sol";
 
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @author MaxApy
 /// @notice `BaseYearnV2Strategy` sets the base functionality to be implemented by MaxApy YearnV3 strategies.
@@ -70,7 +70,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -83,7 +83,11 @@ contract BaseYearnV2Strategy is BaseStrategy {
         bytes32 _strategyName,
         address _strategist,
         IYVault _yVault
-    ) public virtual initializer {
+    )
+        public
+        virtual
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
@@ -219,7 +223,11 @@ contract BaseYearnV2Strategy is BaseStrategy {
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
 
-    function _prepareReturn(uint256 debtOutstanding, uint256, uint256 harvestedProfitBPS)
+    function _prepareReturn(
+        uint256 debtOutstanding,
+        uint256,
+        uint256 harvestedProfitBPS
+    )
         internal
         override
         returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
@@ -331,7 +339,10 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+    function _invest(
+        uint256 amount,
+        uint256 minOutputAfterInvestment
+    )
         internal
         virtual
         returns (uint256 depositedAmount)
@@ -389,13 +400,15 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
     /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
-    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether the
+    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
+    /// the
     /// difference is due to a realized loss, or if there is some other sitution at play
     /// (e.g. locked funds) where the amount made available is less than what is needed.
     /// NOTE: The invariant `liquidatedAmount + loss <= amountNeeded` should always be maintained
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
-    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
+    /// amount
 
     function _liquidatePosition(uint256 amountNeeded)
         internal
@@ -498,7 +511,8 @@ contract BaseYearnV2Strategy is BaseStrategy {
             //temporal value to save gas
             let lockedFundsRatio := sub(timestamp(), lastReport)
 
-            // Overflow check equivalent to require(lockedProfitDegradation == 0 || lockedFundsRatio <= type(uint256).max / lockedProfitDegradation)
+            // Overflow check equivalent to require(lockedProfitDegradation == 0 || lockedFundsRatio <=
+            // type(uint256).max / lockedProfitDegradation)
             if iszero(iszero(mul(lockedProfitDegradation, gt(lockedFundsRatio, div(not(0), lockedProfitDegradation)))))
             {
                 revert(0, 0)
@@ -513,7 +527,8 @@ contract BaseYearnV2Strategy is BaseStrategy {
                 if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
                 lockedProfit := mload(0x00)
 
-                // Overflow check equivalent to require(lockedProfit == 0 || lockedFundsRatio <= type(uint256).max / lockedProfit)
+                // Overflow check equivalent to require(lockedProfit == 0 || lockedFundsRatio <= type(uint256).max /
+                // lockedProfit)
                 if iszero(iszero(mul(lockedProfit, gt(lockedFundsRatio, div(not(0), lockedProfit))))) { revert(0, 0) }
 
                 //return lockedProfit - ((lockedFundsRatio * lockedProfit) / DEGRADATION_COEFFICIENT);

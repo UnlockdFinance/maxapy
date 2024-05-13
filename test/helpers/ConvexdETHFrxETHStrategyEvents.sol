@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategyEvents} from "./BaseStrategyEvents.sol";
+import { BaseStrategyEvents } from "./BaseStrategyEvents.sol";
 
 contract ConvexdETHFrxETHStrategyEvents is BaseStrategyEvents {
     /// @notice Emitted when underlying asset is deposited into Convex
