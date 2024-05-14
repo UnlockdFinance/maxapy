@@ -52,6 +52,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
     function deposit(uint256 amount) public createActor countCall("deposit") {
         amount = bound(amount, 0, vault.maxDeposit(currentActor));
         if (amount == 0) return;
+        if(currentActor == address(vault)) return;
 
         deal(address(token), currentActor, amount);
 
@@ -87,6 +88,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
     function mint(uint256 shares) public createActor countCall("mint") {
         shares = bound(shares, 0, vault.maxMint(currentActor));
         if (shares == 0) return;
+        if(currentActor == address(vault)) return;
 
         expectedAssets = vault.convertToAssets(shares);
         deal(address(token), currentActor, expectedAssets);
@@ -121,6 +123,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
     function redeem(uint256 actorSeed, uint256 shares) public useActor(actorSeed) countCall("redeem") {
         shares = bound(shares, 0, vault.balanceOf(currentActor));
         if (shares == 0) return;
+        if(currentActor == address(vault)) return;
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedAssets = vault.previewRedeem(shares);
@@ -153,6 +156,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
     function withdraw(uint256 actorSeed, uint256 shares) public useActor(actorSeed) countCall("withdraw") {
         shares = bound(shares, 0, vault.balanceOf(currentActor));
         if (shares == 0) return;
+        if(currentActor == address(vault)) return;
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedAssets = vault.previewRedeem(shares);

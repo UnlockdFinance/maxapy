@@ -12,40 +12,26 @@ import {
 } from "./handlers/BaseSommelierStrategyHandler.t.sol";
 import { MaxApyVaultV2Handler, MaxApyVaultV2 } from "./handlers/MaxApyVaultV2Handler.t.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
-import { BaseTest } from "../base/BaseTest.t.sol";
+import { Test } from "forge-std/Test.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {MockERC4626} from "../../lib/solady/test/utils/mocks/MockERC4626.sol";
 
-contract BaseSommelierStrategyInvariants is StdInvariant, BaseTest {
+// TODO: add isPaused() to mock vault 
+contract BaseSommelierStrategyInvariants is StdInvariant, Test {
     MaxApyVaultV2Handler mvh;
     BaseSommelierStrategyHandler bsh;
 
-    /// List of mainnet weth cellars to play with
-    address[7] cellars = [
-        0xcf4B531b4Cde95BD35d71926e09B2b54c564F5b6, // morpho maximizer
-        0xdAdC82e26b3739750E036dFd9dEfd3eD459b877A, // eeth v2
-        0x19B8D8FC682fC56FbB42653F68c7d48Dd3fe597E, // eth x
-        0x27500De405a3212D57177A789E30bb88b0AdbeC5, // ezeth
-        0x1dffb366b5c5A37A12af2C127F31e8e0ED86BDbe, // rseth
-        0xfd6db5011b171B05E1Ea3b92f9EAcaEEb055e971, // steth
-        0xd33dAd974b938744dAC81fE00ac67cb5AA13958E // sweth
-    ];
-
     function setUp() public {
-        super._setUp("MAINNET");
-        vm.rollFork(19_867_327);
-
-        uint256 _cellarSeed;
-        _cellarSeed = bound(_cellarSeed, 0, cellars.length - 1);
-        address _underlyingCellar = cellars[_cellarSeed];
-
-        MockERC20 _token = MockERC20(WETH_MAINNET);
+        MockERC20 _token = new MockERC20("MockWETH", "MW", 18);
         MaxApyVaultV2 _vault = new MaxApyVaultV2(address(_token), "MaxApyVault", "max", address(1));
 
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         BaseSommelierStrategyWrapper _implementation = new BaseSommelierStrategyWrapper();
 
+        MockERC4626 _underlyingCellar = new MockERC4626(address(_token),"Sommelier Cellar", "SC", true, 0);
+
         address[] memory keepers = new address[](1);
-        keepers[0] = users.keeper;
+        keepers[0] = address(this);
 
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
             address(_implementation),
