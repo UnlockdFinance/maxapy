@@ -1,43 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { CommonBase } from "forge-std/Base.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
-import { StdUtils } from "forge-std/StdUtils.sol";
-import { console } from "forge-std/console.sol";
-import { AddressSet, LibAddressSet } from "../../helpers/AddressSet.sol";
+import { BaseHandler, console } from "./base/BaseHadler.t.sol";
 import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
 
-contract MaxApyVaultV2Handler is CommonBase, StdCheats, StdUtils {
-    using LibAddressSet for AddressSet;
-
+contract MaxApyVaultV2Handler is BaseHandler {
     MaxApyVaultV2 vault;
     MockERC20 token;
-
-    ////////////////////////////////////////////////////////////////
-    ///                      ACTORS CONFIG                       ///
-    ////////////////////////////////////////////////////////////////
-    mapping(bytes32 => uint256) public calls;
-
-    AddressSet internal _actors;
-    address internal currentActor;
-
-    modifier createActor() {
-        currentActor = msg.sender;
-        _actors.add(msg.sender);
-        _;
-    }
-
-    modifier useActor(uint256 actorIndexSeed) {
-        currentActor = _actors.rand(actorIndexSeed);
-        _;
-    }
-
-    modifier countCall(bytes32 key) {
-        calls[key]++;
-        _;
-    }
 
     ////////////////////////////////////////////////////////////////
     ///                      GHOST VARIABLES                     ///
@@ -83,7 +53,7 @@ contract MaxApyVaultV2Handler is CommonBase, StdCheats, StdUtils {
         amount = bound(amount, 0, vault.maxDeposit(currentActor));
         if (amount == 0) return;
 
-        token.mint(currentActor, amount);
+        deal(address(token), currentActor, amount);
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedBalance = actualBalance + amount;
@@ -119,7 +89,7 @@ contract MaxApyVaultV2Handler is CommonBase, StdCheats, StdUtils {
         if (shares == 0) return;
 
         expectedAssets = vault.convertToAssets(shares);
-        token.mint(currentActor, expectedAssets);
+        deal(address(token), currentActor, expectedAssets);
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedBalance = actualBalance + expectedAssets;
@@ -130,7 +100,9 @@ contract MaxApyVaultV2Handler is CommonBase, StdCheats, StdUtils {
         expectedTotalDebt = 0;
         expectedSharePrice = (10 ** vault.decimals()) * (expectedTotalAssets + 1) / (expectedTotalSupply + 10 ** 6);
 
+        vm.startPrank(currentActor);
         actualAssets = vault.mint(shares, currentActor);
+        vm.stopPrank();
 
         actualBalance = token.balanceOf(address(vault));
         actualTotalSupply = vault.totalSupply();
@@ -160,8 +132,9 @@ contract MaxApyVaultV2Handler is CommonBase, StdCheats, StdUtils {
         expectedTotalDebt = 0;
         expectedSharePrice = (10 ** vault.decimals()) * (expectedTotalAssets + 1) / (expectedTotalSupply + 10 ** 6);
 
-        vm.prank(currentActor);
+        vm.startPrank(currentActor);
         actualAssets = vault.redeem(shares, currentActor, currentActor);
+        vm.stopPrank();
 
         actualBalance = token.balanceOf(address(vault));
         actualTotalSupply = vault.totalSupply();
@@ -181,8 +154,7 @@ contract MaxApyVaultV2Handler is CommonBase, StdCheats, StdUtils {
         shares = bound(shares, 0, vault.balanceOf(currentActor));
         if (shares == 0) return;
 
-        token.mint(currentActor, shares);
-
+        uint256 previousSharePrice = vault.sharePrice();
         expectedAssets = vault.previewRedeem(shares);
         expectedBalance = actualBalance - expectedAssets;
         expectedTotalSupply = actualTotalSupply - shares;
@@ -201,30 +173,25 @@ contract MaxApyVaultV2Handler is CommonBase, StdCheats, StdUtils {
         actualTotalDebt = vault.totalDebt();
         actualTotalIdle = vault.totalDeposits();
         actualSharePrice = vault.sharePrice();
+        sharePriceDelta = (
+            actualSharePrice > previousSharePrice
+                ? actualSharePrice - previousSharePrice
+                : previousSharePrice - actualSharePrice
+        ) * 10_000 / previousSharePrice;
     }
 
     ////////////////////////////////////////////////////////////////
     ///                      HELPERS                             ///
     ////////////////////////////////////////////////////////////////
-    function forEachActor(function(address) external func) public {
-        return _actors.forEach(func);
+
+    function getEntryPoints() public pure override returns (bytes4[] memory) {
+        bytes4[] memory _entryPoints = new bytes4[](2);
+        _entryPoints[0] = this.deposit.selector;
+        _entryPoints[1] = this.redeem.selector;
+        return _entryPoints;
     }
 
-    function reduceActors(
-        uint256 acc,
-        function(uint256,address) external returns (uint256) func
-    )
-        public
-        returns (uint256)
-    {
-        return _actors.reduce(acc, func);
-    }
-
-    function actors() external view returns (address[] memory) {
-        return _actors.addrs;
-    }
-
-    function callSummary() external view {
+    function callSummary() public view override {
         console.log("");
         console.log("");
         console.log("Call summary:");

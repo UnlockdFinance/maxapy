@@ -5,7 +5,7 @@ import { MaxApyVaultV2Handler, MockERC20, MaxApyVaultV2 } from "./handlers/MaxAp
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { Test } from "forge-std/Test.sol";
 
-contract MaxaApyVaultV2AccountinhInvariants is StdInvariant, Test {
+contract MaxApyVaultV2AccountingInvariants is StdInvariant, Test {
     MaxApyVaultV2Handler mvh;
 
     function setUp() public {
@@ -13,9 +13,7 @@ contract MaxaApyVaultV2AccountinhInvariants is StdInvariant, Test {
         MaxApyVaultV2 _vault = new MaxApyVaultV2(address(_token), "MaxApyVault", "max", address(1));
         mvh = new MaxApyVaultV2Handler(_vault, _token);
         targetContract(address(mvh));
-        bytes4[] memory selectors = new bytes4[](2);
-        selectors[0] = MaxApyVaultV2Handler.deposit.selector;
-        selectors[1] = MaxApyVaultV2Handler.redeem.selector;
+        bytes4[] memory selectors = mvh.getEntryPoints();
         targetSelector(FuzzSelector({ addr: address(mvh), selectors: selectors }));
     }
 
