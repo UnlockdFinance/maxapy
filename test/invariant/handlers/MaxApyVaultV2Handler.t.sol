@@ -52,7 +52,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
     function deposit(uint256 amount) public createActor countCall("deposit") {
         amount = bound(amount, 0, vault.maxDeposit(currentActor));
         if (amount == 0) return;
-        if(currentActor == address(vault)) return;
+        if (currentActor == address(vault)) return;
 
         deal(address(token), currentActor, amount);
 
@@ -88,10 +88,10 @@ contract MaxApyVaultV2Handler is BaseHandler {
     function mint(uint256 shares) public createActor countCall("mint") {
         shares = bound(shares, 0, vault.maxMint(currentActor));
         if (shares == 0) return;
-        if(currentActor == address(vault)) return;
+        if (currentActor == address(vault)) return;
 
-        expectedAssets = vault.convertToAssets(shares);
-        deal(address(token), currentActor, expectedAssets);
+        expectedAssets = vault.previewMint(shares);
+        deal(address(token), currentActor, expectedAssets * 2);
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedBalance = actualBalance + expectedAssets;
@@ -103,6 +103,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
         expectedSharePrice = (10 ** vault.decimals()) * (expectedTotalAssets + 1) / (expectedTotalSupply + 10 ** 6);
 
         vm.startPrank(currentActor);
+        token.approve(address(vault), type(uint256).max);
         actualAssets = vault.mint(shares, currentActor);
         vm.stopPrank();
 
@@ -121,9 +122,9 @@ contract MaxApyVaultV2Handler is BaseHandler {
     }
 
     function redeem(uint256 actorSeed, uint256 shares) public useActor(actorSeed) countCall("redeem") {
-        shares = bound(shares, 0, vault.balanceOf(currentActor));
+        shares = bound(shares, 0, vault.maxRedeem(currentActor));
         if (shares == 0) return;
-        if(currentActor == address(vault)) return;
+        if (currentActor == address(vault)) return;
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedAssets = vault.previewRedeem(shares);
@@ -153,22 +154,29 @@ contract MaxApyVaultV2Handler is BaseHandler {
         ) * 10_000 / previousSharePrice;
     }
 
-    function withdraw(uint256 actorSeed, uint256 shares) public useActor(actorSeed) countCall("withdraw") {
-        shares = bound(shares, 0, vault.balanceOf(currentActor));
-        if (shares == 0) return;
-        if(currentActor == address(vault)) return;
+    function withdraw(uint256 actorSeed, uint256 assets) public useActor(actorSeed) countCall("withdraw") {
+        assets = bound(assets, 0, vault.maxWithdraw(currentActor));
+        if (assets == 0) return;
+        if (currentActor == address(vault)) return;
 
         uint256 previousSharePrice = vault.sharePrice();
-        expectedAssets = vault.previewRedeem(shares);
-        expectedBalance = actualBalance - expectedAssets;
-        expectedTotalSupply = actualTotalSupply - shares;
-        expectedTotalAssets = actualTotalAssets - expectedAssets;
-        expectedTotalDeposits = actualTotalDeposits - expectedAssets;
-        expectedTotalIdle = actualTotalIdle - expectedAssets;
+        expectedShares = vault.previewWithdraw(assets);
+        console.log("actual balance : ", actualBalance);
+        console.log("withdraw assets : ", assets);
+        expectedBalance = actualBalance - assets;
+        console.log ("actual totalSupply : ", actualTotalSupply);
+        console.log ("expectedShares : ", expectedShares);
+        if(actualTotalSupply < expectedShares) return; // trying to withdraw too few assets
+        expectedTotalSupply = actualTotalSupply - expectedShares;
+        expectedTotalAssets = actualTotalAssets - assets;
+        expectedTotalDeposits = actualTotalDeposits - assets;
+        expectedTotalIdle = actualTotalIdle - assets;
         expectedTotalDebt = 0;
         expectedSharePrice = (10 ** vault.decimals()) * (expectedTotalAssets + 1) / (expectedTotalSupply + 10 ** 6);
 
-        actualAssets = vault.withdraw(shares, currentActor, currentActor);
+        vm.startPrank(currentActor);
+        actualShares = vault.withdraw(assets, currentActor, currentActor);
+        vm.stopPrank();
 
         actualBalance = token.balanceOf(address(vault));
         actualTotalSupply = vault.totalSupply();
@@ -189,9 +197,11 @@ contract MaxApyVaultV2Handler is BaseHandler {
     ////////////////////////////////////////////////////////////////
 
     function getEntryPoints() public pure override returns (bytes4[] memory) {
-        bytes4[] memory _entryPoints = new bytes4[](2);
+        bytes4[] memory _entryPoints = new bytes4[](4);
         _entryPoints[0] = this.deposit.selector;
         _entryPoints[1] = this.redeem.selector;
+        _entryPoints[2] = this.mint.selector;
+        _entryPoints[3] = this.withdraw.selector;
         return _entryPoints;
     }
 

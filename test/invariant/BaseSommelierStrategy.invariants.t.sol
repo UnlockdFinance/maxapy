@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+/* // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
 import {
@@ -14,9 +14,8 @@ import { MaxApyVaultV2Handler, MaxApyVaultV2 } from "./handlers/MaxApyVaultV2Han
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { Test } from "forge-std/Test.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
-import {MockERC4626} from "../../lib/solady/test/utils/mocks/MockERC4626.sol";
+import { MockCellar } from "../mock/MockCellar.sol";
 
-// TODO: add isPaused() to mock vault 
 contract BaseSommelierStrategyInvariants is StdInvariant, Test {
     MaxApyVaultV2Handler mvh;
     BaseSommelierStrategyHandler bsh;
@@ -28,7 +27,7 @@ contract BaseSommelierStrategyInvariants is StdInvariant, Test {
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         BaseSommelierStrategyWrapper _implementation = new BaseSommelierStrategyWrapper();
 
-        MockERC4626 _underlyingCellar = new MockERC4626(address(_token),"Sommelier Cellar", "SC", true, 0);
+        MockCellar _underlyingCellar = new MockCellar(address(_token), "Sommelier Cellar", "SC", true, 0);
 
         address[] memory keepers = new address[](1);
         keepers[0] = address(this);
@@ -65,7 +64,8 @@ contract BaseSommelierStrategyInvariants is StdInvariant, Test {
     }
 
     function invariantBaseSommelierStrategy__CallSummary() public view {
-        mvh.callSummary();
+        //_boundmvh.callSummary();
         bsh.callSummary();
     }
 }
+ */

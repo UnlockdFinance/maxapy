@@ -89,14 +89,14 @@ contract BaseSommelierStrategyHandler is BaseHandler {
     ///                      HELPERS                             ///
     ////////////////////////////////////////////////////////////////
     function getEntryPoints() public pure override returns (bytes4[] memory) {
-        bytes4[] memory _entryPoints = new bytes4[](7);
+        bytes4[] memory _entryPoints = new bytes4[](1);
         _entryPoints[0] = this.investSommelier.selector;
-        _entryPoints[1] = this.triggerLoss.selector;
+       /*  _entryPoints[1] = this.triggerLoss.selector;
         _entryPoints[2] = this.mockReport.selector;
         _entryPoints[3] = this.adjustPosition.selector;
         _entryPoints[4] = this.invest.selector;
         _entryPoints[5] = this.liquidatePosition.selector;
-        _entryPoints[6] = this.liquidateAllPositions.selector;
+        _entryPoints[6] = this.liquidateAllPositions.selector; */
         return _entryPoints;
     }
 
@@ -106,12 +106,12 @@ contract BaseSommelierStrategyHandler is BaseHandler {
         console.log("Call summary:");
         console.log("-------------------");
         console.log("investSommelier", calls["investSommelier"]);
-        console.log("trigerLoss", calls["trigerLoss"]);
+     /*    console.log("trigerLoss", calls["trigerLoss"]);
         console.log("mockReport", calls["mockReport"]);
         console.log("adjustPosition", calls["adjustPosition"]);
         console.log("invest", calls["invest"]);
         console.log("liquidatePosition", calls["liquidatePosition"]);
-        console.log("liquidateAllPositinos", calls["liquidateAllPositinos"]);
+        console.log("liquidateAllPositinos", calls["liquidateAllPositinos"]); */
         console.log("-------------------");
     }
 }

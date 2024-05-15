@@ -880,7 +880,8 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 totalSupply = totalSupply();
         // prevent division by zero
         if (totalSupply == 0) return 0;
-        maxAssets = Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply);
+        uint256 o = _decimalsOffset();
+        maxAssets = Math.fullMulDiv(_inc_(maxLiquidableAssets), maxRedeem(owner), totalSupply + 10 ** o);
     }
 
     /// @notice Returns the estimate price of 1 vault share
