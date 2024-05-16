@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseHandler, console } from "./base/BaseHadler.t.sol";
+import { BaseHandler, console } from "./base/BaseHandler.t.sol";
 import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
 
@@ -59,6 +59,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
         uint256 previousSharePrice = vault.sharePrice();
         expectedBalance = actualBalance + amount;
         expectedShares = vault.previewDeposit(amount);
+        if (expectedShares == 0) return;
         expectedTotalSupply = actualTotalSupply + expectedShares;
         expectedTotalAssets = actualTotalAssets + amount;
         expectedTotalDeposits = actualTotalDeposits + amount;
@@ -128,11 +129,13 @@ contract MaxApyVaultV2Handler is BaseHandler {
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedAssets = vault.previewRedeem(shares);
-        expectedBalance = actualBalance - expectedAssets;
+        expectedBalance = _sub0(actualBalance, expectedAssets);
         expectedTotalSupply = actualTotalSupply - shares;
-        expectedTotalAssets = actualTotalAssets - expectedAssets;
-        expectedTotalDeposits = actualTotalDeposits - expectedAssets;
-        expectedTotalIdle = actualTotalIdle - expectedAssets;
+        console.log("total assets : ", vault.totalAssets());
+        console.log("expectedAssets : ", expectedAssets); 
+        expectedTotalAssets = _sub0(actualTotalAssets,expectedAssets);
+        expectedTotalDeposits = _sub0(actualTotalDeposits, expectedAssets);
+        expectedTotalIdle = _sub0(actualTotalIdle, expectedAssets);
         expectedTotalDebt = 0;
         expectedSharePrice = (10 ** vault.decimals()) * (expectedTotalAssets + 1) / (expectedTotalSupply + 10 ** 6);
 
@@ -161,12 +164,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedShares = vault.previewWithdraw(assets);
-        console.log("actual balance : ", actualBalance);
-        console.log("withdraw assets : ", assets);
-        expectedBalance = actualBalance - assets;
-        console.log ("actual totalSupply : ", actualTotalSupply);
-        console.log ("expectedShares : ", expectedShares);
-        if(actualTotalSupply < expectedShares) return; // trying to withdraw too few assets
+        expectedBalance = _sub0(actualBalance, assets);
         expectedTotalSupply = actualTotalSupply - expectedShares;
         expectedTotalAssets = actualTotalAssets - assets;
         expectedTotalDeposits = actualTotalDeposits - assets;
@@ -178,7 +176,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
         actualShares = vault.withdraw(assets, currentActor, currentActor);
         vm.stopPrank();
 
-        actualBalance = token.balanceOf(address(vault));
+        actualBalance = vault.balanceOf(address(vault));
         actualTotalSupply = vault.totalSupply();
         actualTotalAssets = vault.totalAssets();
         actualTotalDeposits = vault.totalDeposits();

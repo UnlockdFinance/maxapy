@@ -5,6 +5,7 @@ import { MockERC4626 } from "../../lib/solady/test/utils/mocks/MockERC4626.sol";
 
 contract MockCellar is MockERC4626 {
     bool public isPaused;
+    bool public isShutdown;
 
     constructor(
         address underlying_,

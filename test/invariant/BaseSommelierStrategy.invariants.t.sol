@@ -1,4 +1,4 @@
-/* // SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
 import {
@@ -50,22 +50,40 @@ contract BaseSommelierStrategyInvariants is StdInvariant, Test {
         mvh = new MaxApyVaultV2Handler(_vault, _token);
         bsh = new BaseSommelierStrategyHandler(_vault, _strategy, _token);
 
+        _strategy.grantRoles(address(bsh),_strategy.KEEPER_ROLE());
+        _strategy.grantRoles(address(bsh),_strategy.VAULT_ROLE());
+        _strategy.setAutopilot(true);
+        _vault.setAutopilotEnabled(true);
+
         targetContract(address(mvh));
         targetContract(address(bsh));
 
-        bytes4[] memory selectors = mvh.getEntryPoints();
-        targetSelector(FuzzSelector({ addr: address(mvh), selectors: selectors }));
+        bytes4[] memory vaultSelectors = new bytes4[](2);
+        vaultSelectors[0] = mvh.deposit.selector;
+        vaultSelectors[1] = mvh.redeem.selector;
+        //vaultSelectors[2] = mvh.withdraw.selector;
 
-        selectors = bsh.getEntryPoints();
-        targetSelector(FuzzSelector({ addr: address(bsh), selectors: selectors }));
+        targetSelector(FuzzSelector({ addr: address(mvh), selectors: vaultSelectors }));
+
+        bytes4[] memory strategySelectors = bsh.getEntryPoints();
+        targetSelector(FuzzSelector({ addr: address(bsh), selectors: strategySelectors }));
 
         excludeSender(address(_vault));
         excludeSender(address(_strategy));
+        excludeSender(address(_underlyingCellar));
+    }
+
+    function invariantBaseSommelierStrategy__VaultAccounting() public {
+        assertEq(mvh.actualAssets(), mvh.expectedAssets(), "invariant: redeem assets");
+        assertEq(mvh.actualShares(), mvh.expectedShares(), "invariant: deposit shares");
+    }
+
+    function invariantBaseSommelierStrategy__AssetEstimation() public {
+        assertEq(bsh.actualEstimatedTotalAssets(), bsh.expectedEstimatedTotalAssets(), "invariant: estimated assets");
     }
 
     function invariantBaseSommelierStrategy__CallSummary() public view {
-        //_boundmvh.callSummary();
+        mvh.callSummary();
         bsh.callSummary();
     }
 }
- */

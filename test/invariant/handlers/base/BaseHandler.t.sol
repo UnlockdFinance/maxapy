@@ -41,6 +41,12 @@ abstract contract BaseHandler is CommonBase, StdCheats, StdUtils {
         return _actors.forEach(func);
     }
 
+    function _sub0(uint256 a, uint256 b) internal pure virtual returns (uint256) {
+        unchecked {
+            return a - b > a ? 0 : a - b;
+        }
+    }
+
     function reduceActors(
         uint256 acc,
         function(uint256,address) external returns (uint256) func

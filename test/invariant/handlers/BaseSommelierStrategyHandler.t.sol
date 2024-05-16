@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseHandler, console } from "./base/BaseHadler.t.sol";
+import { BaseHandler, console } from "./base/BaseHandler.t.sol";
 import { AddressSet, LibAddressSet } from "../../helpers/AddressSet.sol";
 import { BaseSommelierStrategyWrapper } from "../../mock/BaseSommelierStrategyWrapper.sol";
 import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
@@ -33,70 +33,50 @@ contract BaseSommelierStrategyHandler is BaseHandler {
         vault = _vault;
     }
 
-    function investSommelier(uint256 amount) public countCall("investSommelier") {
-        amount = bound(amount, 0, actualStrategyBalance);
-        if (amount == 0) return;
-        expectedStrategyBalance = actualStrategyBalance - amount;
-        strategy.investSommelier(amount);
-        actualStrategyBalance = token.balanceOf(address(strategy));
+    function gain(uint256 amount) public countCall("gain") {
+        amount = bound(amount, 0, 1_000_000 ether);
+        deal(address(token), address(strategy), amount);
     }
 
-    function triggerLoss(uint256 amount) public countCall("trigerLoss") {
-        amount = bound(amount, 0, actualStrategyBalance);
-        if (amount == 0) return;
-        expectedEstimatedTotalAssets = actualEstimatedTotalAssets - amount;
-        expectedStrategyBalance = actualStrategyBalance - amount;
-        strategy.triggerLoss(amount);
-        actualStrategyBalance = token.balanceOf(address(strategy));
+    function triggerLoss(uint256 amount, bool useLiquidateExact) public countCall("triggerLoss") {
+        if(!useLiquidateExact) {
+            amount = bound(amount, 0, strategy.maxLiquidate());
+            if (amount == 0) return;
+            expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount);
+            strategy.liquidate(amount);
+        }
+        else {
+            amount = bound(amount, 0, strategy.maxLiquidateExact());
+            if (amount == 0) return;
+            uint256 loss = strategy.liquidateExact(amount);
+            expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount);
+        }
         actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
     }
 
-    function mockReport(uint256 gain, uint256 loss, uint256 debtPayment, address treasury) public countCall("") {
-        int256 pnl = strategy.unharvestedAmount();
-        if (pnl > 0) {
-            gain = bound(gain, 0, uint256(pnl));
-            loss = bound(loss, 0, gain + 1);
-        } else {
-            gain = 0;
-            loss = bound(loss, 0, uint256(-pnl));
+    function harvest() public countCall("harvest") {
+        int256 unharvestedAmount = strategy.unharvestedAmount();
+        if(unharvestedAmount < 0) {
+            expectedEstimatedTotalAssets = actualEstimatedTotalAssets;
+            strategy.harvest(0,0,0, address(0));
+            actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
-        debtPayment = bound(debtPayment, 0, vault.getStrategyTotalDebt(address(strategy)));
-        strategy.mockReport(uint128(gain), uint128(loss), uint128(debtPayment), treasury);
-    }
-
-    function adjustPosition() public countCall("") {
-        strategy.adjustPosition();
-        ///silence warning
-    }
-
-    function invest(uint256 amount, uint256 minOutputAfterInvestment) public countCall("") {
-        bound(amount, 0, actualStrategyBalance);
-        minOutputAfterInvestment = 0;
-        strategy.invest(amount, minOutputAfterInvestment);
-    }
-
-    function liquidatePosition(uint256 amountNeeded) public countCall("liquidatePosition") {
-        bound(amountNeeded, 0, strategy.maxLiquidate());
-        strategy.liquidatePosition(amountNeeded);
-    }
-
-    function liquidateAllPositions() public countCall("liquidateAllPositions") {
-        strategy.liquidateAllPositions();
+        if(unharvestedAmount > 0) {
+            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + uint256(strategy.unharvestedAmount());
+            strategy.harvest(0,0,0, address(0));
+            actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
+        }
     }
 
     ////////////////////////////////////////////////////////////////
     ///                      HELPERS                             ///
     ////////////////////////////////////////////////////////////////
     function getEntryPoints() public pure override returns (bytes4[] memory) {
-        bytes4[] memory _entryPoints = new bytes4[](1);
-        _entryPoints[0] = this.investSommelier.selector;
-       /*  _entryPoints[1] = this.triggerLoss.selector;
-        _entryPoints[2] = this.mockReport.selector;
-        _entryPoints[3] = this.adjustPosition.selector;
-        _entryPoints[4] = this.invest.selector;
-        _entryPoints[5] = this.liquidatePosition.selector;
-        _entryPoints[6] = this.liquidateAllPositions.selector; */
+        bytes4[] memory _entryPoints = new bytes4[](3);
+        _entryPoints[0] = this.gain.selector;
+        _entryPoints[1] = this.harvest.selector;
+        _entryPoints[2] = this.triggerLoss.selector;
         return _entryPoints;
     }
 
@@ -105,13 +85,9 @@ contract BaseSommelierStrategyHandler is BaseHandler {
         console.log("");
         console.log("Call summary:");
         console.log("-------------------");
-        console.log("investSommelier", calls["investSommelier"]);
-     /*    console.log("trigerLoss", calls["trigerLoss"]);
-        console.log("mockReport", calls["mockReport"]);
-        console.log("adjustPosition", calls["adjustPosition"]);
-        console.log("invest", calls["invest"]);
-        console.log("liquidatePosition", calls["liquidatePosition"]);
-        console.log("liquidateAllPositinos", calls["liquidateAllPositinos"]); */
+        console.log("gain", calls["gain"]);
+        console.log("trigerLoss", calls["trigerLoss"]);
+        console.log("harvest", calls["harvest"]);
         console.log("-------------------");
     }
 }
