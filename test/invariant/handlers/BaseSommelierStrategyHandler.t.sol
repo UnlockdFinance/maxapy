@@ -6,6 +6,7 @@ import { AddressSet, LibAddressSet } from "../../helpers/AddressSet.sol";
 import { BaseSommelierStrategyWrapper } from "../../mock/BaseSommelierStrategyWrapper.sol";
 import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 contract BaseSommelierStrategyHandler is BaseHandler {
     MaxApyVaultV2 vault;
@@ -33,38 +34,43 @@ contract BaseSommelierStrategyHandler is BaseHandler {
         vault = _vault;
     }
 
+    ////////////////////////////////////////////////////////////////
+    ///                      ENTRY POINTS                        ///
+    ////////////////////////////////////////////////////////////////
     function gain(uint256 amount) public countCall("gain") {
         amount = bound(amount, 0, 1_000_000 ether);
         deal(address(token), address(strategy), amount);
+        strategy.harvest(0, 0, 0, address(0));
     }
 
     function triggerLoss(uint256 amount, bool useLiquidateExact) public countCall("triggerLoss") {
-        if(!useLiquidateExact) {
-            amount = bound(amount, 0, strategy.maxLiquidate());
+        uint256 maxLiquidation = strategy.shareValue(strategy.shareBalance());
+        if (!useLiquidateExact) {
+            amount = bound(amount, 0, maxLiquidation);
             if (amount == 0) return;
             expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount);
             strategy.liquidate(amount);
-        }
-        else {
-            amount = bound(amount, 0, strategy.maxLiquidateExact());
+        } else {
+            amount = bound(amount, 0, maxLiquidation * 90 / 100);
             if (amount == 0) return;
             uint256 loss = strategy.liquidateExact(amount);
-            expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount);
+            expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount + loss);
         }
         actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
+        strategy.harvest(0, 0, 0, address(0));
     }
 
     function harvest() public countCall("harvest") {
         int256 unharvestedAmount = strategy.unharvestedAmount();
-        if(unharvestedAmount < 0) {
-            expectedEstimatedTotalAssets = actualEstimatedTotalAssets;
-            strategy.harvest(0,0,0, address(0));
+        if (unharvestedAmount < 0) {
+            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets();
+            strategy.harvest(0, 0, 0, address(0));
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
-        if(unharvestedAmount > 0) {
+        if (unharvestedAmount > 0) {
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + uint256(strategy.unharvestedAmount());
-            strategy.harvest(0,0,0, address(0));
+            strategy.harvest(0, 0, 0, address(0));
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
     }

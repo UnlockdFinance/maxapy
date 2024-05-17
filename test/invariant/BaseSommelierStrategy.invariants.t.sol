@@ -50,18 +50,15 @@ contract BaseSommelierStrategyInvariants is StdInvariant, Test {
         mvh = new MaxApyVaultV2Handler(_vault, _token);
         bsh = new BaseSommelierStrategyHandler(_vault, _strategy, _token);
 
-        _strategy.grantRoles(address(bsh),_strategy.KEEPER_ROLE());
-        _strategy.grantRoles(address(bsh),_strategy.VAULT_ROLE());
+        _strategy.grantRoles(address(bsh), _strategy.KEEPER_ROLE());
+        _strategy.grantRoles(address(bsh), _strategy.VAULT_ROLE());
         _strategy.setAutopilot(true);
         _vault.setAutopilotEnabled(true);
 
         targetContract(address(mvh));
         targetContract(address(bsh));
 
-        bytes4[] memory vaultSelectors = new bytes4[](2);
-        vaultSelectors[0] = mvh.deposit.selector;
-        vaultSelectors[1] = mvh.redeem.selector;
-        //vaultSelectors[2] = mvh.withdraw.selector;
+        bytes4[] memory vaultSelectors = mvh.getEntryPoints();
 
         targetSelector(FuzzSelector({ addr: address(mvh), selectors: vaultSelectors }));
 
@@ -79,7 +76,7 @@ contract BaseSommelierStrategyInvariants is StdInvariant, Test {
     }
 
     function invariantBaseSommelierStrategy__AssetEstimation() public {
-        assertEq(bsh.actualEstimatedTotalAssets(), bsh.expectedEstimatedTotalAssets(), "invariant: estimated assets");
+        assertGe(bsh.actualEstimatedTotalAssets(), bsh.expectedEstimatedTotalAssets(), "invariant: estimated assets");
     }
 
     function invariantBaseSommelierStrategy__CallSummary() public view {

@@ -15,6 +15,9 @@ contract MaxApyVaultV2AccountingInvariants is StdInvariant, Test {
         targetContract(address(mvh));
         bytes4[] memory selectors = mvh.getEntryPoints();
         targetSelector(FuzzSelector({ addr: address(mvh), selectors: selectors }));
+        vm.label(address(_token), "WETH");
+        vm.label(address(_vault), "VAULT");
+        vm.label(address(mvh), "MVH");
     }
 
     function invariantMaxApyVaultV2__Accounting() public {

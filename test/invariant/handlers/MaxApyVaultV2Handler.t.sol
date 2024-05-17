@@ -49,6 +49,9 @@ contract MaxApyVaultV2Handler is BaseHandler {
         token = _token;
     }
 
+    ////////////////////////////////////////////////////////////////
+    ///                      ENTRY POINTS                        ///
+    ////////////////////////////////////////////////////////////////
     function deposit(uint256 amount) public createActor countCall("deposit") {
         amount = bound(amount, 0, vault.maxDeposit(currentActor));
         if (amount == 0) return;
@@ -59,7 +62,10 @@ contract MaxApyVaultV2Handler is BaseHandler {
         uint256 previousSharePrice = vault.sharePrice();
         expectedBalance = actualBalance + amount;
         expectedShares = vault.previewDeposit(amount);
-        if (expectedShares == 0) return;
+        if (expectedShares == 0) {
+            actualShares = 0;
+            return;
+        }
         expectedTotalSupply = actualTotalSupply + expectedShares;
         expectedTotalAssets = actualTotalAssets + amount;
         expectedTotalDeposits = actualTotalDeposits + amount;
@@ -131,9 +137,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
         expectedAssets = vault.previewRedeem(shares);
         expectedBalance = _sub0(actualBalance, expectedAssets);
         expectedTotalSupply = actualTotalSupply - shares;
-        console.log("total assets : ", vault.totalAssets());
-        console.log("expectedAssets : ", expectedAssets); 
-        expectedTotalAssets = _sub0(actualTotalAssets,expectedAssets);
+        expectedTotalAssets = _sub0(actualTotalAssets, expectedAssets);
         expectedTotalDeposits = _sub0(actualTotalDeposits, expectedAssets);
         expectedTotalIdle = _sub0(actualTotalIdle, expectedAssets);
         expectedTotalDebt = 0;
@@ -176,7 +180,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
         actualShares = vault.withdraw(assets, currentActor, currentActor);
         vm.stopPrank();
 
-        actualBalance = vault.balanceOf(address(vault));
+        actualBalance = token.balanceOf(address(vault));
         actualTotalSupply = vault.totalSupply();
         actualTotalAssets = vault.totalAssets();
         actualTotalDeposits = vault.totalDeposits();
