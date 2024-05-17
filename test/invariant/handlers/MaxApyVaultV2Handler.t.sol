@@ -171,8 +171,8 @@ contract MaxApyVaultV2Handler is BaseHandler {
         expectedBalance = _sub0(actualBalance, assets);
         expectedTotalSupply = _sub0(actualTotalSupply, expectedShares);
         expectedTotalAssets = _sub0(actualTotalAssets, assets);
-        expectedTotalDeposits = _sub0(actualTotalDeposits,assets);
-        expectedTotalIdle = _sub0(actualTotalIdle , assets);
+        expectedTotalDeposits = _sub0(actualTotalDeposits, assets);
+        expectedTotalIdle = _sub0(actualTotalIdle, assets);
         expectedTotalDebt = 0;
         expectedSharePrice = (10 ** vault.decimals()) * (expectedTotalAssets + 1) / (expectedTotalSupply + 10 ** 6);
 
