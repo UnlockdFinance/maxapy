@@ -1892,7 +1892,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         IStrategy _strategy = IStrategy(strategy);
         uint256 _maxWithdraw = _strategy.maxLiquidate();
         uint256 loss = _strategy.liquidate(_maxWithdraw);
-        uint256 withdrawn = _maxWithdraw - loss;
+        uint256 withdrawn = _sub0(_maxWithdraw, loss);
         uint256 strategyTotalDebt = strategies[strategy].strategyTotalDebt;
         uint256 strategyDebtRatio = strategies[strategy].strategyDebtRatio;
         totalIdle += withdrawn;
