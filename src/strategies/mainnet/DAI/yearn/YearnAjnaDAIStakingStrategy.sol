@@ -9,6 +9,7 @@ import {
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 /// @title YearnAjnaDAIStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -179,6 +180,9 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
             // If not, divest from yVault
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
+
+                // We cannot withdraw more than actual balance
+                expectedAmountToWithdraw = Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance()));
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
 

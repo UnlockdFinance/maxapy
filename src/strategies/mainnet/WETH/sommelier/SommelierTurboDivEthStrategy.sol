@@ -309,6 +309,9 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = Math.min(maxSingleTrade, amountToWithdraw - underlyingBalance);
 
+                // We cannot withdraw more than actual balance
+                expectedAmountToWithdraw = Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance()));
+
                 uint256 sharesToWithdraw = (expectedAmountToWithdraw);
 
                 uint256 withdrawn = _divest(sharesToWithdraw);
