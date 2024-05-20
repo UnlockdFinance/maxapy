@@ -178,7 +178,7 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
 
-                  // We cannot withdraw more than actual balance
+                // We cannot withdraw more than actual balance
                 expectedAmountToWithdraw = Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance()));
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);

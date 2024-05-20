@@ -391,10 +391,10 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
                 uint256 expectedAmountToWithdraw = Math.min(maxSingleTrade, amountToWithdraw - underlyingBalance);
 
                 // We cannot withdraw more than actual balance
-                expectedAmountToWithdraw = Math.min(expectedAmountToWithdraw,  _lpValue(_stakedBalance(convexRewardPool)));
+                expectedAmountToWithdraw =
+                    Math.min(expectedAmountToWithdraw, _lpValue(_stakedBalance(convexRewardPool)));
 
                 uint256 lpToWithdraw = _lpForAmount(expectedAmountToWithdraw);
-
 
                 uint256 stakedBalance = _stakedBalance(convexRewardPool);
 

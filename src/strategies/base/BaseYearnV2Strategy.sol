@@ -273,7 +273,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
 
                 // We cannot withdraw more than actual balance
                 expectedAmountToWithdraw = Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance()));
-                
+
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
 
                 uint256 withdrawn = _divest(sharesToWithdraw);

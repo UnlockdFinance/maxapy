@@ -268,7 +268,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = Math.min(maxSingleTrade, amountToWithdraw - underlyingBalance);
 
-                  // We cannot withdraw more than actual balance
+                // We cannot withdraw more than actual balance
                 expectedAmountToWithdraw = Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance()));
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
