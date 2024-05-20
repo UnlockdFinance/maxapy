@@ -870,7 +870,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Returns the maximum amount of the underlying asset that can be withdrawn
     /// from the `owner`'s balance in the Vault, via a withdraw call.
-    /*  function maxWithdraw(address owner) public view override returns (uint256 maxAssets) {
+     function maxWithdraw(address owner) public view override returns (uint256 maxAssets) {
         uint256 maxLiquidableAssets = totalIdle;
         for (uint256 i; i < MAXIMUM_STRATEGIES; i++) {
             address strategy = withdrawalQueue[i];
@@ -880,9 +880,11 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 totalSupply = totalSupply();
         // prevent division by zero
         if (totalSupply == 0) return 0;
-        uint256 o = _decimalsOffset();
-        maxAssets = Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply);
-    } */
+        maxAssets = Math.min(
+            super.maxWithdraw(owner), 
+            Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply)
+        );
+    }
 
     /// @notice Returns the estimate price of 1 vault share
     function sharePrice() external view returns (uint256) {
