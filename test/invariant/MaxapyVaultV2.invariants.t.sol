@@ -20,16 +20,25 @@ contract MaxApyVaultV2AccountingInvariants is StdInvariant, Test {
         vm.label(address(mvh), "MVH");
     }
 
-    function invariantMaxApyVaultV2__Accounting() public {
-        assertEq(mvh.actualAssets(), mvh.expectedAssets(), "invariant: redeem assets");
+    function invariantMaxApyVaultV2__SharePreviews() public {
         assertEq(mvh.actualShares(), mvh.expectedShares(), "invariant: deposit shares");
+    }
+
+    function invariantMaxApyVaultV2__AssetsPreviews() public {
+        assertEq(mvh.actualAssets(), mvh.expectedAssets(), "invariant: redeem assets");
+    }
+
+    function invariantMaxApyVaultV2__InternalAccounting() public {
         assertEq(mvh.actualTotalSupply(), mvh.expectedTotalSupply(), "invariant: shares supply");
         assertEq(mvh.actualTotalIdle(), mvh.expectedTotalIdle(), "invariant: total idle");
         assertEq(mvh.actualTotalDebt(), mvh.expectedTotalDebt(), "invariant: total debt");
         assertEq(mvh.actualTotalAssets(), mvh.expectedTotalAssets(), "invariant: total assets");
         assertEq(mvh.actualTotalDeposits(), mvh.expectedTotalDeposits(), "invariant: total deposits");
-        assertEq(mvh.actualSharePrice(), mvh.expectedSharePrice(), "invariant: share price");
         assertEq(mvh.actualBalance(), mvh.expectedBalance(), "invariant: vault assets balance");
+    }
+
+    function invariantMaxApyVaultV2__SharePrice() public {
+        assertEq(mvh.actualSharePrice(), mvh.expectedSharePrice(), "invariant: share price");
         // NOTE: share price can dramatically change in some edge cases
         // assertLe(mvh.sharePriceDelta(), 100,  "invariant: share price delta"); // 1%
     }

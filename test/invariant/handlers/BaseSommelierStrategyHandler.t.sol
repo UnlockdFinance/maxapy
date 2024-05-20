@@ -19,12 +19,6 @@ contract BaseSommelierStrategyHandler is BaseHandler {
     uint256 public expectedEstimatedTotalAssets;
     uint256 public actualEstimatedTotalAssets;
 
-    uint256 public expectedLastEstimatedTotalAsset;
-    uint256 public actualLastEstimatedTotalAsset;
-
-    uint256 public expectedStrategyBalance;
-    uint256 public actualStrategyBalance;
-
     ////////////////////////////////////////////////////////////////
     ///                      SETUP                               ///
     ////////////////////////////////////////////////////////////////
