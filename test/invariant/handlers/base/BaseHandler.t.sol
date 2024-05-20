@@ -2,12 +2,12 @@
 pragma solidity ^0.8.19;
 
 import { CommonBase } from "forge-std/Base.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
+import { Test } from "forge-std/Test.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
 import { console } from "forge-std/console.sol";
 import { AddressSet, LibAddressSet } from "../../../helpers/AddressSet.sol";
 
-abstract contract BaseHandler is CommonBase, StdCheats, StdUtils {
+abstract contract BaseHandler is CommonBase, Test {
     using LibAddressSet for AddressSet;
 
     ////////////////////////////////////////////////////////////////
