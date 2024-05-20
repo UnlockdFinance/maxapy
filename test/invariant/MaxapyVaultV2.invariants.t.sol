@@ -21,20 +21,20 @@ contract MaxApyVaultV2AccountingInvariants is StdInvariant, Test {
     }
 
     function invariantMaxApyVaultV2__SharePreviews() public {
-        assertEq(mvh.actualShares(), mvh.expectedShares(), "invariant: deposit shares");
+        assertEq(mvh.actualShares(), mvh.expectedShares());
     }
 
     function invariantMaxApyVaultV2__AssetsPreviews() public {
-        assertEq(mvh.actualAssets(), mvh.expectedAssets(), "invariant: redeem assets");
+        assertEq(mvh.actualAssets(), mvh.expectedAssets());
     }
 
     function invariantMaxApyVaultV2__InternalAccounting() public {
-        assertEq(mvh.actualTotalSupply(), mvh.expectedTotalSupply(), "invariant: shares supply");
-        assertEq(mvh.actualTotalIdle(), mvh.expectedTotalIdle(), "invariant: total idle");
-        assertEq(mvh.actualTotalDebt(), mvh.expectedTotalDebt(), "invariant: total debt");
-        assertEq(mvh.actualTotalAssets(), mvh.expectedTotalAssets(), "invariant: total assets");
-        assertEq(mvh.actualTotalDeposits(), mvh.expectedTotalDeposits(), "invariant: total deposits");
-        assertEq(mvh.actualBalance(), mvh.expectedBalance(), "invariant: vault assets balance");
+        assertEq(mvh.actualTotalSupply(), mvh.expectedTotalSupply());
+        assertEq(mvh.actualTotalIdle(), mvh.expectedTotalIdle());
+        assertEq(mvh.actualTotalDebt(), mvh.expectedTotalDebt());
+        assertEq(mvh.actualTotalAssets(), mvh.expectedTotalAssets());
+        assertEq(mvh.actualTotalDeposits(), mvh.expectedTotalDeposits());
+        assertEq(mvh.actualBalance(), mvh.expectedBalance());
     }
 
     function invariantMaxApyVaultV2__SharePrice() public {

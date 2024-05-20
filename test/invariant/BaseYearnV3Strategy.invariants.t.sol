@@ -71,12 +71,12 @@ contract BaseYearnV3StrategyInvariants is StdInvariant, Test {
     }
 
     function invariantBaseYearnV3Strategy__VaultAccounting() public {
-        assertEq(mvh.actualAssets(), mvh.expectedAssets(), "invariant: redeem assets");
-        assertEq(mvh.actualShares(), mvh.expectedShares(), "invariant: deposit shares");
+        assertEq(mvh.actualAssets(), mvh.expectedAssets());
+        assertEq(mvh.actualShares(), mvh.expectedShares());
     }
 
     function invariantBaseYearnV3Strategy__AssetEstimation() public {
-        assertGe(byh.actualEstimatedTotalAssets(), byh.expectedEstimatedTotalAssets(), "invariant: estimated assets");
+        assertGe(byh.actualEstimatedTotalAssets(), byh.expectedEstimatedTotalAssets());
     }
 
     function invariantBaseYearnV3Strategy__CallSummary() public view {

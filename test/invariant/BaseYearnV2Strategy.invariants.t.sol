@@ -6,28 +6,28 @@ import {
     ITransparentUpgradeableProxy
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {
-    BaseSommelierStrategyHandler,
-    BaseSommelierStrategyWrapper,
+    BaseYearnV2StrategyHandler,
+    BaseYearnV2StrategyWrapper,
     MockERC20
-} from "./handlers/BaseSommelierStrategyHandler.t.sol";
+} from "./handlers/BaseYearnV2StrategyHandler.t.sol";
 import { MaxApyVaultV2Handler, MaxApyVaultV2 } from "./handlers/MaxApyVaultV2Handler.t.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { Test } from "forge-std/Test.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
-import { MockCellar } from "../mock/MockCellar.sol";
+import { MockYVaultV2 } from "../mock/MockYVaultV2.sol";
 
-contract BaseSommelierStrategyInvariants is StdInvariant, Test {
+contract BaseYearnV2StrategyInvariants is StdInvariant, Test {
     MaxApyVaultV2Handler mvh;
-    BaseSommelierStrategyHandler bsh;
+    BaseYearnV2StrategyHandler byh;
 
     function setUp() public {
         MockERC20 _token = new MockERC20("MockWETH", "MW", 18);
         MaxApyVaultV2 _vault = new MaxApyVaultV2(address(_token), "MaxApyVault", "max", address(1));
 
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
-        BaseSommelierStrategyWrapper _implementation = new BaseSommelierStrategyWrapper();
+        BaseYearnV2StrategyWrapper _implementation = new BaseYearnV2StrategyWrapper();
 
-        MockCellar _underlyingCellar = new MockCellar(address(_token), "Sommelier Cellar", "SC", true, 0);
+        MockYVaultV2 _underlyingYvault = new MockYVaultV2(address(_token), "Yearn Vault", "YV");
 
         address[] memory keepers = new address[](1);
         keepers[0] = address(this);
@@ -39,48 +39,48 @@ contract BaseSommelierStrategyInvariants is StdInvariant, Test {
                 "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Some WETH Strategy")),
+                bytes32(abi.encode("MaxApy Yearn WETH Strategy")),
                 address(this),
-                _underlyingCellar
+                _underlyingYvault
             )
         );
 
-        BaseSommelierStrategyWrapper _strategy = BaseSommelierStrategyWrapper(address(_proxy));
+        BaseYearnV2StrategyWrapper _strategy = BaseYearnV2StrategyWrapper(address(_proxy));
         _vault.addStrategy(address(_strategy), 6000, type(uint256).max, 0, 200);
         mvh = new MaxApyVaultV2Handler(_vault, _token);
-        bsh = new BaseSommelierStrategyHandler(_vault, _strategy, _token);
+        byh = new BaseYearnV2StrategyHandler(_vault, _strategy, _token);
 
-        _strategy.grantRoles(address(bsh), _strategy.KEEPER_ROLE());
-        _strategy.grantRoles(address(bsh), _strategy.VAULT_ROLE());
+        _strategy.grantRoles(address(byh), _strategy.KEEPER_ROLE());
+        _strategy.grantRoles(address(byh), _strategy.VAULT_ROLE());
         _strategy.setAutopilot(true);
         _vault.setAutopilotEnabled(true);
 
         targetContract(address(mvh));
-        targetContract(address(bsh));
+        targetContract(address(byh));
 
         bytes4[] memory vaultSelectors = mvh.getEntryPoints();
 
         targetSelector(FuzzSelector({ addr: address(mvh), selectors: vaultSelectors }));
 
-        bytes4[] memory strategySelectors = bsh.getEntryPoints();
-        targetSelector(FuzzSelector({ addr: address(bsh), selectors: strategySelectors }));
+        bytes4[] memory strategySelectors = byh.getEntryPoints();
+        targetSelector(FuzzSelector({ addr: address(byh), selectors: strategySelectors }));
 
         excludeSender(address(_vault));
         excludeSender(address(_strategy));
-        excludeSender(address(_underlyingCellar));
+        excludeSender(address(_underlyingYvault));
     }
 
-    function invariantBaseSommelierStrategy__VaultAccounting() public {
+    function invariantBaseYearnV2Strategy__VaultAccounting() public {
         assertEq(mvh.actualAssets(), mvh.expectedAssets());
         assertEq(mvh.actualShares(), mvh.expectedShares());
     }
 
-    function invariantBaseSommelierStrategy__AssetEstimation() public {
-        assertGe(bsh.actualEstimatedTotalAssets(), bsh.expectedEstimatedTotalAssets());
+    function invariantBaseYearnV2Strategy__AssetEstimation() public {
+        assertGe(byh.actualEstimatedTotalAssets(), byh.expectedEstimatedTotalAssets());
     }
 
-    function invariantBaseSommelierStrategy__CallSummary() public view {
+    function invariantBaseYearnV2Strategy__CallSummary() public view {
         mvh.callSummary();
-        bsh.callSummary();
+        byh.callSummary();
     }
 }
