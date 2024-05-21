@@ -68,6 +68,11 @@ contract BaseSommelierStrategyInvariants is StdInvariant, Test {
         excludeSender(address(_vault));
         excludeSender(address(_strategy));
         excludeSender(address(_underlyingCellar));
+
+        vm.label(address(_token), "WETH");
+        vm.label(address(_strategy), "BaseSommelierStrategy");
+        vm.label(address(_vault), "VAULT");
+        vm.label(address(mvh), "MVH");
     }
 
     function invariantBaseSommelierStrategy__VaultAccounting() public {

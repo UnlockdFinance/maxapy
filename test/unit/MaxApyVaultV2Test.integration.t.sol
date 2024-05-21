@@ -460,6 +460,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategy2.harvest(0, 0, 0, address(0));
         strategy3.harvest(0, 0, 0, address(0));
         strategy4.harvest(0, 0, 0, address(0));
+
+        deal(WETH_MAINNET, address(strategy1), 10 ether);
+        skip(100);
+        strategy1.harvest(0, 0, 0, address(0));
+
         vm.stopPrank();
 
         vm.startPrank(users.alice);

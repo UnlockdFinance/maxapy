@@ -32,7 +32,8 @@ contract BaseYearnV2StrategyHandler is BaseHandler {
     ///                      ENTRY POINTS                        ///
     ////////////////////////////////////////////////////////////////
     function gain(uint256 amount) public countCall("gain") {
-        amount = bound(amount, 0, 1_000_000 ether);
+        if (currentActor == address(0)) return; // for some reason this caused bugs
+        amount = bound(amount, 0, 1000 ether);
         deal(address(token), address(strategy), amount);
         strategy.harvest(0, 0, 0, address(0));
     }

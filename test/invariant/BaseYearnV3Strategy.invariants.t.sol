@@ -68,6 +68,11 @@ contract BaseYearnV3StrategyInvariants is StdInvariant, Test {
         excludeSender(address(_vault));
         excludeSender(address(_strategy));
         excludeSender(address(_underlyingYvault));
+
+        vm.label(address(_token), "WETH");
+        vm.label(address(_strategy), "BaseYearnV3Strategy");
+        vm.label(address(_vault), "VAULT");
+        vm.label(address(mvh), "MVH");
     }
 
     function invariantBaseYearnV3Strategy__VaultAccounting() public {

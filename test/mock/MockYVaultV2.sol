@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import { MockERC20 } from "../../lib/solady/test/utils/mocks/MockERC20.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import "forge-std/console.sol";
 
 contract MockYVaultV2 is MockERC20 {
     using SafeTransferLib for address;
@@ -29,6 +30,8 @@ contract MockYVaultV2 is MockERC20 {
     }
 
     function deposit(uint256 amount) external returns (uint256) {
+        if (amount == 0) revert();
+
         uint256 vaultTotalSupply = totalSupply();
         uint256 shares = amount;
         /// By default minting 1:1 shares
@@ -37,40 +40,26 @@ contract MockYVaultV2 is MockERC20 {
             /// Mint amount of tokens based on what the Vault is managing overall
             shares = (amount * vaultTotalSupply) / _freeFunds();
         }
+
+        require(shares != 0, "zero shares");
+
         _mint(msg.sender, shares);
+
+        asset.safeTransferFrom(msg.sender, address(this), amount);
+
         return shares;
     }
 
-    function withdraw(uint256 shares, address recipient, uint256 maxLoss) external returns (uint256) {
-        assembly ("memory-safe") {
-            // if maxLoss > MAX_BPS
-            if gt(maxLoss, MAX_BPS) {
-                // throw the `InvalidMaxLoss` error
-                mstore(0x00, 0xef374dc7)
-                revert(0x1c, 0x04)
-            }
-
-            // if shares == 0
-            if iszero(shares) {
-                // throw the `InvalidZeroShares` error
-                mstore(0x00, 0x5a870a25)
-                revert(0x1c, 0x04)
-            }
-
-            // if (shares == type(uint256).max) shares = balanceOf(msg.sender);
-            if eq(shares, not(0)) {
-                // compute `balanceOf(msg.sender)` and store it in `shares`
-                mstore(0x0c, 0x87a211a2) // `_BALANCE_SLOT_SEED`
-                mstore(0x00, caller())
-                shares := sload(keccak256(0x0c, 0x20))
-            }
-        }
+    function withdraw(uint256 shares) external returns (uint256) {
+        require(shares != 0, "0 shares");
 
         uint256 valueToWithdraw = _shareValue(shares);
-        asset.safeTransfer(recipient, valueToWithdraw);
+        _burn(msg.sender, shares);
+        asset.safeTransfer(msg.sender, valueToWithdraw);
+        return valueToWithdraw;
     }
 
-    function totalAssets() external view returns(uint256) {
+    function totalAssets() external view returns (uint256) {
         return _totalAssets();
     }
 
