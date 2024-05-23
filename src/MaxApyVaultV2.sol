@@ -1331,8 +1331,17 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Withdraw from strategy. Compute amount withdrawn
                 // considering the difference between balances pre/post withdrawal
                 uint256 preBalance = SafeTransferLib.balanceOf(underlying, address(this));
-                uint256 loss = IStrategy(strategy).liquidate(amountRequested);
-                uint256 withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
+
+                uint256 withdrawn;
+                uint256 loss;
+                // Use try/catch logic to avoid DoS
+                try IStrategy(strategy).liquidate(amountRequested) returns (uint256 _loss) {
+                    loss = _loss;
+                    withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
+                } catch {
+                    continue;
+                }
+
                 if (withdrawn == 0) continue;
 
                 // Increase cached vault balance to track the newly withdrawn amount
@@ -1373,6 +1382,14 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     // throw the `Overflow` error
                     revert(0, 0)
                 }
+            }
+        }
+
+        assembly ("memory-safe") {
+            if eq(assets, 0x00) {
+                // throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
             }
         }
 
@@ -1460,9 +1477,16 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Withdraw from strategy. Compute amount withdrawn(should be requestedAmount)
                 // considering the difference between balances pre/post withdrawal
                 uint256 preBalance = underlying.balanceOf(address(this));
-                uint256 loss = IStrategy(strategy).liquidateExact(amountRequested);
 
-                uint256 withdrawn = underlying.balanceOf(address(this)) - preBalance;
+                uint256 withdrawn;
+                uint256 loss;
+                // Use try/catch logic to avoid DoS
+                try IStrategy(strategy).liquidateExact(amountRequested) returns (uint256 _loss) {
+                    loss = _loss;
+                    withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
+                } catch {
+                    continue;
+                }
 
                 if (withdrawn == 0) continue;
 

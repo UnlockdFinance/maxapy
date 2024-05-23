@@ -4,14 +4,26 @@ pragma solidity ^0.8.19;
 struct AddressSet {
     address[] addrs;
     mapping(address => bool) saved;
+    mapping(address => uint256) index;
 }
 
 library LibAddressSet {
     function add(AddressSet storage s, address addr) internal {
         if (!s.saved[addr]) {
+            uint256 i = count(s);
             s.addrs.push(addr);
             s.saved[addr] = true;
+            s.index[addr] = i;
         }
+    }
+
+    function remove(AddressSet storage s, address addr) internal {
+        if (!contains(s, addr)) revert();
+        uint256 lastIndex = count(s) - 1;
+        uint256 index = s.index[addr];
+        s.addrs[index] = s.addrs[lastIndex];
+        s.addrs.pop();
+        s.saved[addr] = false;
     }
 
     function contains(AddressSet storage s, address addr) internal view returns (bool) {
