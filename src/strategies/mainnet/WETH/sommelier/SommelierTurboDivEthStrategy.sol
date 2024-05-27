@@ -326,7 +326,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
                 underlyingBalance = _underlyingBalance();
             }
 
-            assembly {
+           assembly {
                 // Net off realized profit and loss
                 switch lt(realizedProfit, loss)
                 // if (realizedProfit < loss)
@@ -342,7 +342,11 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0 
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0

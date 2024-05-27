@@ -113,7 +113,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
-            loss = _sub0(_shareValue(burntShares), amountNeeded);
+            loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
@@ -320,7 +320,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
                 underlyingBalance = _underlyingBalance();
             }
 
-            assembly {
+           assembly {
                 // Net off realized profit and loss
                 switch lt(realizedProfit, loss)
                 // if (realizedProfit < loss)
@@ -336,7 +336,11 @@ contract BaseYearnV3Strategy is BaseStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0 
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0

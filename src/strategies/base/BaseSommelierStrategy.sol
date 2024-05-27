@@ -95,7 +95,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
             // use sub zero because shares could be fewer than expected and underflow
-            loss = _sub0(_shareValue(burntShares), amountNeeded);
+            loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
         underlyingAsset.safeTransfer(msg.sender, amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
@@ -269,12 +269,17 @@ contract BaseSommelierStrategy is BaseStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0 
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
                 }
             }
+            
             // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
             if (realizedProfit > underlyingBalance) {
                 // Profit is prioritised. In this case, no `debtPayment` will be reported
