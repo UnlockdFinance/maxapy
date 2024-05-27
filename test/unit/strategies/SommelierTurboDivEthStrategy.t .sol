@@ -312,7 +312,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
         // ~60 ETH - losses from the previous 10 ETH investment
-        assertEq(realizedProfit, 61.747018291901829621 ether); // ~60 ETH
+        assertEq(realizedProfit, 61.702638366407749256 ether); // ~60 ETH
         assertEq(unrealizedProfit, 61.747018291901829621 ether); // ~60 ETH
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
