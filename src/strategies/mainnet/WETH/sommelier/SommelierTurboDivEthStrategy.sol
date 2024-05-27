@@ -391,8 +391,6 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         if (amount == 0) return 0;
         // Dont't do anything if cellar is paused or shutdown
         if (cellar.isShutdown() || cellar.isPaused()) return 0;
-        uint256 maxDeposit = cellar.maxDeposit(address(this));
-        amount = Math.min(amount, maxDeposit);
 
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
