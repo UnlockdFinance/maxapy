@@ -859,6 +859,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Returns the maximum amount of the underlying asset that can be deposited
     /// into the Vault for `to`, via a deposit call.
     function maxDeposit(address /*to*/ ) public view override returns (uint256 maxAssets) {
+        /// @dev use sub0 to prevent underflow
         return _sub0(depositLimit, totalAssets());
     }
 
