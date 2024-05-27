@@ -1870,9 +1870,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         strategies[strategy].strategyTotalDebt = 0;
         strategies[strategy].strategyDebtRatio = 0;
 
-        // Remove `STRATEGY_ROLE` from strategy
-        _removeRoles(strategy, STRATEGY_ROLE);
-
         // Remove the strategy from the queue
         address[MAXIMUM_STRATEGIES] memory cachedWithdrawalQueue = withdrawalQueue;
         for (uint256 i; i < MAXIMUM_STRATEGIES;) {
@@ -1880,6 +1877,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // The strategy was found and can be removed
                 withdrawalQueue[i] = address(0);
 
+                // Remove `STRATEGY_ROLE` from strategy
                 _removeRoles(strategy, STRATEGY_ROLE);
 
                 // Update withdrawal queue
@@ -1889,7 +1887,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     // Emit the `StrategyRemoved` event
                     log2(0x00, 0x00, _STRATEGY_REMOVED_EVENT_SIGNATURE, strategy)
 
-                    // Emit the `StrategyRemoved` event
+                    // Emit the `StrategyExited` event
                     mstore(0x00, withdrawn)
                     log2(0x00, 0x20, _STRATEGY_EXITED_EVENT_SIGNATURE, strategy)
                 }
