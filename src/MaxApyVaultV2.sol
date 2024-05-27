@@ -1079,36 +1079,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets, shares = previewDeposit(assets));
     }
 
-    /// @notice Mints `shares` Vault shares to `to` by depositing exactly `assets`
-    /// of underlying tokens.
-    /// @notice it allows for gasless approvals on deposits
-    /// @param v, @param r, @param s, @param deadline, @param owner @param assets the components of the {Permit} EIP712
-    /// signature
-    function depositWithPermit(
-        address owner,
-        uint256 assets,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        address receiver
-    )
-        public
-        noEmergencyShutdown
-        nonReentrant
-        returns (uint256 shares)
-    {
-        uint256 _maxDeposit = maxDeposit(owner);
-        assembly ("memory-safe") {
-            if gt(assets, _maxDeposit) {
-                // throw the `VaultDepositLimitExceeded` error
-                mstore(0x00, 0x0c11966b)
-                revert(0x1c, 0x04)
-            }
-        }
-        IERC20Permit(asset()).permit(owner, address(this), assets, deadline, v, r, s);
-        _deposit(owner, receiver, assets, shares = previewDeposit(assets));
-    }
 
     /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
     /// of underlying tokens.
@@ -1134,38 +1104,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
         _deposit(msg.sender, receiver, assets = previewMint(shares), shares);
-    }
-
-    /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
-    /// of underlying tokens.
-    /// @notice it allows for gasless approvals on mints
-    /// @param v, @param r, @param s, @param deadline, @param owner assets(calculated from @param shares ) the
-    /// components of the {Permit} EIP712 signature
-    function mintWithPermit(
-        address owner,
-        uint256 shares,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        address receiver
-    )
-        public
-        noEmergencyShutdown
-        nonReentrant
-        returns (uint256 assets)
-    {
-        uint256 _maxMint = maxMint(msg.sender);
-        assembly ("memory-safe") {
-            if gt(shares, _maxMint) {
-                // throw the `VaultDepositLimitExceeded` error
-                mstore(0x00, 0x0c11966b)
-                revert(0x1c, 0x04)
-            }
-        }
-        assets = previewMint(shares);
-        IERC20Permit(asset()).permit(owner, address(this), assets, deadline, v, r, s);
-        _deposit(msg.sender, receiver, assets, shares);
     }
 
     /// @dev override the Solady's internal function to add extra checks
