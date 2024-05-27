@@ -91,7 +91,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
             loss = _sub0(_shareValue(burntShares),amountToWithdraw);
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }

@@ -103,7 +103,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountRequested);
         // Send it directly back to vault
-        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // something didn't work as expected
         // this should NEVER happen in normal conditions
         else revert();

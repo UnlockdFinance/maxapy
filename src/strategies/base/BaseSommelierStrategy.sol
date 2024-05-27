@@ -97,7 +97,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             // use sub zero because shares could be fewer than expected and underflow
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }

@@ -1278,10 +1278,18 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     loss = _loss;
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
                 } catch {
+                    unchecked {
+                        ++i;
+                    }
                     continue;
                 }
 
-                if (withdrawn == 0) continue;
+                if (withdrawn == 0) {
+                    unchecked {
+                        ++i;
+                    }
+                    continue;
+                }
 
                 // Increase cached vault balance to track the newly withdrawn amount
                 vaultBalance += withdrawn;
@@ -1424,10 +1432,18 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     loss = _loss;
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
                 } catch {
+                    unchecked {
+                        ++i;
+                    }
                     continue;
                 }
 
-                if (withdrawn == 0) continue;
+                if (withdrawn == 0) {
+                    unchecked {
+                        ++i;
+                    }
+                    continue;
+                }
 
                 // increase the vault balance by the needed amount
                 vaultBalance += withdrawn;

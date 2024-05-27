@@ -138,7 +138,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
             uint256 lpTokens = cellar.convertToAssets(burntShares);
             loss = _sub0(amountNeeded - underlyingBalance, _lpValue(lpTokens));
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }

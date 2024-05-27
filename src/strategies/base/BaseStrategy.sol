@@ -157,7 +157,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountNeeded);
         // Send it directly back to vault
-        if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountFreed);
+        if (amountFreed > 0) underlyingAsset.safeTransfer(address(vault), amountFreed);
         // Note: update estimatedTotalAssets
         _snapshotEstimatedTotalAssets();
     }
@@ -175,7 +175,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountRequested);
         // Send it directly back to vault
-        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // something didn't work as expected
         // this should NEVER happen in normal conditions
         else revert();
