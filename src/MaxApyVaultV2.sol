@@ -1080,7 +1080,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets, shares = previewDeposit(assets));
     }
 
-
     /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
     /// of underlying tokens.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers

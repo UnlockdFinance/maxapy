@@ -26,9 +26,11 @@ contract StrategyFuzzer is BaseFuzzer {
     function harvest(uint256 strategySeed) public {
         if (strats.count() == 0) return;
         address strat = strats.rand(strategySeed);
-        try IStrategyWrapper(strat).harvest(0, 0, 0, address(0)){
+        try IStrategyWrapper(strat).harvest(0, 0, 0, address(0)) {
             skip(100);
-        }catch(bytes memory e) {e;}
+        } catch (bytes memory e) {
+            e;
+        }
     }
 
     function exitStrategy(uint256 strategySeed) public {

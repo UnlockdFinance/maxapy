@@ -89,7 +89,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
             uint256 neededVaultShares = yVault.previewWithdraw(amountNeeded);
             yearnStakingRewards.withdraw(neededVaultShares);
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
-            loss = _sub0(_shareValue(burntShares),amountToWithdraw);
+            loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
         underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
@@ -198,7 +198,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
                 underlyingBalance = _underlyingBalance();
             }
 
-           assembly {
+            assembly {
                 // Net off realized profit and loss
                 switch lt(realizedProfit, loss)
                 // if (realizedProfit < loss)
@@ -217,7 +217,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
                 case true {
                     loss := sub(loss, unrealizedProfit)
                     unrealizedProfit := 0
-                    realizedProfit := 0 
+                    realizedProfit := 0
                 }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)

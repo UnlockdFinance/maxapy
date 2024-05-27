@@ -272,14 +272,14 @@ contract BaseSommelierStrategy is BaseStrategy {
                 case true {
                     loss := sub(loss, unrealizedProfit)
                     unrealizedProfit := 0
-                    realizedProfit := 0 
+                    realizedProfit := 0
                 }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
                 }
             }
-            
+
             // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
             if (realizedProfit > underlyingBalance) {
                 // Profit is prioritised. In this case, no `debtPayment` will be reported

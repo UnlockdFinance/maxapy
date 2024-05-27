@@ -288,7 +288,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
                 underlyingBalance = _underlyingBalance();
             }
 
-           assembly {
+            assembly {
                 // Net off realized profit and loss
                 switch lt(realizedProfit, loss)
                 // if (realizedProfit < loss)
@@ -307,7 +307,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
                 case true {
                     loss := sub(loss, unrealizedProfit)
                     unrealizedProfit := 0
-                    realizedProfit := 0 
+                    realizedProfit := 0
                 }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
