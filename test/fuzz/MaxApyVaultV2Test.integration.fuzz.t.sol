@@ -42,6 +42,7 @@ import { MockRevertingStrategy } from "../mock/MockRevertingStrategy.sol";
 
 // Vault fuzzer
 import { MaxApyVaultV2Fuzzer } from "./fuzzers/MaxApyVaultV2Fuzzer.t.sol";
+import { StrategyFuzzer } from "./fuzzers/StrategyFuzzer.t.sol";
 
 // Import Random Number Generator
 import { LibPRNG } from "solady/utils/LibPRNG.sol";
@@ -81,6 +82,8 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
     // Vault Fuzzer
     MaxApyVaultV2Fuzzer public vaultFuzzer;
+    // Strategies fuzzer
+    StrategyFuzzer public strategyFuzzer;
 
     IERC20 public constant crv = IERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);
     IERC20 public constant cvx = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
@@ -123,6 +126,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
     function setUp() public {
         super._setUp("MAINNET");
+        vm.rollFork(19_267_583);
 
         TREASURY = makeAddr("treasury");
 
@@ -218,13 +222,19 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         strategy4 = IStrategyWrapper(address(_proxy));
 
+        address[] memory strategyList = new address[](4);
+
+        strategyList[0] = address(strategy1);
+        strategyList[1] = address(strategy2);
+        strategyList[2] = address(strategy3);
+        strategyList[3] = address(strategy4);
+
         // Add all the strategies
         vault.addStrategy(address(strategy1), 2250, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy2), 2250, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy3), 2250, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy4), 2250, type(uint72).max, 0, 0);
 
-        vm.rollFork(19_267_583);
         vm.label(address(WETH_MAINNET), "WETH");
         /// Alice approves vault for deposits
         IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
@@ -233,11 +243,20 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
         vm.startPrank(users.alice);
 
-        // deploy fuzzer
+        // deploy fuzzers
+        strategyFuzzer = new StrategyFuzzer(strategyList, vault, WETH_MAINNET);
         vaultFuzzer = new MaxApyVaultV2Fuzzer(vault, WETH_MAINNET);
+
+        vault.grantRoles(address(strategyFuzzer), vault.ADMIN_ROLE());
+        uint256 _keeperRole = strategy1.KEEPER_ROLE();
+
+        strategy1.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy2.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy3.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy4.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
-    function testFuzzMaxApyVaultV2__DepositAndRedeemWithoutHarvests(
+    function testFuzzMaxApyVaultV2___DepositAndRedeemWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
         uint256 shares
@@ -254,21 +273,68 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vaultFuzzer.redeem(rng.next(), shares);
     }
 
-    function testFuzzMaxApyVaultV2__MintAndWithdrawWithoutHarvests(
+    function testFuzzMaxApyVaultV2__DepositAndRedeemWithHarvests(
         uint256 actorSeed,
-        uint256 shares,
-        uint256 assets
+        uint256 strategySeed,
+        uint256 assets,
+        uint256 shares
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        actorRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.harvest(strategyRNG.next());
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.harvest(strategyRNG.next());
+        vaultFuzzer.deposit(assets);
+        vaultFuzzer.redeem(actorSeed, shares);
+        strategyFuzzer.harvest(strategyRNG.next());
+        vaultFuzzer.redeem(actorRNG.next(), shares);
+        vaultFuzzer.redeem(actorRNG.next(), shares);
+    }
+
+    function testFuzzMaxApyVaultV2___MintAndWithdrawWithoutHarvests(
+        uint256 actorSeed,
+        uint256 assets,
+        uint256 shares
     )
         public
     {
         LibPRNG.PRNG memory rng;
         rng.seed(actorSeed);
-
         vaultFuzzer.mint(shares);
         vaultFuzzer.mint(shares);
         vaultFuzzer.mint(shares);
         vaultFuzzer.withdraw(actorSeed, assets);
         vaultFuzzer.withdraw(rng.next(), assets);
         vaultFuzzer.withdraw(rng.next(), assets);
+    }
+
+    function testFuzzMaxApyVaultV2__MintAndWithdrawWithHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 shares,
+        uint256 assets
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        actorRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.harvest(strategyRNG.next());
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.harvest(strategyRNG.next());
+        vaultFuzzer.mint(shares);
+        vaultFuzzer.withdraw(actorSeed, assets);
+        strategyFuzzer.harvest(strategyRNG.next());
+        vaultFuzzer.withdraw(actorRNG.next(), assets);
+        vaultFuzzer.withdraw(actorRNG.next(), assets);
     }
 }

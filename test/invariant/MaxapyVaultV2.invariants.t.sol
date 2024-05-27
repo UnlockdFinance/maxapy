@@ -38,7 +38,7 @@ contract MaxApyVaultV2AccountingInvariants is StdInvariant, Test {
     }
 
     function invariantMaxApyVaultV2__SharePrice() public {
-        assertEq(mvh.actualSharePrice(), mvh.expectedSharePrice(), "invariant: share price");
+        assertEq(mvh.actualSharePrice(), mvh.expectedSharePrice());
         // NOTE: share price can dramatically change in some edge cases
         // assertLe(mvh.sharePriceDelta(), 100,  "invariant: share price delta"); // 1%
     }

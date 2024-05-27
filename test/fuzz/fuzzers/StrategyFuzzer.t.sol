@@ -7,8 +7,9 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 import { LibPRNG } from "solady/utils/LibPRNG.sol";
 
-contract MaxApyVaultV2Fuzzer is BaseFuzzer {
+contract StrategyFuzzer is BaseFuzzer {
     using LibAddressSet for AddressSet;
+    using LibPRNG for LibPRNG.PRNG;
 
     AddressSet strats;
     IMaxApyVaultV2 vault;
@@ -23,10 +24,30 @@ contract MaxApyVaultV2Fuzzer is BaseFuzzer {
     }
 
     function harvest(uint256 strategySeed) public {
+        if (strats.count() == 0) return;
         address strat = strats.rand(strategySeed);
-        IStrategyWrapper(strat).harvest(0, 0, 0, address(0));
-        skip(100);
+        try IStrategyWrapper(strat).harvest(0, 0, 0, address(0)){
+            skip(100);
+        }catch(bytes memory e) {e;}
     }
 
-    function gain(uint256 assets) public { }
+    function exitStrategy(uint256 strategySeed) public {
+        if (strats.count() == 0) return;
+        address strat = strats.rand(strategySeed);
+        vault.exitStrategy(strat);
+        strats.remove(strat);
+    }
+
+    function gain(uint256 strategySeed, uint256 amount) public {
+        if (strats.count() == 0) return;
+        address strat = strats.rand(strategySeed);
+        deal(token, strat, amount);
+    }
+
+    function loss(uint256 strategySeed, uint256 amount) public { }
+
+    function rand(uint256 functionSeed, uint256 paramSeed) public {
+        LibPRNG.PRNG memory rngParams;
+        rngParams.seed(paramSeed);
+    }
 }

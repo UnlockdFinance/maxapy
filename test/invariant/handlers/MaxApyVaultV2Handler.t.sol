@@ -135,6 +135,7 @@ contract MaxApyVaultV2Handler is BaseHandler {
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedAssets = vault.previewRedeem(shares);
+        if (expectedAssets == 0) return;
         expectedBalance = _sub0(actualBalance, expectedAssets);
         expectedTotalSupply = actualTotalSupply - shares;
         expectedTotalAssets = _sub0(actualTotalAssets, expectedAssets);
