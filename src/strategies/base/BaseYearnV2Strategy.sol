@@ -416,7 +416,6 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
     /// amount
-
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override
