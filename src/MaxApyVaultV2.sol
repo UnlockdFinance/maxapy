@@ -1528,6 +1528,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// The next time the strategy will harvest, it will pay back the debt in an attempt to adjust to the new debt
     /// limit.
     /// @param debtPayment Amount Strategy has made available to cover outstanding debt
+    /// @param managementFeeReceiver Address receiving the protocol fees
     /// @return debt Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
     function report(
         uint128 realizedGain,
