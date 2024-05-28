@@ -89,7 +89,6 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ////////////////////////////////////////////////////////////////
     ///                STRATEGY CORE LOGIC                       ///
     ////////////////////////////////////////////////////////////////
-
     /// @notice Withdraws exactly `amountNeeded` to `vault`.
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
