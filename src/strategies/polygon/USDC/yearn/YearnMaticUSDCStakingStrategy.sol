@@ -83,10 +83,16 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw = amountNeeded - underlyingBalance;
-            uint256 neededVaultShares = yVault.previewWithdraw(amountNeeded);
+            uint256 neededVaultShares = yVault.previewWithdraw(amountToWithdraw);
             yearnStakingRewards.withdraw(neededVaultShares);
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
             loss = _shareValue(burntShares) - amountNeeded;
+        }
+
+        // In case all shares were not burnt reinvest them
+        uint256 sharesLeft = yVault.balanceOf(address(this));
+        if(sharesLeft != 0) {
+            yearnStakingRewards.stake(sharesLeft);
         }
         underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
