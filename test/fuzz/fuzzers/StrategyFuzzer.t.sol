@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { BaseFuzzer, console, LibAddressSet, AddressSet } from "./base/BaseFuzzer.t.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 import { LibPRNG } from "solady/utils/LibPRNG.sol";
@@ -12,10 +12,10 @@ contract StrategyFuzzer is BaseFuzzer {
     using LibPRNG for LibPRNG.PRNG;
 
     AddressSet strats;
-    IMaxApyVaultV2 vault;
+    IMaxApyVault vault;
     address token;
 
-    constructor(address[] memory _strats, IMaxApyVaultV2 _vault, address _token) {
+    constructor(address[] memory _strats, IMaxApyVault _vault, address _token) {
         for (uint256 i = 0; i < _strats.length; i++) {
             strats.add(_strats[i]);
         }

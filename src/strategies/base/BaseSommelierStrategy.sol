@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { BaseStrategy, IERC20, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
 import { ICellar } from "src/interfaces/ICellar.sol";
 
@@ -60,7 +60,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @param _strategyName the name of the strategy
     /// @param _cellar The address of the Sommelier Turbo-stETH cellar
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,

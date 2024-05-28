@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { BaseStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
 import { ICellar } from "src/interfaces/ICellar.sol";
 
@@ -94,7 +94,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
 
     /// @notice The Balancer pool id for the underlying LP token
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,

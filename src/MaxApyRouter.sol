@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 
@@ -38,7 +38,7 @@ contract MaxApyRouter {
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
     function deposit(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 amount,
         address recipient,
         uint256 minSharesOut
@@ -95,7 +95,7 @@ contract MaxApyRouter {
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
     function depositWithPermit(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 amount,
         address recipient,
         uint256 deadline,
@@ -156,7 +156,7 @@ contract MaxApyRouter {
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
     function depositNative(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         address recipient,
         uint256 minSharesOut
     )
@@ -248,7 +248,7 @@ contract MaxApyRouter {
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
     function redeem(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 shares,
         address recipient,
         uint256 minAmountOut
@@ -308,7 +308,7 @@ contract MaxApyRouter {
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
     function redeemNative(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 shares,
         address recipient,
         uint256 minAmountOut

@@ -5,9 +5,9 @@ import { StrategyData } from "../helpers/VaultTypes.sol";
 import { IERC4626 } from "openzeppelin/interfaces/IERC4626.sol";
 
 /**
- * @notice IMaxApyVaultV2 contains the main interface for MaxApy V2 Vaults
+ * @notice IMaxApyVault contains the main interface for MaxApy V2 Vaults
  */
-interface IMaxApyVaultV2 is IERC4626 {
+interface IMaxApyVault is IERC4626 {
     // Permit deposit methods
     function depositWithPermit(
         address owner,

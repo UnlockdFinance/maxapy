@@ -9,8 +9,8 @@ import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import { BaseTest, IERC20, Vm, console } from "../base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
-import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../helpers/StrategyEvents.sol";
 import { ICurve } from "src/interfaces/ICurve.sol";
@@ -41,7 +41,7 @@ import { YearnCompoundV3WETHLenderStrategyWrapper } from "../mock/YearnCompoundV
 import { MockRevertingStrategy } from "../mock/MockRevertingStrategy.sol";
 
 // Vault fuzzer
-import { MaxApyVaultV2Fuzzer } from "./fuzzers/MaxApyVaultV2Fuzzer.t.sol";
+import { MaxApyVaultFuzzer } from "./fuzzers/MaxApyVaultFuzzer.t.sol";
 import { StrategyFuzzer } from "./fuzzers/StrategyFuzzer.t.sol";
 
 // Import Random Number Generator
@@ -81,7 +81,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     address public constant YVAULT_WETH_COMPOUND_LENDER = 0xb1403908F772E4374BB151F7C67E88761a0Eb4f1;
 
     // Vault Fuzzer
-    MaxApyVaultV2Fuzzer public vaultFuzzer;
+    MaxApyVaultFuzzer public vaultFuzzer;
     // Strategies fuzzer
     StrategyFuzzer public strategyFuzzer;
 
@@ -116,7 +116,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     IStrategyWrapper public strategy8; // convex
     IStrategyWrapper public strategy9; // convex
 
-    IMaxApyVaultV2 public vault;
+    IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
 
@@ -130,10 +130,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         TREASURY = makeAddr("treasury");
 
-        /// Deploy MaxApyVaultV2
-        MaxApyVaultV2 vaultDeployment = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
+        /// Deploy MaxApyVault
+        MaxApyVault vaultDeployment = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
 
-        vault = IMaxApyVaultV2(address(vaultDeployment));
+        vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin();
 
@@ -245,7 +245,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         // deploy fuzzers
         strategyFuzzer = new StrategyFuzzer(strategyList, vault, WETH_MAINNET);
-        vaultFuzzer = new MaxApyVaultV2Fuzzer(vault, WETH_MAINNET);
+        vaultFuzzer = new MaxApyVaultFuzzer(vault, WETH_MAINNET);
 
         vault.grantRoles(address(strategyFuzzer), vault.ADMIN_ROLE());
         uint256 _keeperRole = strategy1.KEEPER_ROLE();
@@ -256,7 +256,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategy4.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
-    function testFuzzMaxApyVaultV2___DepositAndRedeemWithoutHarvests(
+    function testFuzzMaxApyVault___DepositAndRedeemWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
         uint256 shares
@@ -273,7 +273,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vaultFuzzer.redeem(rng.next(), shares);
     }
 
-    function testFuzzMaxApyVaultV2__DepositAndRedeemWithHarvests(
+    function testFuzzMaxApyVault__DepositAndRedeemWithHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 assets,
@@ -297,7 +297,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vaultFuzzer.redeem(actorRNG.next(), shares);
     }
 
-    function testFuzzMaxApyVaultV2___MintAndWithdrawWithoutHarvests(
+    function testFuzzMaxApyVault___MintAndWithdrawWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
         uint256 shares
@@ -314,7 +314,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vaultFuzzer.withdraw(rng.next(), assets);
     }
 
-    function testFuzzMaxApyVaultV2__MintAndWithdrawWithHarvests(
+    function testFuzzMaxApyVault__MintAndWithdrawWithHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 shares,

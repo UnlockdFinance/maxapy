@@ -4,12 +4,12 @@ pragma solidity ^0.8.19;
 import { BaseHandler, console } from "./base/BaseHandler.t.sol";
 import { AddressSet, LibAddressSet } from "../../helpers/AddressSet.sol";
 import { BaseYearnV3StrategyWrapper } from "../../mock/BaseYearnV3StrategyWrapper.sol";
-import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 contract BaseYearnV3StrategyHandler is BaseHandler {
-    MaxApyVaultV2 vault;
+    MaxApyVault vault;
     BaseYearnV3StrategyWrapper strategy;
     MockERC20 token;
 
@@ -22,7 +22,7 @@ contract BaseYearnV3StrategyHandler is BaseHandler {
     ////////////////////////////////////////////////////////////////
     ///                      SETUP                               ///
     ////////////////////////////////////////////////////////////////
-    constructor(MaxApyVaultV2 _vault, BaseYearnV3StrategyWrapper _strategy, MockERC20 _token) {
+    constructor(MaxApyVault _vault, BaseYearnV3StrategyWrapper _strategy, MockERC20 _token) {
         strategy = _strategy;
         token = _token;
         vault = _vault;

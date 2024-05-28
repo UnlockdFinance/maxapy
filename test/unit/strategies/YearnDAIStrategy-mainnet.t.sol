@@ -9,9 +9,9 @@ import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { YearnDAIStrategyWrapper } from "../../mock/YearnDAIStrategyWrapper-mainnet.sol";
-import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 
@@ -28,8 +28,8 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
 
     IStrategyWrapper public strategy;
     YearnDAIStrategyWrapper public implementation;
-    MaxApyVaultV2 public vaultDeployment;
-    IMaxApyVaultV2 public vault;
+    MaxApyVault public vaultDeployment;
+    IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
 
@@ -42,10 +42,10 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
 
         TREASURY = makeAddr("treasury");
 
-        /// Deploy MaxApyVaultV2
-        vaultDeployment = new MaxApyVaultV2(DAI_MAINNET, "MaxApyDAIVault", "maxDAI", TREASURY);
+        /// Deploy MaxApyVault
+        vaultDeployment = new MaxApyVault(DAI_MAINNET, "MaxApyDAIVault", "maxDAI", TREASURY);
 
-        vault = IMaxApyVaultV2(address(vaultDeployment));
+        vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation
@@ -85,8 +85,8 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
 
     function testYearnDAI__Initialization() public {
         /// *************** Yearn Strategy initialization *************** ///
-        /// Deploy MaxApyVaultV2
-        MaxApyVaultV2 _vault = new MaxApyVaultV2(DAI_MAINNET, "MaxApyDAIVault", "maxDAI", TREASURY);
+        /// Deploy MaxApyVault
+        MaxApyVault _vault = new MaxApyVault(DAI_MAINNET, "MaxApyDAIVault", "maxDAI", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation

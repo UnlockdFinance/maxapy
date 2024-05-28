@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {
     BaseYearnV2Strategy,
-    IMaxApyVaultV2,
+    IMaxApyVault,
     SafeTransferLib,
     IYVault,
     IERC20,
@@ -35,7 +35,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @param _strategyName the name of the strategy
     /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
@@ -237,7 +237,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
         // estimate the LUSD value of the underlying amount
-        amount = _estimateAmountOut(underlyingAsset, lusd, uint128(amount), 1800);// use a 30 min TWAP interval
+        amount = _estimateAmountOut(underlyingAsset, lusd, uint128(amount), 1800); // use a 30 min TWAP interval
         uint256 freeFunds = _freeFunds();
         assembly {
             // if freeFunds != 0 return amount

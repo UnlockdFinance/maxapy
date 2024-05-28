@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
-import { IMaxApyVaultV2 } from "../../src/interfaces/IMaxApyVaultV2.sol";
-import { MaxApyVaultV2, StrategyData } from "../../src/MaxApyVaultV2.sol";
+import { IMaxApyVault } from "../../src/interfaces/IMaxApyVault.sol";
+import { MaxApyVault, StrategyData } from "../../src/MaxApyVault.sol";
 import { BaseTest, IERC20, console, Vm } from "../base/BaseTest.t.sol";
-import { MaxApyVaultV2Events } from "../helpers/MaxApyVaultV2Events.sol";
+import { MaxApyVaultEvents } from "../helpers/MaxApyVaultEvents.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
+contract BaseVaultTest is BaseTest, MaxApyVaultEvents {
     ////////////////////////////////////////////////////////////////
     ///                      STRUCTS                             ///
     ////////////////////////////////////////////////////////////////
@@ -23,21 +23,21 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
     ///                      STORAGE                             ///
     ////////////////////////////////////////////////////////////////
 
-    IMaxApyVaultV2 public vault;
+    IMaxApyVault public vault;
     address public TREASURY;
 
     function setupVault(string memory chain, address asset) public {
         super._setUp(chain);
         /// Fork mode activated
         TREASURY = makeAddr("treasury");
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(asset, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
-        vault = IMaxApyVaultV2(address(maxApyVault));
+        MaxApyVault maxApyVault = new MaxApyVault(asset, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
+        vault = IMaxApyVault(address(maxApyVault));
     }
 
     /*//////////////////////////////////////////////////////////////////////////
                                 HELPERS
     //////////////////////////////////////////////////////////////////////////*/
-    function _deposit(address user, IMaxApyVaultV2 _vault, uint256 amount) internal returns (uint256) {
+    function _deposit(address user, IMaxApyVault _vault, uint256 amount) internal returns (uint256) {
         address asset = _vault.asset();
         vm.startPrank(user);
         uint256 expectedShares = _vault.previewDeposit(amount);
@@ -52,7 +52,7 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
         return shares;
     }
 
-    function _withdraw(address user, IMaxApyVaultV2 _vault, uint256 assets) internal returns (uint256) {
+    function _withdraw(address user, IMaxApyVault _vault, uint256 assets) internal returns (uint256) {
         vm.startPrank(user);
 
         address asset = _vault.asset();
@@ -71,7 +71,7 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
 
     function _redeem(
         address user,
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         uint256 shares,
         uint256 expectedLoss
     )
@@ -123,7 +123,7 @@ contract BaseVaultV2Test is BaseTest, MaxApyVaultV2Events {
     }
 
     function _computeExpectedRatioChange(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address strategy,
         uint256 loss
     )

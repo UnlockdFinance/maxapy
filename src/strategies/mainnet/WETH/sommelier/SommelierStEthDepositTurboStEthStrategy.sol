@@ -5,7 +5,7 @@ import {
     BaseSommelierStrategy,
     ICellar,
     IWETH,
-    IMaxApyVaultV2,
+    IMaxApyVault,
     SafeTransferLib
 } from "src/strategies/base/BaseSommelierStrategy.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
@@ -64,7 +64,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @param _strategyName the name of the strategy
     /// @param _cellar The address of the Sommelier Turbo-stETH cellar
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,

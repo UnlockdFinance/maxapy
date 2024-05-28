@@ -2,9 +2,9 @@
 pragma solidity ^0.8.19;
 
 import { BaseTest, IERC20, Vm, console } from "../base/BaseTest.t.sol";
-import { BaseVaultV2Test } from "../base/BaseVaultV2Test.t.sol";
-import { MaxApyVaultV2, StrategyData } from "src/MaxApyVaultV2.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { BaseVaultTest } from "../base/BaseVaultTest.t.sol";
+import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 import { MockStrategy } from "../mock/MockStrategy.sol";
 import { MockLossyUSDCStrategy } from "../mock/MockLossyUSDCStrategy.sol";
@@ -14,7 +14,7 @@ import { ReentrantERC777AttackerWithdraw } from "../mock/ReentrantERC777Attacker
 
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract MaxApyVaultV2Test is BaseVaultV2Test {
+contract MaxApyVaultTest is BaseVaultTest {
     ////////////////////////////////////////////////////////////////
     ///                      SETUP                               ///
     ////////////////////////////////////////////////////////////////
@@ -47,7 +47,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                  TEST initialize()                       ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__Initialization() public {
+    function testMaxApyVault__Initialization() public {
         /// *************** MaxApyVault initialization *************** ///
 
         /// Ensure performance fee is set to the number defined in initialization (1000)
@@ -64,7 +64,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// *************** ERC20Upgradeable initialization *************** ///
 
         /// Ensure the vault name is correct
-        assertEq(vault.name(), "MaxApyVaultV2USDC");
+        assertEq(vault.name(), "MaxApyVaultUSDC");
         /// Ensure the vault symbol is correct
         assertEq(vault.symbol(), "maxUSDCv2");
         /// Ensure underlying decimals is the initialized asset decimals
@@ -77,11 +77,11 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                    TEST OWNER NEGATIVES                  ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__OwnerNegatives() public {
+    function testMaxApyVault__OwnerNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        MaxApyVault maxApyVault = new MaxApyVault(USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
 
-        IMaxApyVaultV2 vaultOwnership = IMaxApyVaultV2(address(maxApyVault));
+        IMaxApyVault vaultOwnership = IMaxApyVault(address(maxApyVault));
         assertEq(vaultOwnership.owner(), users.alice);
 
         /// *************** Transfer ownership *************** ///
@@ -125,11 +125,11 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                    TEST OWNER POSITIVES                  ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__OwnerPositives() public {
+    function testMaxApyVault__OwnerPositives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        MaxApyVault maxApyVault = new MaxApyVault(USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
 
-        IMaxApyVaultV2 vaultOwnership = IMaxApyVaultV2(address(maxApyVault));
+        IMaxApyVault vaultOwnership = IMaxApyVault(address(maxApyVault));
         assertEq(vaultOwnership.owner(), users.alice);
 
         /// *************** Transfer ownership *************** ///
@@ -213,14 +213,14 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///                    TEST ROLES NEGATIVES                  ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__RolesNegatives() public {
+    function testMaxApyVault__RolesNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
         MockStrategy mockStrategy = new MockStrategy(address(vault), USDC_MAINNET);
 
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        MaxApyVault maxApyVault = new MaxApyVault(USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
 
-        IMaxApyVaultV2 vaultRoles = IMaxApyVaultV2(address(maxApyVault));
+        IMaxApyVault vaultRoles = IMaxApyVault(address(maxApyVault));
 
         uint256 ADMIN_ROLE = vaultRoles.ADMIN_ROLE();
         uint256 EMERGENCY_ADMIN_ROLE = vaultRoles.EMERGENCY_ADMIN_ROLE();
@@ -293,12 +293,12 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///                    TEST ROLES POSITIVES                  ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__RolesPositives() public {
+    function testMaxApyVault__RolesPositives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        MaxApyVault maxApyVault = new MaxApyVault(USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
 
-        IMaxApyVaultV2 vaultRoles = IMaxApyVaultV2(address(maxApyVault));
+        IMaxApyVault vaultRoles = IMaxApyVault(address(maxApyVault));
 
         MockStrategy mockStrategy = new MockStrategy(address(vaultRoles), USDC_MAINNET);
 
@@ -398,11 +398,11 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///               TEST addStrategy() NEGATIVES               ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__AddStrategyNegatives() public {
+    function testMaxApyVault__AddStrategyNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
+        MaxApyVault maxApyVault = new MaxApyVault(USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
 
-        IMaxApyVaultV2 fullQueueVault = IMaxApyVaultV2(address(maxApyVault));
+        IMaxApyVault fullQueueVault = IMaxApyVault(address(maxApyVault));
 
         MockStrategy mockStrategy = new MockStrategy(address(fullQueueVault), USDC_MAINNET);
         /// *************** General vault checks *************** ///
@@ -465,15 +465,15 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         vm.expectRevert(abi.encodeWithSignature("InvalidDebtRatio()"));
         vault.addStrategy(address(mockStrategy), 10_001, 0, 0, 0);
 
-        MaxApyVaultV2 maxApyVault2 = new MaxApyVaultV2(
+        MaxApyVault maxApyVault2 = new MaxApyVault(
             /// Deploy new instance to add debt ratio and test addition
             USDC_MAINNET,
-            "MaxApyVaultV2USDC",
+            "MaxApyVaultUSDC",
             "maxUSDCv2",
             TREASURY
         );
 
-        IMaxApyVaultV2 debtRatioVault = IMaxApyVaultV2(address(maxApyVault2));
+        IMaxApyVault debtRatioVault = IMaxApyVault(address(maxApyVault2));
 
         mockStrategy = new MockStrategy(address(debtRatioVault), USDC_MAINNET);
 
@@ -509,7 +509,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///               TEST addStrategy() POSITIVES               ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__AddStrategyPositives() public {
+    function testMaxApyVault__AddStrategyPositives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
         MockStrategy mockStrategy = new MockStrategy(address(vault), USDC_MAINNET);
         assertEq(vault.MAXIMUM_STRATEGIES(), 20);
@@ -626,7 +626,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///               TEST revokeStrategy()                      ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__RevokeStrategy() public {
+    function testMaxApyVault__RevokeStrategy() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
         MockStrategy mockStrategyNegatives = new MockStrategy(address(vault), USDC_MAINNET);
@@ -660,7 +660,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///               TEST removeStrategy()                      ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__RemoveStrategy() public {
+    function testMaxApyVault__RemoveStrategy() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
         MockStrategy mockStrategy = new MockStrategy(address(vault), USDC_MAINNET);
@@ -711,7 +711,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///            TEST updateStrategyData() NEGATIVES           ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__UpdateStrategyDataNegatives() public {
+    function testMaxApyVault__UpdateStrategyDataNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
         MockStrategy mockStrategy = new MockStrategy(address(vault), USDC_MAINNET);
         MockStrategy mockStrategy2 = new MockStrategy(address(vault), USDC_MAINNET);
@@ -776,7 +776,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///            TEST updateStrategyData() POSITIVES           ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__UpdateStrategyDataPositives() public {
+    function testMaxApyVault__UpdateStrategyDataPositives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
         MockStrategy mockStrategy = new MockStrategy(address(vault), USDC_MAINNET);
         MockStrategy mockStrategy2 = new MockStrategy(address(vault), USDC_MAINNET);
@@ -852,7 +852,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///               TEST setWithdrawalQueue() NEGATIVES        ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__SetWithdrawalQueueNegatives() public {
+    function testMaxApyVault__SetWithdrawalQueueNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
         /// Added initially
@@ -906,7 +906,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///               TEST setWithdrawalQueue() POSITIVES        ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__SetWithdrawalQueuePositives() public {
+    function testMaxApyVault__SetWithdrawalQueuePositives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
         /// Added initially
@@ -1007,7 +1007,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///               TEST setEmergencyShutdown()                ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__SetEmergencyShutdown() public {
+    function testMaxApyVault__SetEmergencyShutdown() public {
         /// Vault is NOT in emergency shutdown mode by default
         assertEq(vault.emergencyShutdown(), false);
         /// Enable emergency shutdown mode
@@ -1026,7 +1026,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                 TEST setPerformanceFee()                 ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__SetPerformanceFee() public {
+    function testMaxApyVault__SetPerformanceFee() public {
         /// Test access control
         vm.startPrank(users.eve);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -1063,7 +1063,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                 TEST setManagementFee()                  ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__SetManagementFee() public {
+    function testMaxApyVault__SetManagementFee() public {
         /// Test access control
         vm.startPrank(users.eve);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -1105,7 +1105,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                 TEST setMaxDeposit()                   ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__SetMaxDeposit() public {
+    function testMaxApyVault__SetMaxDeposit() public {
         /// Test access control
         vm.startPrank(users.eve);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -1135,7 +1135,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                   TEST setTreasury()                     ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__SetTreasury() public {
+    function testMaxApyVault__SetTreasury() public {
         vm.startPrank(users.eve);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         vault.setTreasury(makeAddr("random"));
@@ -1153,7 +1153,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                 TEST deposit() NEGATIVES                 ///
     ////////////////////////////////////////////////////////////////
     // TODO: max TVL limit or deposit limit?
-    function testMaxApyVaultV2__DepositNegatives() public {
+    function testMaxApyVault__DepositNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
         /// Create reentrant attacker contract
@@ -1162,7 +1162,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// Create ERC777 token
         MockERC777 token = new MockERC777("Test", "TST", new address[](0), address(reentrantAttacker));
 
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(
+        MaxApyVault maxApyVault = new MaxApyVault(
             /// Deploy new instance to add debt ratio and test addition
             address(token),
             "MaxApyERC777Vault",
@@ -1170,7 +1170,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
             TREASURY
         );
 
-        IMaxApyVaultV2 vaultReentrant = IMaxApyVaultV2(address(maxApyVault));
+        IMaxApyVault vaultReentrant = IMaxApyVault(address(maxApyVault));
 
         /// Set proxy in attacker
         reentrantAttacker.setVault(vaultReentrant);
@@ -1217,7 +1217,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///                 TEST deposit() POSITIVES                 ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__DepositPositives() public {
+    function testMaxApyVault__DepositPositives() public {
         /// Deposit 1 * _1_USDC
         uint256 expectedShares = _calculateExpectedShares(1 * _1_USDC);
         vm.expectEmit();
@@ -1252,7 +1252,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///                 TEST redeem() NEGATIVES                ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__RedeemNegatives() public {
+    function testMaxApyVault__RedeemNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
         /// Create reentrant attacker contract
@@ -1261,7 +1261,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// Create ERC777 token
         MockERC777 token = new MockERC777("Test", "TST", new address[](0), address(reentrantAttacker));
 
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(
+        MaxApyVault maxApyVault = new MaxApyVault(
             /// Deploy new instance to add debt ratio and test addition
             address(token),
             "MaxApyERC777Vault",
@@ -1269,7 +1269,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
             TREASURY
         );
 
-        IMaxApyVaultV2 vaultReentrant = IMaxApyVaultV2(address(maxApyVault));
+        IMaxApyVault vaultReentrant = IMaxApyVault(address(maxApyVault));
 
         /// Set proxy in attacker
         reentrantAttacker.setVault(vaultReentrant);
@@ -1359,7 +1359,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                 TEST redeem() POSITIVES                ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__RedeemPositives() public {
+    function testMaxApyVault__RedeemPositives() public {
         /// *************** 🔸 Tests 🔸 *************** ///
 
         /// ⭕️ SCENARIO 1: Deposit 10 USDC, withdraw 10 USDC from vault.
@@ -1745,7 +1745,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///                 TEST withdraw() NEGATIVES                ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__WithdrawNegatives() public {
+    function testMaxApyVault__WithdrawNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
 
         /// Create reentrant attacker contract
@@ -1754,7 +1754,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
         /// Create ERC777 token
         MockERC777 token = new MockERC777("Test", "TST", new address[](0), address(reentrantAttacker));
 
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(
+        MaxApyVault maxApyVault = new MaxApyVault(
             /// Deploy new instance to add debt ratio and test addition
             address(token),
             "MaxApyERC777Vault",
@@ -1762,7 +1762,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
             TREASURY
         );
 
-        IMaxApyVaultV2 vaultReentrant = IMaxApyVaultV2(address(maxApyVault));
+        IMaxApyVault vaultReentrant = IMaxApyVault(address(maxApyVault));
 
         /// Set proxy in attacker
         reentrantAttacker.setVault(vaultReentrant);
@@ -1852,7 +1852,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ///                 TEST withdraw() POSITIVES                ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__WithdrawPositives() public {
+    function testMaxApyVault__WithdrawPositives() public {
         /// *************** 🔸 Tests 🔸 *************** ///
 
         /// ⭕️ SCENARIO 1: Deposit 10 USDC, withdraw 10 USDC from vault.
@@ -2240,7 +2240,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///                 TEST report() NEGATIVES                  ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__ReportNegatives() public {
+    function testMaxApyVault__ReportNegatives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
         /// Grant Alice a strategy role
         vault.grantRoles(users.alice, vault.STRATEGY_ROLE());
@@ -2297,7 +2297,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///                 TEST report() POSITIVES                  ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__ReportPositives() public {
+    function testMaxApyVault__ReportPositives() public {
         /// *************** 🔹 Setup 🔹 *************** ///
         MockLossyUSDCStrategy lossyStrategy =
             new MockLossyUSDCStrategy(address(vault), USDC_MAINNET, makeAddr("strategist"));
@@ -2580,7 +2580,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///              TEST setAutopilotEnabled() NEGATIVES         ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__setAutopilotEnabledNegatives() public {
+    function testMaxApyVault__setAutopilotEnabledNegatives() public {
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         vault.setAutopilotEnabled(true);
@@ -2589,7 +2589,7 @@ contract MaxApyVaultV2Test is BaseVaultV2Test {
     ////////////////////////////////////////////////////////////////
     ///              TEST setAutopilotEnabled() POSITIVES         ///
     ////////////////////////////////////////////////////////////////
-    function testMaxApyVaultV2__setAutopilotEnabledPositives() public {
+    function testMaxApyVault__setAutopilotEnabledPositives() public {
         assertFalse(vault.autoPilotEnabled());
         vm.expectEmit();
         emit AutopilotEnabled(true);

@@ -7,7 +7,7 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
 import { IStrategy } from "../../interfaces/IStrategy.sol";
-import { IMaxApyVaultV2 } from "../../interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
 import { Initializable } from "../../lib/Initializable.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
@@ -65,7 +65,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ////////////////////////////////////////////////////////////////
 
     /// @notice The MaxApy vault linked to this strategy
-    IMaxApyVaultV2 public vault;
+    IMaxApyVault public vault;
     /// @notice The strategy's underlying asset (`want` token)
     address public underlyingAsset;
     /// @notice Strategy state stating if vault is in emergency shutdown mode
@@ -97,7 +97,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param _keepers The addresses of the keepers to be granted the keeper role
     /// @param _strategyName the name of the strategy
     function __BaseStrategy_init(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist

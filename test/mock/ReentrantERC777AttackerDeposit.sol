@@ -3,12 +3,12 @@ pragma solidity ^0.8.19;
 
 import { IERC777 } from "./MockERC777.sol";
 
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 contract ReentrantERC777AttackerDeposit {
-    IMaxApyVaultV2 public vault;
+    IMaxApyVault public vault;
 
-    function setVault(IMaxApyVaultV2 _vault) public {
+    function setVault(IMaxApyVault _vault) public {
         vault = _vault;
     }
 

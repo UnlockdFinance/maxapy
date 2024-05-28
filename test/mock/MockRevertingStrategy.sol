@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 contract MockRevertingStrategy {
     error HarvestFailed();
@@ -39,7 +39,7 @@ contract MockRevertingStrategy {
     }
 
     function setAutopilot(bool _autoPilot) external {
-        IMaxApyVaultV2(vault).setAutoPilot(_autoPilot);
+        IMaxApyVault(vault).setAutoPilot(_autoPilot);
     }
 
     function estimatedTotalAssets() external view returns (uint256) {

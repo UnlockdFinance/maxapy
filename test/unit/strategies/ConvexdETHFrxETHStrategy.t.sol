@@ -8,12 +8,12 @@ import {
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { ICurve } from "src/interfaces/ICurve.sol";
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 
-import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { ConvexdETHFrxETHStrategy } from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
 import { ConvexdETHFrxETHStrategyEvents } from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
@@ -40,8 +40,8 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
     IStrategyWrapper public strategy;
     ConvexdETHFrxETHStrategyWrapper public implementation;
-    MaxApyVaultV2 public vaultDeployment;
-    IMaxApyVaultV2 public vault;
+    MaxApyVault public vaultDeployment;
+    IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
 
@@ -54,10 +54,10 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         TREASURY = makeAddr("treasury");
 
-        /// Deploy MaxApyVaultV2
-        vaultDeployment = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
+        /// Deploy MaxApyVault
+        vaultDeployment = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
 
-        vault = IMaxApyVaultV2(address(vaultDeployment));
+        vault = IMaxApyVault(address(vaultDeployment));
 
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin();
@@ -96,8 +96,8 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     ////////////////////////////////////////////////////////////////
     function testConvexdETHFrxETH__Initialization() public {
         /// *************** Convex Strategy initialization *************** ///
-        /// Deploy MaxApyVaultV2
-        MaxApyVaultV2 _vault = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
+        /// Deploy MaxApyVault
+        MaxApyVault _vault = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
 
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin();

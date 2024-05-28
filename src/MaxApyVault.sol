@@ -48,7 +48,7 @@ KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK0OOOOOOO0KKK*/
 /// to the vault
 /// @author ERC2626 adaptation of MaxAPYVault:
 /// https://github.com/UnlockdFinance/maxapy/blob/development/src/MaxApyVault.sol
-contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
+contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     using SafeTransferLib for address;
     ////////////////////////////////////////////////////////////////
     ///                         CONSTANTS                        ///

@@ -2,10 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {
-    BaseYearnV3Strategy,
-    SafeTransferLib,
-    IMaxApyVaultV2,
-    IYVaultV3
+    BaseYearnV3Strategy, SafeTransferLib, IMaxApyVault, IYVaultV3
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
@@ -51,7 +48,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
     /// @param _strategyName the name of the strategy
     /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
@@ -95,7 +92,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
 
         // In case all shares were not burnt reinvest them
         uint256 sharesLeft = yVault.balanceOf(address(this));
-        if(sharesLeft != 0) {
+        if (sharesLeft != 0) {
             yearnStakingRewards.stake(sharesLeft);
         }
         // Note: Reinvest anything leftover on next `harvest`
