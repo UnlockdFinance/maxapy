@@ -215,7 +215,6 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
-
     /// @notice Determines the current value of `shares`.
     /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
@@ -231,14 +230,14 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
 
         uint256 lusdValue = Math.mulDiv(shares, _freeFunds(), vaultTotalSupply);
         // estimate USDC value of the LUSD tokens
-        return _estimateAmountOut(lusd, underlyingAsset, uint128(lusdValue), 10);
+        return _estimateAmountOut(lusd, underlyingAsset, uint128(lusdValue), 1800); // use a 30 min TWAP interval
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
         // estimate the LUSD value of the underlying amount
-        amount = _estimateAmountOut(underlyingAsset, lusd, uint128(amount), 10);
+        amount = _estimateAmountOut(underlyingAsset, lusd, uint128(amount), 1800);// use a 30 min TWAP interval
         uint256 freeFunds = _freeFunds();
         assembly {
             // if freeFunds != 0 return amount
