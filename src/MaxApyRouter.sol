@@ -194,7 +194,7 @@ contract MaxApyRouter {
                     cachedWrappedToken, // Address of `wrappedToken`
                     callvalue(), // `msg.value`
                     0x1c, // byte offset in memory where calldata starts
-                    0x24, // size of the calldata to copy
+                    0x04, // size of the calldata to copy
                     0x00, // byte offset in memory to store the return data
                     0x00 // size of the return data
                 )
