@@ -111,7 +111,10 @@ contract BaseYearnV3Strategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
@@ -204,7 +207,9 @@ contract BaseYearnV3Strategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < liquidatedAmount) {
-            liquidatedAmount = liquidatedAmount - underlyingBalance;
+            unchecked {
+                liquidatedAmount = liquidatedAmount - underlyingBalance;
+            }
             requestedAmount = _shareValue(yVault.previewWithdraw(liquidatedAmount));
         }
         return requestedAmount + underlyingBalance;

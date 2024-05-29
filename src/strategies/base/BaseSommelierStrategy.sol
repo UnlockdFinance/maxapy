@@ -91,7 +91,10 @@ contract BaseSommelierStrategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
             // use sub zero because shares could be fewer than expected and underflow
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);
@@ -145,7 +148,9 @@ contract BaseSommelierStrategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < liquidatedAmount) {
-            liquidatedAmount = liquidatedAmount - underlyingBalance;
+            unchecked {
+                liquidatedAmount = liquidatedAmount - underlyingBalance;
+            }
             requestedAmount = _shareValue(cellar.previewWithdraw(liquidatedAmount));
         }
         return requestedAmount + underlyingBalance;

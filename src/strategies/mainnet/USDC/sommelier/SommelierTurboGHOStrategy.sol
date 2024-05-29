@@ -93,7 +93,10 @@ contract SommelierTurboGHOStrategy is BaseSommelierStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
             // use sub zero because shares could be fewer than expected and underflow
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);

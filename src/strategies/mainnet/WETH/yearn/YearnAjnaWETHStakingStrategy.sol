@@ -80,7 +80,10 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
             uint256 neededVaultShares = yVault.previewWithdraw(amountToWithdraw);
             yearnStakingRewards.withdraw(neededVaultShares);
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
