@@ -35,11 +35,11 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @notice Emitted when the strategy's min single trade value is updated
     event MinSingleTradeUpdated(uint256 minSingleTrade);
 
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
 
-    // @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
 

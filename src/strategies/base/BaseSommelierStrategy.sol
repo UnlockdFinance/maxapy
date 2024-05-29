@@ -32,11 +32,11 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @notice Emitted when the `requestedShares` are divested from the Sommelier Vault
     event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
 
-    // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
 
-    // @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
     uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
         0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
@@ -53,7 +53,6 @@ contract BaseSommelierStrategy is BaseStrategy {
     constructor() initializer { }
 
     /// @dev the initialization function must be defined in each strategy
-
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
@@ -371,7 +370,6 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
     /// amount
-
     function _liquidatePosition(uint256 amountNeeded)
         internal
         virtual
