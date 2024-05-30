@@ -535,7 +535,7 @@ contract SommelierTurboDivEthStrategy is BaseStrategy {
         return amount * _lpPrice() / 1e18;
     }
 
-    /// @notice Returns the estimated price for the strategy's Convex's LP token
+    /// @notice Returns the estimated price for the strategy's Balancer LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view returns (uint256) {
         return IBalancerStablePool(balancerLpPool).getRate();

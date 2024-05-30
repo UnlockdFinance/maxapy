@@ -56,7 +56,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     uint256 internal constant _STRATEGY_STRATEGIST_UPDATED_EVENT_SIGNATURE =
         0xf6a8d961ba4f41874e38ad8bed56ca4bcf2356a3dd5bfa626b8a73a0da9f5c69;
 
-    /// @dev `keccak256(bytes("StrategistUpdated(address,address)"))`.
+    /// @dev `keccak256(bytes("StrategyAutopilotUpdated(address,bool)"))`.
     uint256 internal constant _STRATEGY_AUTOPILOT_UPDATED =
         0x517fe77f85715a129ee7e042c1b69addb2890b8cc86b9dcad191c565d43d69d3;
 
@@ -377,7 +377,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
         vault.setAutoPilot(_autoPilot);
         assembly ("memory-safe") {
-            // Emit the `StrategyAutopilotStatusUpdated` event
+            // Emit the `StrategyAutopilotUpdated` event
             mstore(0x00, _autoPilot)
             log2(0x00, 0x20, _STRATEGY_AUTOPILOT_UPDATED, address())
         }

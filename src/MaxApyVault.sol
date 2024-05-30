@@ -259,8 +259,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice the assets in which the vault earns interest
     address private immutable _underlyingAsset;
 
-    /// @notice the assets in which the vault earns interest
-
     ////////////////////////////////////////////////////////////////
     ///                         MODIFIERS                        ///
     ////////////////////////////////////////////////////////////////
@@ -395,7 +393,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         assembly {
             // Overflow checks
             if gt(ratioChange, debtRatio_) {
-                // throw `Overflwow` error
+                // throw `Overflow` error
                 revert(0, 0)
             }
             if gt(loss, totalDebt_) {
@@ -731,7 +729,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Revoke a Strategy, setting its debt limit to 0 and preventing any future deposits
     /// @param strategy The strategy to revoke
-    /// @param strategy The strategy debt ratio
+    /// @param strategyDebtRatio The strategy debt ratio
     function _revokeStrategy(address strategy, uint256 strategyDebtRatio) internal {
         debtRatio -= strategyDebtRatio;
         strategies[strategy].strategyDebtRatio = 0;
@@ -741,7 +739,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     }
 
     /// @notice Issues `amount` Vault shares to `to`
-    /// @dev Shares must be issued prior to taking on new collateral, or calculation will be wrong.
+    /// @dev Shares must be issued prior to taking on new collateral, or calculation will be wrong
     /// This means that only *trusted* tokens (with no capability for exploitative behavior) can be used
     /// @param to The shares recipient
     /// @param amount The amount considered to compute the shares
@@ -1124,12 +1122,12 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 revert(0x1c, 0x04)
             }
 
-            // Get totalAssets, same as calling _totalAssets() but caching totalIdle
+            // Get totalDeposits
             totalIdle_ := sload(totalIdle.slot)
             let totalAssets_ := add(totalIdle_, sload(totalDebt.slot))
             if lt(totalAssets_, totalIdle_) { revert(0, 0) }
 
-            // check if totalAssets + assets overflows
+            // check if totalDeposits + assets overflows
             let total := add(totalAssets_, assets)
             if lt(total, totalAssets_) { revert(0, 0) }
         }
@@ -1358,7 +1356,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         return assets;
     }
 
-    /// @dev Burns the needed amount of shars to withdraw @param assets after lealising loses
+    /// @dev Burns the needed amount of shares to withdraw @param assets after realising loses
     /// @return shares the real amount shares burnt
     function _withdraw(address by, address to, address owner, uint256 assets) private returns (uint256 shares) {
         assembly ("memory-safe") {

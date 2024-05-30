@@ -37,6 +37,7 @@ contract MaxApyRouter {
     /// @param amount The amount of underlying assets to deposit
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
+    /// @return sharesOut The actual amount of minted shares
     function deposit(
         IMaxApyVault vault,
         uint256 amount,
@@ -93,7 +94,12 @@ contract MaxApyRouter {
     /// @param vault The MaxApy vault to interact with
     /// @param amount The amount of underlying assets to deposit
     /// @param recipient The address to issue the shares from MaxApy's Vault to
+    /// @param deadline Deadline for the EIP712-Permit signature
+    /// @param v `v` component of the digital signature
+    /// @param r `r` component of the digital signature
+    /// @param s `s` component of the digital signature
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
+    /// @return sharesOut The actual amount of minted shares
     function depositWithPermit(
         IMaxApyVault vault,
         uint256 amount,
@@ -155,6 +161,7 @@ contract MaxApyRouter {
     /// @param vault The MaxApy vault to interact with
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
+    /// @return sharesOut The actual amount of minted shares
     function depositNative(
         IMaxApyVault vault,
         address recipient,
@@ -247,6 +254,7 @@ contract MaxApyRouter {
     /// @param shares How many shares to try and redeem for tokens
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
+    /// @return amountOut The actual amount of redeemed assets
     function redeem(
         IMaxApyVault vault,
         uint256 shares,
@@ -301,12 +309,13 @@ contract MaxApyRouter {
     }
 
     /// @notice Withdraws the calling account's tokens from MaxApy's Vault, redeeming
-    /// amount `shares` for the corresponding amount of tokens, which will be transferred to
+    /// amount of `shares` for the corresponding amount of tokens, which will be transferred to
     /// `recipient` in the form of the chain's native token
     /// @param vault The MaxApy vault to interact with
     /// @param shares How many shares to try and redeem for tokens
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
+    /// @return amountOut The actual amount of redeemed assets
     function redeemNative(
         IMaxApyVault vault,
         uint256 shares,

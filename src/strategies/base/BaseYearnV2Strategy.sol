@@ -6,6 +6,7 @@ import { IYVault } from "src/interfaces/IYVault.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
+/// @title BaseYearnV2Strategy
 /// @author MaxApy
 /// @notice `BaseYearnV2Strategy` sets the base functionality to be implemented by MaxApy YearnV3 strategies.
 /// @dev Some functions can be overriden if needed
@@ -405,7 +406,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     }
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
-    /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
+    /// regardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
     /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
     /// the
@@ -471,7 +472,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
-    /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
+    /// @return shares returns the estimated amount of shares computed in exchange for the underlying `amount`
     function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
         uint256 freeFunds = _freeFunds();
         assembly {
@@ -514,7 +515,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
             // Check overflow
             if gt(lastReport, timestamp()) { revert(0, 0) }
 
-            //temporal value to save gas
+            //temporry value to save gas
             let lockedFundsRatio := sub(timestamp(), lastReport)
 
             // Overflow check equivalent to require(lockedProfitDegradation == 0 || lockedFundsRatio <=

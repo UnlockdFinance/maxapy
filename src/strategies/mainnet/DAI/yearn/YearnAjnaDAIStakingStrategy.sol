@@ -354,7 +354,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
         // Claim Ajna rewards
         _yearnStakingRewards.getReward();
 
-        // Exchange Ajna <> WETH
+        // Exchange Ajna <> DAI
         uint256 ajnaBalance = _ajnaBalance();
         if (ajnaBalance > minSwapAjna) {
             router.exactInputSingle(
