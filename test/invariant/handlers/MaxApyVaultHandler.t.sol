@@ -135,7 +135,10 @@ contract MaxApyVaultHandler is BaseHandler {
 
         uint256 previousSharePrice = vault.sharePrice();
         expectedAssets = vault.previewRedeem(shares);
-        if (expectedAssets == 0) return;
+        if (expectedAssets == 0) {
+            actualAssets = 0;
+            return;
+        }
         expectedBalance = _sub0(actualBalance, expectedAssets);
         expectedTotalSupply = actualTotalSupply - shares;
         expectedTotalAssets = _sub0(actualTotalAssets, expectedAssets);
@@ -193,6 +196,47 @@ contract MaxApyVaultHandler is BaseHandler {
                 ? actualSharePrice - previousSharePrice
                 : previousSharePrice - actualSharePrice
         ) * 10_000 / previousSharePrice;
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                      INVARIANTS                          ///
+    ////////////////////////////////////////////////////////////////
+    function INVARIANT_A_SHARE_PREVIEWS() public {
+        assertLe(actualShares, expectedShares);
+    }
+
+    function INVARIANT_B_ASSET_PREVIEWS() public {
+        assertGe(actualAssets, expectedAssets);
+    }
+
+    function INVARIANT_C_TOTAL_SUPPLY() public {
+        assertEq(actualTotalSupply, expectedTotalSupply);
+    }
+
+    function INVARIANT_D_TOTAL_IDLE() public {
+        assertEq(actualTotalIdle, expectedTotalIdle);
+    }
+
+    function INVARIANT_E_TOTAL_DEBT() public {
+        assertEq(actualTotalDebt, expectedTotalDebt);
+    }
+
+    function INVARIANT_F_TOTAL_ASSETS() public {
+        assertEq(actualTotalAssets, expectedTotalAssets);
+    }
+
+    function INVARIANT_G_TOTAL_DEPOSITS() public {
+        assertEq(actualTotalDeposits, expectedTotalDeposits);
+    }
+
+    function INVARIANT_H_TOKEN_BALANCE() public {
+        assertEq(actualBalance, expectedBalance);
+    }
+
+    function INVARIANT_I_SHARE_PRICE() public {
+        assertEq(actualSharePrice, expectedSharePrice);
+        // NOTE: share price can dramatically change in some edge cases
+        // assertLe(sharePriceDelta, 100,  "invariant: share price delta"); // 1%
     }
 
     ////////////////////////////////////////////////////////////////
