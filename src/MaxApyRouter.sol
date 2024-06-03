@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 
@@ -37,8 +37,9 @@ contract MaxApyRouter {
     /// @param amount The amount of underlying assets to deposit
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
+    /// @return sharesOut The actual amount of minted shares
     function deposit(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 amount,
         address recipient,
         uint256 minSharesOut
@@ -93,9 +94,14 @@ contract MaxApyRouter {
     /// @param vault The MaxApy vault to interact with
     /// @param amount The amount of underlying assets to deposit
     /// @param recipient The address to issue the shares from MaxApy's Vault to
+    /// @param deadline Deadline for the EIP712-Permit signature
+    /// @param v `v` component of the digital signature
+    /// @param r `r` component of the digital signature
+    /// @param s `s` component of the digital signature
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
+    /// @return sharesOut The actual amount of minted shares
     function depositWithPermit(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 amount,
         address recipient,
         uint256 deadline,
@@ -155,8 +161,9 @@ contract MaxApyRouter {
     /// @param vault The MaxApy vault to interact with
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minSharesOut The minimum acceptable amount of vault shares to get after the deposit
+    /// @return sharesOut The actual amount of minted shares
     function depositNative(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         address recipient,
         uint256 minSharesOut
     )
@@ -194,7 +201,7 @@ contract MaxApyRouter {
                     cachedWrappedToken, // Address of `wrappedToken`
                     callvalue(), // `msg.value`
                     0x1c, // byte offset in memory where calldata starts
-                    0x24, // size of the calldata to copy
+                    0x04, // size of the calldata to copy
                     0x00, // byte offset in memory to store the return data
                     0x00 // size of the return data
                 )
@@ -247,8 +254,9 @@ contract MaxApyRouter {
     /// @param shares How many shares to try and redeem for tokens
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
+    /// @return amountOut The actual amount of redeemed assets
     function redeem(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 shares,
         address recipient,
         uint256 minAmountOut
@@ -301,14 +309,15 @@ contract MaxApyRouter {
     }
 
     /// @notice Withdraws the calling account's tokens from MaxApy's Vault, redeeming
-    /// amount `shares` for the corresponding amount of tokens, which will be transferred to
+    /// amount of `shares` for the corresponding amount of tokens, which will be transferred to
     /// `recipient` in the form of the chain's native token
     /// @param vault The MaxApy vault to interact with
     /// @param shares How many shares to try and redeem for tokens
     /// @param recipient The address to issue the shares from MaxApy's Vault to
     /// @param minAmountOut The minimum acceptable amount of assets to get in exchange for the burnt shares
+    /// @return amountOut The actual amount of redeemed assets
     function redeemNative(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 shares,
         address recipient,
         uint256 minAmountOut

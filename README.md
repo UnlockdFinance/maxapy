@@ -13,7 +13,7 @@ src
 ├─ interfaces  — "Interfaces of all the contracts involved in the protocol"
     ├─ IConvexBooster
     ├─ IConvexRewards
-    ├─ IMaxApyVaultV2
+    ├─ IMaxApyVault
     ├─ IStrategy
     ├─ IWETH
     ├─ IWrappedToken
@@ -21,7 +21,7 @@ src
     ├─ ICellar
     ├─ IConvexdETHFrxETHStrategy
     ├─ ICurve
-    ├─ ISommelierStrategy  
+    ├─ ISommelierStrategy
     ├─ IUniswap
     ├─ IWrappedTokenGateway
     ├─ IYearnStrategy
@@ -35,23 +35,23 @@ src
 ├─ strategies
     ├─ base
         ├─ BaseStrategy — "Base vault strategy implementation"
-    ├─ mainnet — "Mainent chain strategies" 
-        ├─ DAI — "DAI strategies" 
+    ├─ mainnet — "Mainent chain strategies"
+        ├─ DAI — "DAI strategies"
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnAjnaDAIStakingStrategy
                 ├─YearnDAIStrategy
-        ├─ USDC — "USDC strategies" 
+        ├─ USDC — "USDC strategies"
             ├─ sommelier — "Strategies interacting with Sommelier Finance"
                 ├─SommelierTurboGHOStrategy
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDCStrategy
                 ├─YearnLUSDStrategy
-        ├─ USDT — "USDT strategies" 
+        ├─ USDT — "USDT strategies"
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDTStrategy
-        ├─ WETH — "Wrapped Ether strategies" 
+        ├─ WETH — "Wrapped Ether strategies"
             ├─ convex — "Strategies interacting with Convex Finance"
-                ├─ConvexdETHFrxETHStrategy 
+                ├─ConvexdETHFrxETHStrategy
             ├─ sommelier — "Stratgies interacting with Sommelier Finance"
                 ├─SommelierMorphoEthMaximizerStrategy
                 ├─SommelierStEthDepositTurboStEthStrategy
@@ -60,27 +60,27 @@ src
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnWETHStrategy
                 ├─YearnAjnaWETHStakingStrategy
-    ├─ polygon — "Polygon chain strategies" 
-       ├─ DAI — "DAI strategies" 
+    ├─ polygon — "Polygon chain strategies"
+       ├─ DAI — "DAI strategies"
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnDAIStrategy
                 ├─YearnDAILendingStrategy
-        ├─ USDC — "USDC strategies" 
+        ├─ USDC — "USDC strategies"
             ├─ yearn — "Strategies interacting with Yearn Finance"
                 ├─YearnMaticUSDCStakingStrategy
                 ├─YearnAjnaUSDCStrategy
-        ├─ USDCe — "USDCe strategies" 
+        ├─ USDCe — "USDCe strategies"
             ├─ yearn — "Strategies interacting with Yearn Finance"
-                ├─YearnUSDCeStrategy            
-                ├─YearnUSDCeLendingStrategy                
-                ├─YearnCompoundUSDCeLenderStrategy            
-        ├─ USDT — "USDT strategies" 
+                ├─YearnUSDCeStrategy
+                ├─YearnUSDCeLendingStrategy
+                ├─YearnCompoundUSDCeLenderStrategy
+        ├─ USDT — "USDT strategies"
             ├─ yearn — "Strategies interacting with Yearn"
                 ├─YearnUSDTStrategy
-├─ MaxApyVaultV2 — "Yield farming vault"
+├─ MaxApyVault — "Yield farming vault"
 ```
 
-## Install 
+## Install
 
 ```bash
 git clone https://github.com/UnlockdFinance/maxapy-v2.git
@@ -93,6 +93,7 @@ forge build
 ```
 
 ## Test
+
 ```
 forge test
 ```

@@ -11,10 +11,10 @@ import { ICurve } from "src/interfaces/ICurve.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
 import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SommelierStEthDepositTurboStEthStrategyWrapper } from
     "../../mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
-import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { SommelierTurboStEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
@@ -44,8 +44,8 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
 
     IStrategyWrapper public strategy;
     SommelierStEthDepositTurboStEthStrategyWrapper public implementation;
-    MaxApyVaultV2 public vaultDeployment;
-    IMaxApyVaultV2 public vault;
+    MaxApyVault public vaultDeployment;
+    IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
 
@@ -59,9 +59,9 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
+        vaultDeployment = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
 
-        vault = IMaxApyVaultV2(address(vaultDeployment));
+        vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation
@@ -105,7 +105,7 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
     function testSommelierStEthDeposit_TurboStEth__Initialization() public {
         /// *************** sommelier Strategy initialization *************** ///
         /// Deploy MaxApyVault
-        MaxApyVaultV2 _vault = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation

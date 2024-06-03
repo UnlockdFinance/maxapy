@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { BaseStrategy, IERC20, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
 import { ICellar } from "src/interfaces/ICellar.sol";
 
@@ -32,11 +32,11 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @notice Emitted when the `requestedShares` are divested from the Sommelier Vault
     event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
 
-    // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
 
-    // @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
     uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
         0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
@@ -53,14 +53,13 @@ contract BaseSommelierStrategy is BaseStrategy {
     constructor() initializer { }
 
     /// @dev the initialization function must be defined in each strategy
-
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
     /// @param _cellar The address of the Sommelier Turbo-stETH cellar
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
@@ -92,12 +91,15 @@ contract BaseSommelierStrategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
             uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
             // use sub zero because shares could be fewer than expected and underflow
-            loss = _sub0(_shareValue(burntShares), amountNeeded);
+            loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }
@@ -146,7 +148,9 @@ contract BaseSommelierStrategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < liquidatedAmount) {
-            liquidatedAmount = liquidatedAmount - underlyingBalance;
+            unchecked {
+                liquidatedAmount = liquidatedAmount - underlyingBalance;
+            }
             requestedAmount = _shareValue(cellar.previewWithdraw(liquidatedAmount));
         }
         return requestedAmount + underlyingBalance;
@@ -269,12 +273,17 @@ contract BaseSommelierStrategy is BaseStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
                 }
             }
+
             // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
             if (realizedProfit > underlyingBalance) {
                 // Profit is prioritised. In this case, no `debtPayment` will be reported
@@ -366,7 +375,6 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
     /// amount
-
     function _liquidatePosition(uint256 amountNeeded)
         internal
         virtual

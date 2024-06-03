@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { BaseStrategy, IERC20, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IYVaultV3 } from "src/interfaces/IYVaultV3.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
@@ -37,19 +37,19 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @notice Emitted when the strategy's min single trade value is updated
     event MinSingleTradeUpdated(uint256 minSingleTrade);
 
-    // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
 
-    // @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
     uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
         0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
 
-    // @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
 
@@ -78,7 +78,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @param _strategyName the name of the strategy
     /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
@@ -111,11 +111,14 @@ contract BaseYearnV3Strategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
-            loss = _sub0(_shareValue(burntShares), amountNeeded);
+            loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }
@@ -204,7 +207,9 @@ contract BaseYearnV3Strategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < liquidatedAmount) {
-            liquidatedAmount = liquidatedAmount - underlyingBalance;
+            unchecked {
+                liquidatedAmount = liquidatedAmount - underlyingBalance;
+            }
             requestedAmount = _shareValue(yVault.previewWithdraw(liquidatedAmount));
         }
         return requestedAmount + underlyingBalance;
@@ -336,7 +341,11 @@ contract BaseYearnV3Strategy is BaseStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0

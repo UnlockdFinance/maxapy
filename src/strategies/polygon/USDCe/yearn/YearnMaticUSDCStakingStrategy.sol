@@ -2,10 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {
-    BaseYearnV3Strategy,
-    SafeTransferLib,
-    IMaxApyVaultV2,
-    IYVaultV3
+    BaseYearnV3Strategy, SafeTransferLib, IMaxApyVault, IYVaultV3
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
@@ -48,7 +45,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     /// @param _strategyName the name of the strategy
     /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
@@ -82,13 +79,22 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
-            uint256 neededVaultShares = yVault.previewWithdraw(amountNeeded);
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
+            uint256 neededVaultShares = yVault.previewWithdraw(amountToWithdraw);
             yearnStakingRewards.withdraw(neededVaultShares);
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
             loss = _shareValue(burntShares) - amountNeeded;
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+
+        // In case all shares were not burnt reinvest them
+        uint256 sharesLeft = yVault.balanceOf(address(this));
+        if (sharesLeft != 0) {
+            yearnStakingRewards.stake(sharesLeft);
+        }
+        underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }
@@ -208,7 +214,11 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0

@@ -2,11 +2,11 @@
 pragma solidity ^0.8.19;
 
 import { BaseTest, IERC20, Vm, console } from "../base/BaseTest.t.sol";
-import { BaseVaultV2Test } from "../base/BaseVaultV2Test.t.sol";
-import { MaxApyVaultV2, StrategyData } from "src/MaxApyVaultV2.sol";
+import { BaseVaultTest } from "../base/BaseVaultTest.t.sol";
+import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
 import { MaxApyRouter } from "src/MaxApyRouter.sol";
 import { IMaxApyRouter } from "src/interfaces/IMaxApyRouter.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
 import { MockStrategy } from "../mock/MockStrategy.sol";
@@ -18,7 +18,7 @@ import { SigUtils } from "../utils/SigUtils.sol";
 import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract MaxApyRouterTest is BaseVaultV2Test {
+contract MaxApyRouterTest is BaseVaultTest {
     IMaxApyRouter public router;
     SigUtils internal sigUtils;
     uint256 internal bobPrivateKey;
@@ -92,8 +92,8 @@ contract MaxApyRouterTest is BaseVaultV2Test {
 
     function testMaxApyRouter__Deposit_Permit() public {
         // Deploy the USDC vault
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
-        IMaxApyVaultV2 _vault = IMaxApyVaultV2(address(maxApyVault));
+        MaxApyVault maxApyVault = new MaxApyVault(USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
+        IMaxApyVault _vault = IMaxApyVault(address(maxApyVault));
         deal(USDC_MAINNET, users.bob, 1000 * _1_USDC);
         vm.startPrank(users.bob);
 

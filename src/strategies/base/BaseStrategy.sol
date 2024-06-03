@@ -7,7 +7,7 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 
 import { IStrategy } from "../../interfaces/IStrategy.sol";
-import { IMaxApyVaultV2 } from "../../interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
 import { Initializable } from "../../lib/Initializable.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
@@ -56,7 +56,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     uint256 internal constant _STRATEGY_STRATEGIST_UPDATED_EVENT_SIGNATURE =
         0xf6a8d961ba4f41874e38ad8bed56ca4bcf2356a3dd5bfa626b8a73a0da9f5c69;
 
-    /// @dev `keccak256(bytes("StrategistUpdated(address,address)"))`.
+    /// @dev `keccak256(bytes("StrategyAutopilotUpdated(address,bool)"))`.
     uint256 internal constant _STRATEGY_AUTOPILOT_UPDATED =
         0x517fe77f85715a129ee7e042c1b69addb2890b8cc86b9dcad191c565d43d69d3;
 
@@ -65,7 +65,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ////////////////////////////////////////////////////////////////
 
     /// @notice The MaxApy vault linked to this strategy
-    IMaxApyVaultV2 public vault;
+    IMaxApyVault public vault;
     /// @notice The strategy's underlying asset (`want` token)
     address public underlyingAsset;
     /// @notice Strategy state stating if vault is in emergency shutdown mode
@@ -97,7 +97,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param _keepers The addresses of the keepers to be granted the keeper role
     /// @param _strategyName the name of the strategy
     function __BaseStrategy_init(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist
@@ -157,7 +157,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         // Liquidate as much as possible to `underlyingAsset`, up to `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountNeeded);
         // Send it directly back to vault
-        if (amountFreed > 0) underlyingAsset.safeTransfer(msg.sender, amountFreed);
+        if (amountFreed > 0) underlyingAsset.safeTransfer(address(vault), amountFreed);
         // Note: update estimatedTotalAssets
         _snapshotEstimatedTotalAssets();
     }
@@ -175,7 +175,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountRequested);
         // Send it directly back to vault
-        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // something didn't work as expected
         // this should NEVER happen in normal conditions
         else revert();
@@ -377,7 +377,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
         vault.setAutoPilot(_autoPilot);
         assembly ("memory-safe") {
-            // Emit the `StrategyAutopilotStatusUpdated` event
+            // Emit the `StrategyAutopilotUpdated` event
             mstore(0x00, _autoPilot)
             log2(0x00, 0x20, _STRATEGY_AUTOPILOT_UPDATED, address())
         }

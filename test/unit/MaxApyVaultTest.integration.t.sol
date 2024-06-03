@@ -9,8 +9,8 @@ import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import { BaseTest, IERC20, Vm, console } from "../base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
-import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../helpers/StrategyEvents.sol";
 import { ICurve } from "src/interfaces/ICurve.sol";
@@ -70,7 +70,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     IStrategyWrapper public strategy3; // sommelier steth deposit
     IStrategyWrapper public strategy4; // convex
 
-    IMaxApyVaultV2 public vault;
+    IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
 
@@ -83,10 +83,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         TREASURY = makeAddr("treasury");
 
-        /// Deploy MaxApyVaultV2
-        MaxApyVaultV2 vaultDeployment = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
+        /// Deploy MaxApyVault
+        MaxApyVault vaultDeployment = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
 
-        vault = IMaxApyVaultV2(address(vaultDeployment));
+        vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin();
 
@@ -195,7 +195,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ///                  TEST previews                           ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2_ERC4626__PreviewDeposit() public {
+    function testMaxApyVault_ERC4626__PreviewDeposit() public {
         /// 1.deposit when the vault is empty
         uint256 expectedShares = vault.previewDeposit(20 ether);
         uint256 sharesReturn = vault.deposit(20 ether, users.alice);
@@ -211,7 +211,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 40 ether);
     }
 
-    function testMaxApyVaultV2_ERC4626__PreviewMint() public {
+    function testMaxApyVault_ERC4626__PreviewMint() public {
         /// 1.mint when the vault is empty
         uint256 expectedAssets = vault.previewMint(20 ether);
         uint256 assetsReturn = vault.mint(20 ether, users.alice);
@@ -227,7 +227,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), expectedAssets * 2);
     }
 
-    function testMaxApyVaultV2_ERC4626__PreviewRedeem() public {
+    function testMaxApyVault_ERC4626__PreviewRedeem() public {
         /// ⭕️ SCENARIO 1: Redeem when all the funds are in the vault
         /// - Alice deposits 20 WETH
         /// - Bob deposits 500 WETH
@@ -297,7 +297,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.revertTo(snapshotId);
     }
 
-    function testMaxApyVaultV2_ERC4626__PreviewWithdraw() public {
+    function testMaxApyVault_ERC4626__PreviewWithdraw() public {
         /// ⭕️ SCENARIO 1: withdraw when all the funds are in the vault
         /// - Alice deposits 20 WETH
         /// - Bob deposits 5,000 WETH
@@ -392,7 +392,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.revertTo(snapshotId);
     }
 
-    /*     function testMaxApyVaultV2_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
+    /*     function testMaxApyVault_ERC4626__PreviewWithdraw_FUZZY(uint256 amount) public {
         vm.assume(amount > 1 ether / 10 && amount < 10_000 ether);
         vault.deposit(20 ether, users.alice);
         // other users deposits as well
@@ -432,7 +432,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ///                  TEST redeem/withdraw max amount         ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2_ERC4626_RedeemMax() public {
+    function testMaxApyVault_ERC4626_RedeemMax() public {
         deal(WETH_MAINNET, users.alice, 500 ether);
 
         IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
@@ -449,7 +449,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.redeem(type(uint256).max, users.alice, users.alice);
     }
 
-    function testMaxApyVaultV2_ERC4626_WithdrawMax() public {
+    function testMaxApyVault_ERC4626_WithdrawMax() public {
         deal(WETH_MAINNET, users.alice, 500 ether);
 
         IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
@@ -475,7 +475,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ///                  TEST sharePrice()                       ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__SharePrice() external {
+    function testMaxApyVault__SharePrice() external {
         vault.deposit(20 ether, users.alice);
         assertEq(vault.sharePrice(), 1 ether);
 
@@ -516,7 +516,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ///                  TEST setAutoPilot()                     ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2_AutoPilot() public {
+    function testMaxApyVault_AutoPilot() public {
         MockRevertingStrategy revertingStrategy = new MockRevertingStrategy(address(vault), WETH_MAINNET);
         vault.addStrategy(address(revertingStrategy), 500, type(uint72).max, 0, 0);
         vault.setAutopilotEnabled(true);
@@ -564,7 +564,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ///                  TEST exitStrategy()                     ///
     ////////////////////////////////////////////////////////////////
 
-    function testMaxApyVaultV2__ExitStrategy() public {
+    function testMaxApyVault__ExitStrategy() public {
         uint256 snapshotId = vm.snapshot();
         /// ⭕️ SCENARIO 1: exit empty strategies
 

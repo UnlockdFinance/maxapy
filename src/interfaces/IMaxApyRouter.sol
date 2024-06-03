@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 interface IMaxApyRouter {
     function deposit(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 amount,
         address recipient,
         uint256 minSharesOut
@@ -15,7 +15,7 @@ interface IMaxApyRouter {
         returns (uint256);
 
     function depositNative(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         address recipient,
         uint256 minSharesOut
     )
@@ -24,7 +24,7 @@ interface IMaxApyRouter {
         returns (uint256);
 
     function redeem(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 shares,
         address recipient,
         uint256 minAmountOut
@@ -33,7 +33,7 @@ interface IMaxApyRouter {
         returns (uint256);
 
     function redeemNative(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 shares,
         address recipient,
         uint256 minAmountOut
@@ -42,7 +42,7 @@ interface IMaxApyRouter {
         returns (uint256);
 
     function depositWithPermit(
-        IMaxApyVaultV2 vault,
+        IMaxApyVault vault,
         uint256 amount,
         address recipient,
         uint256 deadline,

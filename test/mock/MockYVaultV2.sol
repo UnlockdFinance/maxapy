@@ -3,7 +3,6 @@ pragma solidity ^0.8.19;
 
 import { MockERC20 } from "../../lib/solady/test/utils/mocks/MockERC20.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import "forge-std/console.sol";
 
 contract MockYVaultV2 is MockERC20 {
     using SafeTransferLib for address;

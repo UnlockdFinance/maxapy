@@ -10,19 +10,19 @@ import {
     BaseYearnV3StrategyWrapper,
     MockERC20
 } from "./handlers/BaseYearnV3StrategyHandler.t.sol";
-import { MaxApyVaultV2Handler, MaxApyVaultV2 } from "./handlers/MaxApyVaultV2Handler.t.sol";
+import { MaxApyVaultHandler, MaxApyVault } from "./handlers/MaxApyVaultHandler.t.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { Test } from "forge-std/Test.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import { MockYVaultV3 } from "../mock/MockYVaultV3.sol";
 
 contract BaseYearnV3StrategyInvariants is StdInvariant, Test {
-    MaxApyVaultV2Handler mvh;
+    MaxApyVaultHandler mvh;
     BaseYearnV3StrategyHandler byh;
 
     function setUp() public {
         MockERC20 _token = new MockERC20("MockWETH", "MW", 18);
-        MaxApyVaultV2 _vault = new MaxApyVaultV2(address(_token), "MaxApyVault", "max", address(1));
+        MaxApyVault _vault = new MaxApyVault(address(_token), "MaxApyVault", "max", address(1));
 
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         BaseYearnV3StrategyWrapper _implementation = new BaseYearnV3StrategyWrapper();
@@ -47,7 +47,7 @@ contract BaseYearnV3StrategyInvariants is StdInvariant, Test {
 
         BaseYearnV3StrategyWrapper _strategy = BaseYearnV3StrategyWrapper(address(_proxy));
         _vault.addStrategy(address(_strategy), 6000, type(uint256).max, 0, 200);
-        mvh = new MaxApyVaultV2Handler(_vault, _token);
+        mvh = new MaxApyVaultHandler(_vault, _token);
         byh = new BaseYearnV3StrategyHandler(_vault, _strategy, _token);
 
         _strategy.grantRoles(address(byh), _strategy.KEEPER_ROLE());

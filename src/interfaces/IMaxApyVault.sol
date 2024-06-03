@@ -5,34 +5,9 @@ import { StrategyData } from "../helpers/VaultTypes.sol";
 import { IERC4626 } from "openzeppelin/interfaces/IERC4626.sol";
 
 /**
- * @notice IMaxApyVaultV2 contains the main interface for MaxApy V2 Vaults
+ * @notice IMaxApyVault contains the main interface for MaxApy V2 Vaults
  */
-interface IMaxApyVaultV2 is IERC4626 {
-    // Permit deposit methods
-    function depositWithPermit(
-        address owner,
-        uint256 assets,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        address receiver
-    )
-        external
-        returns (uint256 shares);
-
-    function mintWithPermit(
-        address owner,
-        uint256 shares,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        address receiver
-    )
-        external
-        returns (uint256 assets);
-
+interface IMaxApyVault is IERC4626 {
     function report(
         uint128 realizedGain,
         uint128 unrealizedGain,

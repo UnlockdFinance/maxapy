@@ -48,7 +48,7 @@ KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK0OOOOOOO0KKK*/
 /// to the vault
 /// @author ERC2626 adaptation of MaxAPYVault:
 /// https://github.com/UnlockdFinance/maxapy/blob/development/src/MaxApyVault.sol
-contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
+contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     using SafeTransferLib for address;
     ////////////////////////////////////////////////////////////////
     ///                         CONSTANTS                        ///
@@ -259,8 +259,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice the assets in which the vault earns interest
     address private immutable _underlyingAsset;
 
-    /// @notice the assets in which the vault earns interest
-
     ////////////////////////////////////////////////////////////////
     ///                         MODIFIERS                        ///
     ////////////////////////////////////////////////////////////////
@@ -395,7 +393,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         assembly {
             // Overflow checks
             if gt(ratioChange, debtRatio_) {
-                // throw `Overflwow` error
+                // throw `Overflow` error
                 revert(0, 0)
             }
             if gt(loss, totalDebt_) {
@@ -731,7 +729,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @notice Revoke a Strategy, setting its debt limit to 0 and preventing any future deposits
     /// @param strategy The strategy to revoke
-    /// @param strategy The strategy debt ratio
+    /// @param strategyDebtRatio The strategy debt ratio
     function _revokeStrategy(address strategy, uint256 strategyDebtRatio) internal {
         debtRatio -= strategyDebtRatio;
         strategies[strategy].strategyDebtRatio = 0;
@@ -741,7 +739,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     }
 
     /// @notice Issues `amount` Vault shares to `to`
-    /// @dev Shares must be issued prior to taking on new collateral, or calculation will be wrong.
+    /// @dev Shares must be issued prior to taking on new collateral, or calculation will be wrong
     /// This means that only *trusted* tokens (with no capability for exploitative behavior) can be used
     /// @param to The shares recipient
     /// @param amount The amount considered to compute the shares
@@ -859,6 +857,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Returns the maximum amount of the underlying asset that can be deposited
     /// into the Vault for `to`, via a deposit call.
     function maxDeposit(address /*to*/ ) public view override returns (uint256 maxAssets) {
+        /// @dev use sub0 to prevent underflow
         return _sub0(depositLimit, totalAssets());
     }
 
@@ -1079,37 +1078,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets, shares = previewDeposit(assets));
     }
 
-    /// @notice Mints `shares` Vault shares to `to` by depositing exactly `assets`
-    /// of underlying tokens.
-    /// @notice it allows for gasless approvals on deposits
-    /// @param v, @param r, @param s, @param deadline, @param owner @param assets the components of the {Permit} EIP712
-    /// signature
-    function depositWithPermit(
-        address owner,
-        uint256 assets,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        address receiver
-    )
-        public
-        noEmergencyShutdown
-        nonReentrant
-        returns (uint256 shares)
-    {
-        uint256 _maxDeposit = maxDeposit(owner);
-        assembly ("memory-safe") {
-            if gt(assets, _maxDeposit) {
-                // throw the `VaultDepositLimitExceeded` error
-                mstore(0x00, 0x0c11966b)
-                revert(0x1c, 0x04)
-            }
-        }
-        IERC20Permit(asset()).permit(owner, address(this), assets, deadline, v, r, s);
-        _deposit(owner, receiver, assets, shares = previewDeposit(assets));
-    }
-
     /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
     /// of underlying tokens.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
@@ -1136,38 +1104,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         _deposit(msg.sender, receiver, assets = previewMint(shares), shares);
     }
 
-    /// @notice Mints exactly `shares` Vault shares to `to` by depositing `assets`
-    /// of underlying tokens.
-    /// @notice it allows for gasless approvals on mints
-    /// @param v, @param r, @param s, @param deadline, @param owner assets(calculated from @param shares ) the
-    /// components of the {Permit} EIP712 signature
-    function mintWithPermit(
-        address owner,
-        uint256 shares,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        address receiver
-    )
-        public
-        noEmergencyShutdown
-        nonReentrant
-        returns (uint256 assets)
-    {
-        uint256 _maxMint = maxMint(msg.sender);
-        assembly ("memory-safe") {
-            if gt(shares, _maxMint) {
-                // throw the `VaultDepositLimitExceeded` error
-                mstore(0x00, 0x0c11966b)
-                revert(0x1c, 0x04)
-            }
-        }
-        assets = previewMint(shares);
-        IERC20Permit(asset()).permit(owner, address(this), assets, deadline, v, r, s);
-        _deposit(msg.sender, receiver, assets, shares);
-    }
-
     /// @dev override the Solady's internal function to add extra checks
     function _deposit(address by, address to, uint256 assets, uint256 shares) internal override {
         asset().safeTransferFrom(by, address(this), assets);
@@ -1186,12 +1122,12 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 revert(0x1c, 0x04)
             }
 
-            // Get totalAssets, same as calling _totalAssets() but caching totalIdle
+            // Get totalDeposits
             totalIdle_ := sload(totalIdle.slot)
             let totalAssets_ := add(totalIdle_, sload(totalDebt.slot))
             if lt(totalAssets_, totalIdle_) { revert(0, 0) }
 
-            // check if totalAssets + assets overflows
+            // check if totalDeposits + assets overflows
             let total := add(totalAssets_, assets)
             if lt(total, totalAssets_) { revert(0, 0) }
         }
@@ -1339,10 +1275,18 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     loss = _loss;
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
                 } catch {
+                    unchecked {
+                        ++i;
+                    }
                     continue;
                 }
 
-                if (withdrawn == 0) continue;
+                if (withdrawn == 0) {
+                    unchecked {
+                        ++i;
+                    }
+                    continue;
+                }
 
                 // Increase cached vault balance to track the newly withdrawn amount
                 vaultBalance += withdrawn;
@@ -1412,7 +1356,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         return assets;
     }
 
-    /// @dev Burns the needed amount of shars to withdraw @param assets after lealising loses
+    /// @dev Burns the needed amount of shares to withdraw @param assets after realising loses
     /// @return shares the real amount shares burnt
     function _withdraw(address by, address to, address owner, uint256 assets) private returns (uint256 shares) {
         assembly ("memory-safe") {
@@ -1485,10 +1429,18 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     loss = _loss;
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
                 } catch {
+                    unchecked {
+                        ++i;
+                    }
                     continue;
                 }
 
-                if (withdrawn == 0) continue;
+                if (withdrawn == 0) {
+                    unchecked {
+                        ++i;
+                    }
+                    continue;
+                }
 
                 // increase the vault balance by the needed amount
                 vaultBalance += withdrawn;
@@ -1574,6 +1526,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
     /// The next time the strategy will harvest, it will pay back the debt in an attempt to adjust to the new debt
     /// limit.
     /// @param debtPayment Amount Strategy has made available to cover outstanding debt
+    /// @param managementFeeReceiver Address receiving the protocol fees
     /// @return debt Amount of debt outstanding (if totalDebt > debtLimit or emergency shutdown).
     function report(
         uint128 realizedGain,
@@ -1931,9 +1884,6 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
         strategies[strategy].strategyTotalDebt = 0;
         strategies[strategy].strategyDebtRatio = 0;
 
-        // Remove `STRATEGY_ROLE` from strategy
-        _removeRoles(strategy, STRATEGY_ROLE);
-
         // Remove the strategy from the queue
         address[MAXIMUM_STRATEGIES] memory cachedWithdrawalQueue = withdrawalQueue;
         for (uint256 i; i < MAXIMUM_STRATEGIES;) {
@@ -1941,6 +1891,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                 // The strategy was found and can be removed
                 withdrawalQueue[i] = address(0);
 
+                // Remove `STRATEGY_ROLE` from strategy
                 _removeRoles(strategy, STRATEGY_ROLE);
 
                 // Update withdrawal queue
@@ -1950,7 +1901,7 @@ contract MaxApyVaultV2 is ERC4626, OwnableRoles, ReentrancyGuard {
                     // Emit the `StrategyRemoved` event
                     log2(0x00, 0x00, _STRATEGY_REMOVED_EVENT_SIGNATURE, strategy)
 
-                    // Emit the `StrategyRemoved` event
+                    // Emit the `StrategyExited` event
                     mstore(0x00, withdrawn)
                     log2(0x00, 0x20, _STRATEGY_EXITED_EVENT_SIGNATURE, strategy)
                 }

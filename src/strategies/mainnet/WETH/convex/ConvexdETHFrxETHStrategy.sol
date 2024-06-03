@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { BaseStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
 import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
@@ -135,7 +135,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// @param _curveEthFrxEthPool The address of Curve's ETH-frxETH pool
     /// @param _router The router address to perform swaps
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
@@ -430,7 +430,11 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0

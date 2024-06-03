@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { BaseStrategy, IERC20, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IYVault } from "src/interfaces/IYVault.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
+/// @title BaseYearnV2Strategy
 /// @author MaxApy
 /// @notice `BaseYearnV2Strategy` sets the base functionality to be implemented by MaxApy YearnV3 strategies.
 /// @dev Some functions can be overriden if needed
@@ -40,19 +41,19 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @notice Emitted when the strategy's max single trade value is updated
     event MaxSingleTradeUpdated(uint256 maxSingleTrade);
 
-    // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
 
-    // @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
     uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
         0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
-    // @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
 
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
 
@@ -78,7 +79,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @param _strategyName the name of the strategy
     /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
@@ -304,7 +305,11 @@ contract BaseYearnV2Strategy is BaseStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
@@ -401,7 +406,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     }
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
-    /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
+    /// regardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
     /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
     /// the
@@ -412,7 +417,6 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
     /// amount
-
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override
@@ -468,7 +472,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
-    /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
+    /// @return shares returns the estimated amount of shares computed in exchange for the underlying `amount`
     function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
         uint256 freeFunds = _freeFunds();
         assembly {
@@ -511,7 +515,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
             // Check overflow
             if gt(lastReport, timestamp()) { revert(0, 0) }
 
-            //temporal value to save gas
+            //temporry value to save gas
             let lockedFundsRatio := sub(timestamp(), lastReport)
 
             // Overflow check equivalent to require(lockedProfitDegradation == 0 || lockedFundsRatio <=

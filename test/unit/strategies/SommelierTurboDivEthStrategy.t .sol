@@ -9,10 +9,10 @@ import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { ICellar } from "src/interfaces/ICellar.sol";
 import { SommelierTurboDivEthStrategyWrapper } from "../../mock/SommelierTurboDivEthStrategyWrapper.sol";
-import { MaxApyVaultV2 } from "src/MaxApyVaultV2.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { SommelierTurboDivEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboDivEthStrategy.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
@@ -31,8 +31,8 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
 
     IStrategyWrapper public strategy;
     SommelierTurboDivEthStrategyWrapper public implementation;
-    MaxApyVaultV2 public vaultDeployment;
-    IMaxApyVaultV2 public vault;
+    MaxApyVault public vaultDeployment;
+    IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
 
@@ -45,10 +45,10 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
 
         TREASURY = makeAddr("treasury");
 
-        /// Deploy MaxApyVaultV2
-        vaultDeployment = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
+        /// Deploy MaxApyVault
+        vaultDeployment = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
 
-        vault = IMaxApyVaultV2(address(vaultDeployment));
+        vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation
@@ -89,8 +89,8 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
 
     function testSommelierTurboDivEth__Initialization() public {
         /// *************** sommelier Strategy initialization *************** ///
-        /// Deploy MaxApyVaultV2
-        MaxApyVaultV2 _vault = new MaxApyVaultV2(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
+        /// Deploy MaxApyVault
+        MaxApyVault _vault = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         /// Deploy strategy implementation
@@ -312,7 +312,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
 
         (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
         // ~60 ETH - losses from the previous 10 ETH investment
-        assertEq(realizedProfit, 61.747018291901829621 ether); // ~60 ETH
+        assertEq(realizedProfit, 61.702638366407749256 ether); // ~60 ETH
         assertEq(unrealizedProfit, 61.747018291901829621 ether); // ~60 ETH
         assertEq(loss, 0);
         assertEq(debtPayment, 0);

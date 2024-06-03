@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseYearnV2Strategy, IMaxApyVaultV2, SafeTransferLib } from "src/strategies/base/BaseYearnV2Strategy.sol";
+import { BaseYearnV2Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseYearnV2Strategy.sol";
 
 /// @title YearnUSDCStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol

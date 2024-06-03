@@ -2,19 +2,19 @@
 pragma solidity ^0.8.19;
 
 import { BaseFuzzer, console } from "./base/BaseFuzzer.t.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { LibPRNG } from "solady/utils/LibPRNG.sol";
 
-contract MaxApyVaultV2Fuzzer is BaseFuzzer {
+contract MaxApyVaultFuzzer is BaseFuzzer {
     using SafeTransferLib for address;
     using LibPRNG for LibPRNG.PRNG;
 
     LibPRNG.PRNG rng;
-    IMaxApyVaultV2 vault;
+    IMaxApyVault vault;
     address token;
 
-    constructor(IMaxApyVaultV2 _vault, address _token) {
+    constructor(IMaxApyVault _vault, address _token) {
         vault = _vault;
         token = _token;
     }

@@ -5,7 +5,7 @@ import {
     BaseSommelierStrategy,
     ICellar,
     IWETH,
-    IMaxApyVaultV2,
+    IMaxApyVault,
     SafeTransferLib
 } from "src/strategies/base/BaseSommelierStrategy.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
@@ -35,11 +35,11 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @notice Emitted when the strategy's min single trade value is updated
     event MinSingleTradeUpdated(uint256 minSingleTrade);
 
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
 
-    // @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
 
@@ -64,7 +64,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @param _strategyName the name of the strategy
     /// @param _cellar The address of the Sommelier Turbo-stETH cellar
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
@@ -89,7 +89,6 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ////////////////////////////////////////////////////////////////
     ///                STRATEGY CORE LOGIC                       ///
     ////////////////////////////////////////////////////////////////
-
     /// @notice Withdraws exactly `amountNeeded` to `vault`.
     /// @dev This may only be called by the respective Vault.
     /// @param amountNeeded How much `underlyingAsset` to withdraw.
@@ -103,7 +102,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountRequested);
         // Send it directly back to vault
-        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // something didn't work as expected
         // this should NEVER happen in normal conditions
         else revert();
@@ -301,7 +300,11 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                    realizedProfit := 0
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0

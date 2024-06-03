@@ -10,8 +10,8 @@ import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import { BaseTest, IERC20, Vm, console } from "../../test/base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../../test/interfaces/IStrategyWrapper.sol";
-import { IMaxApyVaultV2 } from "src/interfaces/IMaxApyVaultV2.sol";
-import { MaxApyVaultV2, OwnableRoles } from "src/MaxApyVaultV2.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
 import { ICurve } from "src/interfaces/ICurve.sol";
@@ -83,7 +83,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
 
     // **********LOCAL VARIABLES*****************
     // use storage variables to avoid stack too deep
-    IMaxApyVaultV2 public vault;
+    IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
     address vaultAdmin;
@@ -91,7 +91,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
     address strategyAdmin;
     address strategyEmergencyAdmin;
     address treasury;
-    MaxApyVaultV2 vaultDeployment;
+    MaxApyVault vaultDeployment;
 
     ////////////////////////////////////////////////////////////////
     ///                      SETUP                               ///
@@ -112,10 +112,10 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        /// Deploy MaxApyVaultV2
-        vaultDeployment = new MaxApyVaultV2(WETH, "MaxApyWETHVault", "maxApy", treasury);
+        /// Deploy MaxApyVault
+        vaultDeployment = new MaxApyVault(WETH, "MaxApyWETHVault", "maxApy", treasury);
 
-        vault = IMaxApyVaultV2(address(vaultDeployment));
+        vault = IMaxApyVault(address(vaultDeployment));
         // grant roles
         vault.grantRoles(vaultAdmin, vault.ADMIN_ROLE());
         vault.grantRoles(vaultEmergencyAdmin, vault.EMERGENCY_ADMIN_ROLE());
