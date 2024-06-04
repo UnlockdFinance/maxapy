@@ -164,10 +164,12 @@ contract SommelierTurboEthXStrategy is BaseSommelierStrategy {
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         // if cellar is paused dont liquidate, skips revert
         if (cellar.isPaused()) return 0;
-        withdrawn = cellar.redeem(shares, address(this), address(this));
+        uint256 balanceBefore = _underlyingBalance();
+        cellar.redeem(shares, address(this), address(this));
         uint256 ethXBalance = _ethXBalance();
         // If the vault sent any ethX swap it to underlying WETH
         if (ethXBalance > 0) withdrawn += _swapEthX(ethXBalance);
+        withdrawn = _underlyingBalance() - balanceBefore;
         emit Divested(address(this), shares, withdrawn);
     }
 

@@ -161,13 +161,15 @@ contract SommelierMorphoEthMaximizerStrategy is BaseSommelierStrategy {
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         // if cellar is paused dont liquidate, skips revert
         if (cellar.isPaused()) return 0;
-        withdrawn = cellar.redeem(shares, address(this), address(this));
+        uint256 balanceBefore = _underlyingBalance();
+        cellar.redeem(shares, address(this), address(this));
         uint256 wstEthBalance = _wstEthBalance();
-        if (wstEthBalance > 0) withdrawn += _swapWstEth(wstEthBalance);
+        if (wstEthBalance > 0) _swapWstEth(wstEthBalance);
+        withdrawn = _underlyingBalance() - balanceBefore;
         emit Divested(address(this), shares, withdrawn);
     }
-    /// @notice helper function to swap the WSTETH in balance to underlying WETH
 
+    /// @notice helper function to swap the WSTETH in balance to underlying WETH
     function _swapWstEth(uint256 amountIn) internal returns (uint256) {
         if (amountIn < minSingleTrade) return 0;
         return router.exactInputSingle(

@@ -163,9 +163,11 @@ contract SommelierTurboGHOStrategy is BaseSommelierStrategy {
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         // if cellar is paused dont liquidate, skips revert
         if (cellar.isPaused()) return 0;
-        withdrawn = cellar.redeem(shares, address(this), address(this));
+        uint256 balanceBefore = _underlyingBalance();
+        cellar.redeem(shares, address(this), address(this));
         uint256 ghoBalance = _ghoBalance();
-        if (ghoBalance > 0) withdrawn += _swapGho(ghoBalance);
+        if (ghoBalance > 0) _swapGho(ghoBalance);
+        withdrawn = _underlyingBalance() - balanceBefore;
         emit Divested(address(this), shares, withdrawn);
     }
 
@@ -189,7 +191,6 @@ contract SommelierTurboGHOStrategy is BaseSommelierStrategy {
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
     /// @notice returns GHO balance
-
     function _ghoBalance() internal view returns (uint256) {
         return gho.balanceOf(address(this));
     }
