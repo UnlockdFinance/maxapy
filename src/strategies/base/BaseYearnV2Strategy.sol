@@ -97,6 +97,9 @@ contract BaseYearnV2Strategy is BaseStrategy {
 
         /// Mininmum single trade is 0.01 token units
         minSingleTrade = 10 ** IERC20(underlyingAsset).decimals() / 100;
+
+        /// Unlimited max single trade by default
+        maxSingleTrade = type(uint256).max;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -272,8 +275,9 @@ contract BaseYearnV2Strategy is BaseStrategy {
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
 
-                // We cannot withdraw more than actual balance
-                expectedAmountToWithdraw = Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance()));
+                // We cannot withdraw more than actual balance or maxSingleTrade
+                expectedAmountToWithdraw =
+                    Math.min(Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance())), maxSingleTrade);
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
 

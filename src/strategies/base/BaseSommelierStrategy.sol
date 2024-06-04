@@ -32,6 +32,12 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @notice Emitted when the `requestedShares` are divested from the Sommelier Vault
     event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
 
+    /// @notice Emitted when the strategy's min single trade value is updated
+    event MinSingleTradeUpdated(uint256 minSingleTrade);
+
+    /// @notice Emitted when the strategy's max single trade value is updated
+    event MaxSingleTradeUpdated(uint256 maxSingleTrade);
+
     /// @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
@@ -40,12 +46,26 @@ contract BaseSommelierStrategy is BaseStrategy {
     uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
         0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
+    /// @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
+    uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
+        0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
+
+    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
+    uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
+        0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
+
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
 
     /// @notice The Sommelier Vault the strategy interacts with
     ICellar public cellar;
+
+    /// @notice The maximum single trade allowed in the strategy
+    uint256 public maxSingleTrade;
+
+    /// @notice Minimun trade size within the strategy
+    uint256 public minSingleTrade;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -73,6 +93,9 @@ contract BaseSommelierStrategy is BaseStrategy {
         cellar = _cellar;
         /// Approve Cellar Vault to transfer underlying
         underlyingAsset.safeApprove(address(_cellar), type(uint256).max);
+
+        /// Unlimited max single trade by default
+        maxSingleTrade = type(uint256).max;
     }
 
     /////////////////////////////////////////////////////////////////
@@ -168,6 +191,45 @@ contract BaseSommelierStrategy is BaseStrategy {
     }
 
     ////////////////////////////////////////////////////////////////
+    ///                 STRATEGY CONFIGURATION                   ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Sets the minimum single trade amount allowed
+    /// @param _minSingleTrade The new minimum single trade value
+    function setMinSingleTrade(uint256 _minSingleTrade) external checkRoles(ADMIN_ROLE) {
+        assembly {
+            // if _minSingleTrade == 0 revert()
+            if iszero(_minSingleTrade) {
+                // Throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
+            }
+            sstore(minSingleTrade.slot, _minSingleTrade)
+            // Emit the `MinSingleTradeUpdated` event
+            mstore(0x00, _minSingleTrade)
+            log1(0x00, 0x20, _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
+        }
+    }
+
+    /// @notice Sets the maximum single trade amount allowed
+    /// @param _maxSingleTrade The new maximum single trade value
+    function setMaxSingleTrade(uint256 _maxSingleTrade) external checkRoles(ADMIN_ROLE) {
+        assembly ("memory-safe") {
+            // revert if `_maxSingleTrade` is zero
+            if iszero(_maxSingleTrade) {
+                // throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
+            }
+
+            sstore(maxSingleTrade.slot, _maxSingleTrade) // set the max single trade value in storage
+
+            // Emit the `MaxSingleTradeUpdated` event
+            mstore(0x00, _maxSingleTrade)
+            log1(0x00, 0x20, _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
     /// @notice Perform any Strategy unwinding or other calls necessary to capture the
@@ -240,8 +302,9 @@ contract BaseSommelierStrategy is BaseStrategy {
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
 
-                // We cannot withdraw more than actual balance
-                expectedAmountToWithdraw = Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance()));
+                // We cannot withdraw more than actual balance or maxSingleTrade
+                expectedAmountToWithdraw =
+                    Math.min(Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance())), maxSingleTrade);
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
 

@@ -250,10 +250,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
         vm.startPrank(users.alice);
         uint256 expectedAssets = vault.previewRedeem(sharesAlice);
@@ -275,14 +275,14 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest again
         /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
         deal(WETH_MAINNET, address(strategy1), 50 ether);
         // forward time so lastReport timestamp is not the same
         skip(1);
-        strategy1.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedAssets = vault.previewRedeem(sharesAlice);
@@ -337,10 +337,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest strategies so they take the vault money
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(18 ether);
@@ -368,10 +368,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         /// - Harvest again
         /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
         vm.startPrank(users.alice);
         expectedShares = vault.previewWithdraw(19 ether);
@@ -403,10 +403,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
 
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
         deal(WETH_MAINNET, address(strategy1), 50 ether);
         vm.stopPrank();
 
@@ -439,10 +439,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.deposit(500 ether, users.alice);
 
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
 
         vm.startPrank(users.alice);
@@ -456,14 +456,14 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.deposit(500 ether, users.alice);
 
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
 
         deal(WETH_MAINNET, address(strategy1), 10 ether);
         skip(100);
-        strategy1.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
 
         vm.stopPrank();
 
@@ -488,17 +488,17 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         // share price might slightly decrease after investing
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
 
         // sending assets directly to the strategy won't work
         deal(WETH_MAINNET, address(strategy1), 5 ether);
         assertApproxEq(vault.sharePrice(), 1 ether, 1 ether / 1000);
         skip(1);
-        strategy1.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
 
         assertApproxEq(vault.sharePrice(), 1 ether * 125 / 100, 1 ether);
 
@@ -635,10 +635,10 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         /// Deposit and harvest funds
         vault.deposit(10 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy1.harvest(0, 0, 0, address(0));
-        strategy2.harvest(0, 0, 0, address(0));
-        strategy3.harvest(0, 0, 0, address(0));
-        strategy4.harvest(0, 0, 0, address(0));
+        strategy1.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy2.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy3.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy4.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
 
         vm.startPrank(users.alice);

@@ -28,7 +28,7 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     function gain(uint256 amount) public override countCall("gain") {
         amount = bound(amount, 0, 1_000_000 ether);
         deal(address(token), address(strategy), amount);
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
     }
 
     function triggerLoss(uint256 amount, bool useLiquidateExact) public override countCall("triggerLoss") {
@@ -50,20 +50,20 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
             expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount);
         }
         actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
     }
 
     function harvest() public override countCall("harvest") {
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets();
-            strategy.harvest(0, 0, 0, address(0));
+            strategy.harvest(0, 0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
         if (unharvestedAmount > 0) {
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + uint256(strategy.unharvestedAmount());
-            strategy.harvest(0, 0, 0, address(0));
+            strategy.harvest(0, 0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
     }

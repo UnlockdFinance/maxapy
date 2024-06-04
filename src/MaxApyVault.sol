@@ -333,7 +333,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
         // use try/catch so deposits always succeed
         // and next index is updated
-        try IStrategy(strategy).harvest(0, 0, 0, harvester) {
+        try IStrategy(strategy).harvest(0, 0, 0, harvester, block.timestamp) {
             success = true;
         } catch (bytes memory _reason) {
             reason = _reason;

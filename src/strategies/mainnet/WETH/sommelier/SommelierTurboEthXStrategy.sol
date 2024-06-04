@@ -22,32 +22,6 @@ contract SommelierTurboEthXStrategy is BaseSommelierStrategy {
     address constant ethX = 0xA35b1B31Ce002FBF2058D22F30f95D405200A15b;
     IUniswapV3Router constant router = IUniswapV3Router(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
-    ////////////////////////////////////////////////////////////////
-    ///            STRATEGY GLOBAL STATE VARIABLES               ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Minimun trade size within the strategy
-    uint256 public minSingleTrade;
-    /// @notice Maximum trade size within the strategy
-    uint256 public maxSingleTrade;
-
-    ////////////////////////////////////////////////////////////////
-    ///                         EVENTS                           ///
-    ////////////////////////////////////////////////////////////////
-    /// @notice Emitted when the strategy's min single trade value is updated
-    event MinSingleTradeUpdated(uint256 minSingleTrade);
-
-    /// @notice Emitted when the strategy's max single trade value is updated
-    event MaxSingleTradeUpdated(uint256 maxSingleTrade);
-
-    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
-    uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
-
-    /// @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
-    uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
-
     /// @dev the initialization function must be defined in each strategy
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -111,46 +85,6 @@ contract SommelierTurboEthXStrategy is BaseSommelierStrategy {
     }
 
     ////////////////////////////////////////////////////////////////
-    ///                 STRATEGY CONFIGURATION                   ///
-    ////////////////////////////////////////////////////////////////
-
-    /// @notice Sets the minimum single trade amount allowed
-    /// @param _minSingleTrade The new minimum single trade value
-    function setMinSingleTrade(uint256 _minSingleTrade) external checkRoles(ADMIN_ROLE) {
-        assembly {
-            // if _minSingleTrade == 0 revert()
-            if iszero(_minSingleTrade) {
-                // Throw the `InvalidZeroAmount` error
-                mstore(0x00, 0xdd484e70)
-                revert(0x1c, 0x04)
-            }
-            sstore(minSingleTrade.slot, _minSingleTrade)
-            // Emit the `MinSingleTradeUpdated` event
-            mstore(0x00, _minSingleTrade)
-            log1(0x00, 0x20, _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
-        }
-    }
-
-    /// @notice Sets the maximum single trade amount allowed
-    /// @param _maxSingleTrade The new maximum single trade value
-    function setMaxSingleTrade(uint256 _maxSingleTrade) external checkRoles(ADMIN_ROLE) {
-        assembly ("memory-safe") {
-            // revert if `_maxSingleTrade` is zero
-            if iszero(_maxSingleTrade) {
-                // throw the `InvalidZeroAmount` error
-                mstore(0x00, 0xdd484e70)
-                revert(0x1c, 0x04)
-            }
-
-            sstore(maxSingleTrade.slot, _maxSingleTrade) // set the max single trade value in storage
-
-            // Emit the `MaxSingleTradeUpdated` event
-            mstore(0x00, _maxSingleTrade)
-            log1(0x00, 0x20, _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE)
-        }
-    }
-
-    ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
@@ -164,10 +98,12 @@ contract SommelierTurboEthXStrategy is BaseSommelierStrategy {
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         // if cellar is paused dont liquidate, skips revert
         if (cellar.isPaused()) return 0;
-        withdrawn = cellar.redeem(shares, address(this), address(this));
+        uint256 balanceBefore = _underlyingBalance();
+        cellar.redeem(shares, address(this), address(this));
         uint256 ethXBalance = _ethXBalance();
         // If the vault sent any ethX swap it to underlying WETH
         if (ethXBalance > 0) withdrawn += _swapEthX(ethXBalance);
+        withdrawn = _underlyingBalance() - balanceBefore;
         emit Divested(address(this), shares, withdrawn);
     }
 
