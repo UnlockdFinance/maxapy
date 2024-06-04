@@ -113,7 +113,6 @@ contract SommelierTurboGHOStrategy is BaseSommelierStrategy {
     ////////////////////////////////////////////////////////////////
     ///                 STRATEGY CONFIGURATION                   ///
     ////////////////////////////////////////////////////////////////
-
     /// @notice Sets the minimum single trade amount allowed
     /// @param _minSingleTrade The new minimum single trade value
     function setMinSingleTrade(uint256 _minSingleTrade) external checkRoles(ADMIN_ROLE) {
@@ -169,8 +168,8 @@ contract SommelierTurboGHOStrategy is BaseSommelierStrategy {
         if (ghoBalance > 0) withdrawn += _swapGho(ghoBalance);
         emit Divested(address(this), shares, withdrawn);
     }
-    /// @notice helper function to swap the GHO in balance to underlying WETH
 
+    /// @notice helper function to swap the GHO in balance to underlying WETH
     function _swapGho(uint256 amountIn) internal returns (uint256) {
         if (amountIn < minSingleTrade) return 0;
         return router.exactInputSingle(
