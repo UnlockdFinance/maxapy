@@ -121,7 +121,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         vault.grantRoles(vaultEmergencyAdmin, vault.EMERGENCY_ADMIN_ROLE());
 
         /// Deploy transparent upgradeable proxy admin
-        proxyAdmin = new ProxyAdmin();
+        proxyAdmin = new ProxyAdmin(strategyAdmin);
 
         // Deploy strategy1 (Convex)
 

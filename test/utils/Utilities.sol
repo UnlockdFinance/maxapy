@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
-import { DSTest } from "ds-test/test.sol";
 import { Vm } from "forge-std/Vm.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract Utilities is DSTest, StdCheats {
+contract Utilities is StdCheats {
+    address constant HEVM_ADDRESS = 
+        address(bytes20(uint160(uint256(keccak256('hevm cheat code')))));
     Vm internal immutable vm = Vm(HEVM_ADDRESS);
 
     /*//////////////////////////////////////////////////////////////////////////

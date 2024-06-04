@@ -6,7 +6,6 @@ import {
     IMaxApyVault,
     SafeTransferLib,
     IYVault,
-    IERC20,
     Math
 } from "src/strategies/base/BaseYearnV2Strategy.sol";
 import { IUniswapV3Router as IRouter, IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
@@ -56,10 +55,10 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         lusd.safeApprove(address(router), type(uint256).max);
 
         /// Mininmum single trade is 0.01 token units
-        minSingleTrade = 10 ** IERC20(underlyingAsset).decimals() / 100;
+        minSingleTrade = 0.01 ether;
 
         /// Max single trade
-        maxSingleTrade = 10 ** IERC20(underlyingAsset).decimals() * 10_000;
+        maxSingleTrade = 10_000 ether;
     }
 
     ////////////////////////////////////////////////////////////////

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IERC20, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
 import { ICellar } from "src/interfaces/ICellar.sol";
 

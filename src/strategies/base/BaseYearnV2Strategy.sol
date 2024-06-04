@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IERC20, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IYVault } from "src/interfaces/IYVault.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
@@ -96,7 +96,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
 
         /// Mininmum single trade is 0.01 token units
-        minSingleTrade = 10 ** IERC20(underlyingAsset).decimals() / 100;
+        minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
 
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;

@@ -24,7 +24,7 @@ contract BaseYearnV2StrategyInvariants is SetUp {
         _setUpToken();
         _setUpVault();
 
-        ProxyAdmin _proxyAdmin = new ProxyAdmin();
+        ProxyAdmin _proxyAdmin = new ProxyAdmin(address(this));
         BaseYearnV2StrategyWrapper _implementation = new BaseYearnV2StrategyWrapper();
 
         MockYVaultV2 _underlyingYvault = new MockYVaultV2(address(token), "Yearn Vault", "YV");

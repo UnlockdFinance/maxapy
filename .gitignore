@@ -3,7 +3,7 @@ cache/
 out/
 
 # Ignores development broadcast logs
-/broadcast
+broadcast/
 
 # Docs
 docs/
@@ -14,3 +14,6 @@ docs/
 # Coverage file
 lcov.info
 
+# Soldeer dependencies
+dependencies/
+soldeer.lock/

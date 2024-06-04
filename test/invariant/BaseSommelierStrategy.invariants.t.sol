@@ -20,7 +20,7 @@ contract BaseSommelierStrategyInvariants is SetUp {
         _setUpToken();
         _setUpVault();
 
-        ProxyAdmin _proxyAdmin = new ProxyAdmin();
+        ProxyAdmin _proxyAdmin = new ProxyAdmin(address(this));
         BaseSommelierStrategyWrapper _implementation = new BaseSommelierStrategyWrapper();
 
         MockCellar _underlyingCellar = new MockCellar(address(token), "Sommelier Cellar", "SC", true, 0);

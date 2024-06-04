@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { MockERC4626 } from "../../lib/solady/test/utils/mocks/MockERC4626.sol";
+import { MockERC4626 } from "./MockERC4626.sol";
 
 contract MockYVaultV3 is MockERC4626 {
     constructor(
