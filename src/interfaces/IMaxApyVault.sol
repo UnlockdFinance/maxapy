@@ -9,7 +9,6 @@ import { IERC4626 } from "openzeppelin/interfaces/IERC4626.sol";
  */
 interface IMaxApyVault is IERC4626 {
     function report(
-        uint128 realizedGain,
         uint128 unrealizedGain,
         uint128 loss,
         uint128 debtPayment,

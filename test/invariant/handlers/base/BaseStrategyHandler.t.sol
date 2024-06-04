@@ -44,5 +44,5 @@ abstract contract BaseStrategyHandler is BaseHandler {
     ////////////////////////////////////////////////////////////////
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
-    function INVARIANT_A_ESTIMATED_TOTAL_ASSETS() public virtual;
+    function INVARIANT_A_ESTIMATED_TOTAL_ASSETS() public view virtual;
 }

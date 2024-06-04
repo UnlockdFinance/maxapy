@@ -201,39 +201,39 @@ contract MaxApyVaultHandler is BaseHandler {
     ////////////////////////////////////////////////////////////////
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
-    function INVARIANT_A_SHARE_PREVIEWS() public {
+    function INVARIANT_A_SHARE_PREVIEWS() public view {
         assertLe(actualShares, expectedShares);
     }
 
-    function INVARIANT_B_ASSET_PREVIEWS() public {
+    function INVARIANT_B_ASSET_PREVIEWS() public view {
         assertGe(actualAssets, expectedAssets);
     }
 
-    function INVARIANT_C_TOTAL_SUPPLY() public {
+    function INVARIANT_C_TOTAL_SUPPLY() public view {
         assertEq(actualTotalSupply, expectedTotalSupply);
     }
 
-    function INVARIANT_D_TOTAL_IDLE() public {
+    function INVARIANT_D_TOTAL_IDLE() public view {
         assertEq(actualTotalIdle, expectedTotalIdle);
     }
 
-    function INVARIANT_E_TOTAL_DEBT() public {
+    function INVARIANT_E_TOTAL_DEBT() public view {
         assertEq(actualTotalDebt, expectedTotalDebt);
     }
 
-    function INVARIANT_F_TOTAL_ASSETS() public {
+    function INVARIANT_F_TOTAL_ASSETS() public view {
         assertEq(actualTotalAssets, expectedTotalAssets);
     }
 
-    function INVARIANT_G_TOTAL_DEPOSITS() public {
+    function INVARIANT_G_TOTAL_DEPOSITS() public view {
         assertEq(actualTotalDeposits, expectedTotalDeposits);
     }
 
-    function INVARIANT_H_TOKEN_BALANCE() public {
+    function INVARIANT_H_TOKEN_BALANCE() public view {
         assertEq(actualBalance, expectedBalance);
     }
 
-    function INVARIANT_I_SHARE_PRICE() public {
+    function INVARIANT_I_SHARE_PRICE() public view {
         assertEq(actualSharePrice, expectedSharePrice);
         // NOTE: share price can dramatically change in some edge cases
         // assertLe(sharePriceDelta, 100,  "invariant: share price delta"); // 1%

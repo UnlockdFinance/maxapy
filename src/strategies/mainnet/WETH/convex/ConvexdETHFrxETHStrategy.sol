@@ -331,12 +331,11 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
     /// See `MaxApy.debtOutstanding()`.
     function _prepareReturn(
         uint256 debtOutstanding,
-        uint256 minExpectedBalance,
-        uint256 harvestedProfitBPS
+        uint256 minExpectedBalance
     )
         internal
         override
-        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
+        returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
         // Cache reward pool
         IConvexRewards rewardPool = convexRewardPool;
@@ -380,10 +379,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 
-            // we will report harvestedProfitBPS % of the profits only so we can compound the rest
-            realizedProfit = unrealizedProfit * harvestedProfitBPS / MAX_BPS;
-
-            uint256 amountToWithdraw = realizedProfit + debtOutstanding;
+            uint256 amountToWithdraw = debtOutstanding;
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Convex
@@ -415,40 +411,23 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
             }
 
             assembly {
-                // Net off realized profit and loss
-                switch lt(realizedProfit, loss)
-                // if (realizedProfit < loss)
-                case true {
-                    loss := sub(loss, realizedProfit)
-                    realizedProfit := 0
-                }
-                case false {
-                    realizedProfit := sub(realizedProfit, loss)
-                    loss := 0
-                }
-
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
                 case true {
                     loss := sub(loss, unrealizedProfit)
                     unrealizedProfit := 0
-                    realizedProfit := 0
                 }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
                 }
             }
-            // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
-            if (realizedProfit > underlyingBalance) {
-                // Profit is prioritised. In this case, no `debtPayment` will be reported
-                realizedProfit = underlyingBalance;
-            } else if (amountToWithdraw > underlyingBalance) {
+            if (amountToWithdraw > underlyingBalance) {
                 // same as `profit` + `debtOutstanding` > `underlyingBalance`
                 // Extract debt payment from divested amount
                 unchecked {
-                    debtPayment = underlyingBalance - realizedProfit;
+                    debtPayment = underlyingBalance;
                 }
             } else {
                 debtPayment = debtOutstanding;

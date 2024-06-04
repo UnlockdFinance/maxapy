@@ -56,7 +56,7 @@ contract MockLossyUSDCStrategy {
     }
 
     function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
-        IMaxApyVault(vault).report(gain, gain, loss, debtPayment, treasury);
+        IMaxApyVault(vault).report(gain, loss, debtPayment, treasury);
     }
 
     function delegatedAssets() external pure returns (uint256) {

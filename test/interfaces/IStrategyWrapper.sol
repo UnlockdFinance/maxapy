@@ -6,11 +6,10 @@ import { IYearnStrategy } from "../../src/interfaces/IYearnStrategy.sol";
 interface IStrategyWrapper is IYearnStrategy {
     function prepareReturn(
         uint256 debtOutstanding,
-        uint256 minExpectedBalance,
-        uint256 harvestedProfitBPS
+        uint256 minExpectedBalance
     )
         external
-        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
+        returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
 
     function adjustPosition() external;
 

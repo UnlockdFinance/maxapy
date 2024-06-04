@@ -9,15 +9,15 @@ contract MaxApyVaultAccountingInvariants is SetUp {
         _setUpVault();
     }
 
-    function invariantMaxApyVault__SharePreviews() public {
+    function invariantMaxApyVault__SharePreviews() public view {
         vaultHandler.INVARIANT_A_SHARE_PREVIEWS();
     }
 
-    function invariantMaxApyVault__AssetsPreviews() public {
+    function invariantMaxApyVault__AssetsPreviews() public view {
         vaultHandler.INVARIANT_B_ASSET_PREVIEWS();
     }
 
-    function invariantMaxApyVault__InternalAccounting() public {
+    function invariantMaxApyVault__InternalAccounting() public view {
         vaultHandler.INVARIANT_C_TOTAL_SUPPLY();
         vaultHandler.INVARIANT_D_TOTAL_IDLE();
         vaultHandler.INVARIANT_E_TOTAL_DEBT();
@@ -26,7 +26,7 @@ contract MaxApyVaultAccountingInvariants is SetUp {
         vaultHandler.INVARIANT_H_TOKEN_BALANCE();
     }
 
-    function invariantMaxApyVault__SharePrice() public {
+    function invariantMaxApyVault__SharePrice() public view {
         vaultHandler.INVARIANT_I_SHARE_PRICE();
     }
 
