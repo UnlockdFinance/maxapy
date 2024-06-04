@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { MockERC20 } from "../../lib/solady/test/utils/mocks/MockERC20.sol";
+import { MockERC20 } from "./MockERC20.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 contract MockYVaultV2 is MockERC20 {

@@ -135,7 +135,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
-        proxyAdmin = new ProxyAdmin();
+        proxyAdmin = new ProxyAdmin(users.alice);
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;

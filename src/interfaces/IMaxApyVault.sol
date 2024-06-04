@@ -32,8 +32,6 @@ interface IMaxApyVault is IERC4626 {
     /// View ownership
     function ownershipHandoverExpiresAt(address pendingOwner) external view returns (uint256);
 
-    function ownershipHandoverValidFor() external view returns (uint64);
-
     function owner() external view returns (address result);
 
     /// Roles
