@@ -11,6 +11,8 @@ import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
 import { Initializable } from "../../lib/Initializable.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
+// TODO: add tests for harvest deadline
+
 /// @title BaseStrategy
 /// @author Forked and adapted from https://github.com/yearn/yearn-vaults/blob/master/contracts/BaseStrategy.sol
 /// @notice `BaseStrategy` sets the base functionality to be implemented by MaxApy strategies.
@@ -196,16 +198,24 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param harvester only relevant when the harvest is triggered from the vault, is the address of the user that is
     /// enduring the harvest gas cost
     /// from the vault and will receive the managemente fees in return
+    /// @param deadline max allowed timestamp for the transaction to be included in a block
     function harvest(
         uint256 minExpectedBalance,
         uint256 minOutputAfterInvestment,
         uint256 harvestedProfitBPS,
-        address harvester
+        address harvester,
+        uint256 deadline
     )
         external
         checkRoles(KEEPER_ROLE)
     {
         assembly ("memory-safe") {
+            // if block.timestamp > deadline
+            if gt(timestamp(), deadline) {
+                // revert
+                revert(0, 0)
+            }
+
             // if harvestedProfitBPS > MAX_BPS
             if gt(harvestedProfitBPS, MAX_BPS) {
                 // throw the `InvalidHarvestedProfit` error

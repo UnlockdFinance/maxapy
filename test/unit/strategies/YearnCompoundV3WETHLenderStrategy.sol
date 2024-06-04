@@ -206,7 +206,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
@@ -217,7 +217,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
 
         deal(WETH_MAINNET, address(strategy), 1 ether);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
         assertEq(strategy.isActive(), true);
     }
 
@@ -256,7 +256,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
 
         // Expect revert if output amount is gt amount obtained
         vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-        strategy.harvest(0, type(uint256).max, 10_000, address(0));
+        strategy.harvest(0, type(uint256).max, 10_000, address(0), block.timestamp);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -561,13 +561,13 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         // it should revert if profit harvest percentage is > 100 %
         vm.startPrank(users.keeper);
         vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, 10_001, address(0));
+        strategy.harvest(0, 0, 10_001, address(0), block.timestamp);
     }
 
     function testYearnCompoundV3WETHLender__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.harvest(0, 0, 10_000, address(0));
+        strategy.harvest(0, 0, 10_000, address(0), block.timestamp);
 
         /// ⭕️ SCENARIO 1:
         /// 1. Strategy performs initial harvest to request vault funds
@@ -606,7 +606,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        strategy.harvest(0, 0, 10_000, address(0));
+        strategy.harvest(0, 0, 10_000, address(0), block.timestamp);
 
         uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
@@ -644,7 +644,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         /// dont report any profit
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
         /// vault balance doesnt increase at all
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
         /// the strategy reinvests all the profit
@@ -680,7 +680,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(4.523 ether, 0, 0, 0);
         /// dont report any profit
-        strategy.harvest(0, 0, 4523, address(0));
+        strategy.harvest(0, 0, 4523, address(0), block.timestamp);
         /// vault balance doesnt increase at all                    // 4.52 ether
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether + 4.523 ether);
         /// the strategy reinvests the profit partially          // 5.477 ether
@@ -733,7 +733,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0),block.timestamp);
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
@@ -776,7 +776,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(49.999999999999999999 ether, 0, 0, 0);
 
         /// only harvest 50% of profit, but it wont have any effect since its an emergency exit
-        strategy.harvest(0, 0, 5000, address(0));
+        strategy.harvest(0, 0, 5000, address(0), block.timestamp);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 109.999999999999999999 ether);
         assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
@@ -819,7 +819,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        strategy.harvest(0, 0, 10_000, address(0));
+        strategy.harvest(0, 0, 10_000, address(0), block.timestamp);
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
@@ -904,7 +904,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         uint256 strategyBalanceBefore = IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2.999999999999999999 ether);
         // here requesting 20% wont have any effect neither
-        strategy.harvest(0, 0, 2000, address(0));
+        strategy.harvest(0, 0, 2000, address(0),block.timestamp);
 
         data = vault.strategies(address(strategy));
 
@@ -926,7 +926,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 expected = strategy.previewLiquidate(30 ether);
         vm.startPrank(address(vault));
@@ -957,7 +957,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewLiquidateExact(30 ether);
         vm.startPrank(address(vault));
@@ -996,7 +996,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 maxLiquidateExact = strategy.maxLiquidateExact();
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
@@ -1038,7 +1038,7 @@ contract YearnCompoundV3WETHLenderStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0));
+        strategy.harvest(0, 0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxLiquidate();
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));

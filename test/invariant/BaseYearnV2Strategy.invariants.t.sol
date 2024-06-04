@@ -57,12 +57,11 @@ contract BaseYearnV2StrategyInvariants is SetUp {
 
         bytes4[] memory strategySelectors = _strategyHandler.getEntryPoints();
         targetSelector(FuzzSelector({ addr: address(_strategyHandler), selectors: strategySelectors }));
-        
+
         excludeSender(address(_underlyingYvault));
 
         vm.label(address(_strategy), "BaseYearnV2Strategy");
         vm.label(address(_strategyHandler), "BYH");
-
     }
 
     function invariantBaseYearnV2Strategy_vaultAccounting() public {

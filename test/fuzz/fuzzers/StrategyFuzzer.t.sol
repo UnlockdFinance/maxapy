@@ -26,7 +26,7 @@ contract StrategyFuzzer is BaseFuzzer {
     function harvest(LibPRNG.PRNG memory strategySeedRNG) public {
         if (strats.count() == 0) return;
         address strat = strats.rand(strategySeedRNG.next());
-        try IStrategyWrapper(strat).harvest(0, 0, 0, address(0)) {
+        try IStrategyWrapper(strat).harvest(0, 0, 0, address(0), block.timestamp) {
             skip(100);
         } catch (bytes memory e) {
             e;
