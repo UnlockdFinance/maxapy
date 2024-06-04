@@ -153,10 +153,7 @@ contract MaxApyVaultTest is BaseVaultTest {
         vm.expectEmit();
         emit OwnershipHandoverRequested(users.bob);
         vaultOwnership.requestOwnershipHandover();
-        assertEq(
-            vaultOwnership.ownershipHandoverExpiresAt(users.bob),
-            block.timestamp + ( 48 * 3600)
-        );
+        assertEq(vaultOwnership.ownershipHandoverExpiresAt(users.bob), block.timestamp + (48 * 3600));
 
         /// Bob cancels ownership handover
         vm.expectEmit();
@@ -168,10 +165,7 @@ contract MaxApyVaultTest is BaseVaultTest {
         vm.expectEmit();
         emit OwnershipHandoverRequested(users.bob);
         vaultOwnership.requestOwnershipHandover();
-        assertEq(
-            vaultOwnership.ownershipHandoverExpiresAt(users.bob),
-            block.timestamp + ( 48 * 3600)
-        );
+        assertEq(vaultOwnership.ownershipHandoverExpiresAt(users.bob), block.timestamp + (48 * 3600));
 
         vm.startPrank(users.alice);
         vm.expectEmit();
@@ -186,12 +180,9 @@ contract MaxApyVaultTest is BaseVaultTest {
         vm.expectEmit();
         emit OwnershipHandoverRequested(users.alice);
         vaultOwnership.requestOwnershipHandover();
-        assertEq(
-            vaultOwnership.ownershipHandoverExpiresAt(users.alice),
-            block.timestamp + ( 48 * 3600)
-        );
+        assertEq(vaultOwnership.ownershipHandoverExpiresAt(users.alice), block.timestamp + (48 * 3600));
 
-        vm.warp(block.timestamp + ( 48 * 3600));
+        vm.warp(block.timestamp + (48 * 3600));
 
         vm.startPrank(users.bob);
         vm.expectEmit();

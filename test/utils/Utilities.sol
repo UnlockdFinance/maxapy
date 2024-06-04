@@ -6,8 +6,7 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract Utilities is StdCheats {
-    address constant HEVM_ADDRESS = 
-        address(bytes20(uint160(uint256(keccak256('hevm cheat code')))));
+    address constant HEVM_ADDRESS = address(bytes20(uint160(uint256(keccak256("hevm cheat code")))));
     Vm internal immutable vm = Vm(HEVM_ADDRESS);
 
     /*//////////////////////////////////////////////////////////////////////////

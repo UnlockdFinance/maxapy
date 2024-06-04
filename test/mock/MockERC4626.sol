@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import {ERC20, ERC4626} from "solady/tokens/ERC4626.sol";
+import { ERC20, ERC4626 } from "solady/tokens/ERC4626.sol";
 
 /// @dev WARNING! This mock is strictly intended for testing purposes only.
 /// Do NOT copy anything here into production code unless you really know what you are doing.
