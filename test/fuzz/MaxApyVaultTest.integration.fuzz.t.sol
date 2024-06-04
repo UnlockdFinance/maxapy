@@ -263,14 +263,14 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     )
         public
     {
-        LibPRNG.PRNG memory rng;
-        rng.seed(actorSeed);
+        LibPRNG.PRNG memory actorSeedRNG;
+        actorSeedRNG.seed(actorSeed);
         vaultFuzzer.deposit(assets);
         vaultFuzzer.deposit(assets);
         vaultFuzzer.deposit(assets);
-        vaultFuzzer.redeem(actorSeed, shares);
-        vaultFuzzer.redeem(rng.next(), shares);
-        vaultFuzzer.redeem(rng.next(), shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
     function testFuzzMaxApyVault__DepositAndRedeemWithHarvests(
@@ -281,20 +281,20 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     )
         public
     {
-        LibPRNG.PRNG memory actorRNG;
+        LibPRNG.PRNG memory actorSeedRNG;
         LibPRNG.PRNG memory strategyRNG;
-        actorRNG.seed(actorSeed);
+        actorSeedRNG.seed(actorSeed);
         strategyRNG.seed(strategySeed);
 
         vaultFuzzer.deposit(assets);
-        strategyFuzzer.harvest(strategyRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
         vaultFuzzer.deposit(assets);
-        strategyFuzzer.harvest(strategyRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
         vaultFuzzer.deposit(assets);
-        vaultFuzzer.redeem(actorSeed, shares);
-        strategyFuzzer.harvest(strategyRNG.next());
-        vaultFuzzer.redeem(actorRNG.next(), shares);
-        vaultFuzzer.redeem(actorRNG.next(), shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
     function testFuzzMaxApyVault___MintAndWithdrawWithoutHarvests(
@@ -304,14 +304,14 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     )
         public
     {
-        LibPRNG.PRNG memory rng;
-        rng.seed(actorSeed);
+        LibPRNG.PRNG memory actorSeedRNG;
+        actorSeedRNG.seed(actorSeed);
         vaultFuzzer.mint(shares);
         vaultFuzzer.mint(shares);
         vaultFuzzer.mint(shares);
-        vaultFuzzer.withdraw(actorSeed, assets);
-        vaultFuzzer.withdraw(rng.next(), assets);
-        vaultFuzzer.withdraw(rng.next(), assets);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
     }
 
     function testFuzzMaxApyVault__MintAndWithdrawWithHarvests(
@@ -322,19 +322,19 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     )
         public
     {
-        LibPRNG.PRNG memory actorRNG;
-        LibPRNG.PRNG memory strategyRNG;
-        actorRNG.seed(actorSeed);
-        strategyRNG.seed(strategySeed);
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategySeedRNG;
+        actorSeedRNG.seed(actorSeed);
+        strategySeedRNG.seed(strategySeed);
 
         vaultFuzzer.mint(shares);
-        strategyFuzzer.harvest(strategyRNG.next());
+        strategyFuzzer.harvest(strategySeedRNG);
         vaultFuzzer.mint(shares);
-        strategyFuzzer.harvest(strategyRNG.next());
+        strategyFuzzer.harvest(strategySeedRNG);
         vaultFuzzer.mint(shares);
-        vaultFuzzer.withdraw(actorSeed, assets);
-        strategyFuzzer.harvest(strategyRNG.next());
-        vaultFuzzer.withdraw(actorRNG.next(), assets);
-        vaultFuzzer.withdraw(actorRNG.next(), assets);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        strategyFuzzer.harvest(strategySeedRNG);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
     }
 }

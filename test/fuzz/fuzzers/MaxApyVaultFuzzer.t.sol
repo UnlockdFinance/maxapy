@@ -10,7 +10,6 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
     using SafeTransferLib for address;
     using LibPRNG for LibPRNG.PRNG;
 
-    LibPRNG.PRNG rng;
     IMaxApyVault vault;
     address token;
 
@@ -43,7 +42,7 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
         vm.stopPrank();
     }
 
-    function redeem(uint256 actorSeed, uint256 shares) public useActor(actorSeed) {
+    function redeem(LibPRNG.PRNG memory actorSeedRng, uint256 shares) public useActor(actorSeedRng.next()) {
         shares = bound(shares, 0, vault.maxRedeem(currentActor));
         uint256 expectedAssets = vault.previewRedeem(shares);
         vm.startPrank(currentActor);
@@ -53,7 +52,7 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
         vm.stopPrank();
     }
 
-    function withdraw(uint256 actorSeed, uint256 assets) public useActor(actorSeed) {
+    function withdraw(LibPRNG.PRNG memory actorSeedRng, uint256 assets) public useActor(actorSeedRng.next()) {
         assets = bound(assets, 0, vault.maxWithdraw(currentActor));
         uint256 expectedShares = vault.previewWithdraw(assets);
         vm.startPrank(currentActor);

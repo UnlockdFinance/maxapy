@@ -15,19 +15,19 @@ import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { Test } from "forge-std/Test.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import { MockYVaultV2 } from "../mock/MockYVaultV2.sol";
+import { SetUp } from "./helpers/SetUp.t.sol";
+import { IStrategyHandler } from "../interfaces/IStrategyHandler.sol";
+import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
 
-contract BaseYearnV2StrategyInvariants is StdInvariant, Test {
-    MaxApyVaultHandler mvh;
-    BaseYearnV2StrategyHandler byh;
-
+contract BaseYearnV2StrategyInvariants is SetUp {
     function setUp() public {
-        MockERC20 _token = new MockERC20("MockWETH", "MW", 18);
-        MaxApyVault _vault = new MaxApyVault(address(_token), "MaxApyVault", "max", address(1));
+        _setUpToken();
+        _setUpVault();
 
         ProxyAdmin _proxyAdmin = new ProxyAdmin();
         BaseYearnV2StrategyWrapper _implementation = new BaseYearnV2StrategyWrapper();
 
-        MockYVaultV2 _underlyingYvault = new MockYVaultV2(address(_token), "Yearn Vault", "YV");
+        MockYVaultV2 _underlyingYvault = new MockYVaultV2(address(token), "Yearn Vault", "YV");
 
         address[] memory keepers = new address[](1);
         keepers[0] = address(this);
@@ -37,7 +37,7 @@ contract BaseYearnV2StrategyInvariants is StdInvariant, Test {
             address(_proxyAdmin),
             abi.encodeWithSignature(
                 "initialize(address,address[],bytes32,address,address)",
-                address(_vault),
+                address(vault),
                 keepers,
                 bytes32(abi.encode("MaxApy Yearn WETH Strategy")),
                 address(this),
@@ -46,47 +46,36 @@ contract BaseYearnV2StrategyInvariants is StdInvariant, Test {
         );
 
         BaseYearnV2StrategyWrapper _strategy = BaseYearnV2StrategyWrapper(address(_proxy));
-        _vault.addStrategy(address(_strategy), 6000, type(uint256).max, 0, 200);
-        mvh = new MaxApyVaultHandler(_vault, _token);
-        byh = new BaseYearnV2StrategyHandler(_vault, _strategy, _token);
+        vaultHandler = new MaxApyVaultHandler(vault, token);
+        BaseYearnV2StrategyHandler _strategyHandler = new BaseYearnV2StrategyHandler(vault, _strategy, token);
 
-        _strategy.grantRoles(address(byh), _strategy.KEEPER_ROLE());
-        _strategy.grantRoles(address(byh), _strategy.VAULT_ROLE());
-        _strategy.setAutopilot(true);
-        _vault.setAutopilotEnabled(true);
+        _setUpStrategy(IStrategyWrapper(address(_strategy)), IStrategyHandler(address(_strategyHandler)));
 
-        targetContract(address(mvh));
-        targetContract(address(byh));
+        bytes4[] memory vaultSelectors = vaultHandler.getEntryPoints();
 
-        bytes4[] memory vaultSelectors = mvh.getEntryPoints();
+        targetSelector(FuzzSelector({ addr: address(vaultHandler), selectors: vaultSelectors }));
 
-        targetSelector(FuzzSelector({ addr: address(mvh), selectors: vaultSelectors }));
-
-        bytes4[] memory strategySelectors = byh.getEntryPoints();
-        targetSelector(FuzzSelector({ addr: address(byh), selectors: strategySelectors }));
-
-        excludeSender(address(_vault));
-        excludeSender(address(_strategy));
+        bytes4[] memory strategySelectors = _strategyHandler.getEntryPoints();
+        targetSelector(FuzzSelector({ addr: address(_strategyHandler), selectors: strategySelectors }));
+        
         excludeSender(address(_underlyingYvault));
 
-        vm.label(address(_token), "WETH");
         vm.label(address(_strategy), "BaseYearnV2Strategy");
-        vm.label(address(_vault), "VAULT");
-        vm.label(address(_underlyingYvault), "MockYVault");
-        vm.label(address(mvh), "MVH");
+        vm.label(address(_strategyHandler), "BYH");
+
     }
 
-    function invariantBaseYearnV2Strategy__VaultAccounting() public {
-        assertGe(mvh.actualAssets(), mvh.expectedAssets());
-        assertLe(mvh.actualShares(), mvh.expectedShares());
+    function invariantBaseYearnV2Strategy_vaultAccounting() public {
+        vaultHandler.INVARIANT_A_SHARE_PREVIEWS();
+        vaultHandler.INVARIANT_B_ASSET_PREVIEWS();
     }
 
     function invariantBaseYearnV2Strategy__AssetEstimation() public {
-        assertLe(byh.actualEstimatedTotalAssets(), byh.expectedEstimatedTotalAssets());
+        strategyHandler.INVARIANT_A_ESTIMATED_TOTAL_ASSETS();
     }
 
     function invariantBaseYearnV2Strategy__CallSummary() public view {
-        mvh.callSummary();
-        byh.callSummary();
+        vaultHandler.callSummary();
+        strategyHandler.callSummary();
     }
 }

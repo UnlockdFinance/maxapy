@@ -23,9 +23,9 @@ contract StrategyFuzzer is BaseFuzzer {
         token = _token;
     }
 
-    function harvest(uint256 strategySeed) public {
+    function harvest(LibPRNG.PRNG memory strategySeedRNG) public {
         if (strats.count() == 0) return;
-        address strat = strats.rand(strategySeed);
+        address strat = strats.rand(strategySeedRNG.next());
         try IStrategyWrapper(strat).harvest(0, 0, 0, address(0)) {
             skip(100);
         } catch (bytes memory e) {
@@ -33,20 +33,20 @@ contract StrategyFuzzer is BaseFuzzer {
         }
     }
 
-    function exitStrategy(uint256 strategySeed) public {
+    function exitStrategy(LibPRNG.PRNG memory strategySeedRNG) public {
         if (strats.count() == 0) return;
-        address strat = strats.rand(strategySeed);
+        address strat = strats.rand(strategySeedRNG.next());
         vault.exitStrategy(strat);
         strats.remove(strat);
     }
 
-    function gain(uint256 strategySeed, uint256 amount) public {
+    function gain(LibPRNG.PRNG memory strategySeedRNG, uint256 amount) public {
         if (strats.count() == 0) return;
-        address strat = strats.rand(strategySeed);
+        address strat = strats.rand(strategySeedRNG.next());
         deal(token, strat, amount);
     }
 
-    function loss(uint256 strategySeed, uint256 amount) public { }
+    function loss(LibPRNG.PRNG memory strategySeedRNG, uint256 amount) public { }
 
     function rand(uint256 functionSeed, uint256 paramSeed) public {
         LibPRNG.PRNG memory rngParams;
