@@ -736,15 +736,13 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
         // strategy gets 10 eth more as profit
         deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
-        uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1: We harvest 100% of profit
         vm.expectEmit();
         // debt: 40 eth
         emit StrategyReported(
             address(strategy),
-            /// vault realized gain - 10 ETH
-            10 ether,
+            /// vault realized gain - 0
+            0,
             /// vault unrealized gain - 10 ETH
             10 ether,
             /// vault loss
@@ -766,74 +764,10 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         emit Harvested(10 ether, 0, 0, 0);
         /// 10 ETH harvested
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 70 ether);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2: We harvest 0% of profit
-        vm.expectEmit();
-        // debt: 40 eth
-        emit StrategyReported(
-            address(strategy),
-            /// vault realized gain - 0
-            0,
-            /// vault unrealized gain - 10 ETH
-            10 ether,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy realized gain - 10 ETH
-            0,
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            40 ether,
-            /// credit 0 ether due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-        vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
-        /// 10 ETH harvested
-        strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
-        vm.revertTo(beforeReportSnapshotId);
 
-        /// Case #3: We harvest 100% of profit
-        vm.expectEmit();
-        // debt: 40 eth
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain - 10 ETH
-            5 ether,
-            /// vault gain - 10 ETH
-            10 ether,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy realized gain - 10 ETH
-            5 ether,
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            40 ether,
-            /// credit 0 ether due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-        vm.expectEmit();
-        emit Harvested(5 ether, 0, 0, 0);
-        /// 10 ETH harvested
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether + 5 ether);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
-
         snapshotId = vm.snapshot();
 
         /// ⭕️ SCENARIO 2:
@@ -900,28 +834,28 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49.970026864837587483 ether,
+            0,
             /// vault gain + all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             // unrealised vault gain is 0 because we dont want to assess fees
-            0,
+            0.013830253026478812 ether,
             /// vault loss
-            0,
+            39.986169746973521188 ether,
             /// vault debtPayment
-            49.970026864837587483 ether,
-            /// strategy realized gain - 9.99999 ETH
             0,
+            /// strategy realized gain - 9.99999 ETH
+            0.013830253026478812 ether,
             /// strategy loss
-            40 ether,
+            0,
             /// strategy total debt: not changing now
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
-            4000
+            3999
         );
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49.970026864837587483 ether, 0, 0, 0);
+        emit Harvested(0, 0.013830253026478812 ether, 49.970026864837587483 ether, 0);
         /// 49.997 ETH harvested
 
         /// no effect since the strategy is in emergency exit
@@ -1026,18 +960,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         assertEq(data.strategyDebtRatio, 3001);
         assertEq(data.strategyTotalDebt, 30.005494640978456209 ether);
         assertEq(data.strategyTotalLoss, 9.994505359021543791 ether);
-    }
-
-    function testSommelierStEthDeposit_TurboStEth__Harvest_Negatives() public {
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-
-        /// Deposit into vault
-        vault.deposit(100 ether, users.alice);
-
-        // it should revert if profit harvest percentage is > 100 %
-        vm.startPrank(users.keeper);
-        vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, address(0), block.timestamp);
     }
 
     function testSommelierStEthDeposit_TurboStEth__Harvest_CellarIsShutdown_Paused() public {

@@ -560,18 +560,6 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierMorphoEthMaximizer__Harvest_Negatives() public {
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-
-        /// Deposit into vault
-        vault.deposit(100 ether, users.alice);
-
-        // it should revert if profit harvest percentage is > 100 %
-        vm.startPrank(users.keeper);
-        vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, address(0), block.timestamp);
-    }
-
     function testSommelierMorphoEthMaximizer__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -630,21 +618,19 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
         // strategy gets 10 eth more as profit
         deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
-        uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1: We harvest 100% of profit
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            /// vault realized gain - 10 ETH
-            10 ether,
+            /// vault realized gain - 0
+            0,
             /// vault unrealized gain - 10 ETH
             10 ether,
             /// vault loss
             0,
             /// vault debtPayment
             0,
-            /// strategy realized gain - 10 ETH
+            /// strategy unrealized gain - 10 ETH
             10 ether,
             /// strategy loss
             0,
@@ -660,81 +646,12 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         emit Harvested(10 ether, 0, 0, 0);
         /// 10 ETH harvested
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 70 ether);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
-        /// 10 ETH increase in regarding before
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
-        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2: We harvest 0% of profit
-        vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault realized gain - 0
-            0,
-            /// vault unrealized gain - 10 ETH
-            10 ether,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy realized gain - 10 ETH
-            0 ether,
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            40 ether,
-            /// credit 0 ether due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-
-        vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
-        /// 10 ETH harvested
-        strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 10 ether);
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
-        vm.revertTo(beforeReportSnapshotId);
 
-        /// Case #3: We harvest 50% of profit
-        vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault realized gain - 0
-            5 ether,
-            /// vault unrealized gain - 10 ETH
-            10 ether,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy realized gain - 10 ETH
-            5 ether,
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            40 ether,
-            /// credit 0 ether due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-
-        vm.expectEmit();
-        emit Harvested(5 ether, 0, 0, 0);
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 5 ether);
-        /// 10 ETH harvested
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether + 5 ether);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
-        /// 10 ETH increase in regarding before
-        assertApproxEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, 1);
         vm.revertTo(snapshotId);
 
         snapshotId = vm.snapshot();
@@ -799,19 +716,19 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49.979874544512611813 ether,
+            0,
             /// vault gain + all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// unrealized vault gain is 0 because we dont want to assess fees
             0,
             /// vault loss
-            0,
+            40 ether,
             /// vault debtPayment
-            49.979874544512611813 ether,
-            /// strategy realized gain - 9.99999 ETH
+            0,
+            /// strategy unrealized gain - 9.99999 ETH
             0,
             /// strategy loss
-            40 ether,
+            0,
             /// strategy total debt: not changing now
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
@@ -820,7 +737,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49.979874544512611813 ether, 0, 0, 0);
+        emit Harvested(0, 0, 49.979874544512611813 ether, 0);
         /// 49.99999 ETH harvested
 
         /// no effect since the strategy is in emergency exit

@@ -549,18 +549,6 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testYearnUSDC__Harvest_Negatives() public {
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-
-        /// Deposit into vault
-        vault.deposit(100 * _1_USDC, users.alice);
-
-        // it should revert if profit harvest percentage is > 100 %
-        vm.startPrank(users.keeper);
-        vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, address(0), block.timestamp);
-    }
-
     function testYearnUSDC__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -615,7 +603,6 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC });
         uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1 : we request 0% profit harvest
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
@@ -627,7 +614,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
             /// vault debtPayment
             0,
             /// strategy gain - 0 ETH
-            0,
+            uint128(10 * _1_USDC),
             /// strategy loss
             0,
             /// strategy total debt: not changing now
@@ -639,7 +626,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
+        emit Harvested(10 * _1_USDC, 0, 0, 0);
         /// dont report any profit
         strategy.harvest(0, 0, address(0), block.timestamp);
         /// vault balance doesnt increase at all
@@ -648,44 +635,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         uint256 shares = strategy.sharesForAmount(10 * _1_USDC);
         assertEq(IERC20(YVAULT_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "1");
 
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2 : we request 45,23% profit harvest
-        vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain ~ 10 ETH * 45.23%
-            uint128(4_523_000),
-            /// vault gain ~ 10 ETH * 45.23%
-            10 * _1_USDC,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain ~ 10 ETH * 45.23%
-            uint128(4_523_000),
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            uint128(40 * _1_USDC),
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-
-        vm.expectEmit();
-        emit Harvested(4_523_000, 0, 0, 0);
-        /// dont report any profit
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        /// vault balance doesnt increase at all                    // 4.52 * _1_USDC
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC + 4_523_000);
-        /// the strategy reinvests the profit partially          // 5.477 * _1_USDC
-        shares = strategy.sharesForAmount(5_477_000);
-        assertEq(IERC20(YVAULT_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "2");
-
         vm.revertTo(snapshotId);
-
         snapshotId = vm.snapshot();
 
         /// ⭕️ SCENARIO 2:
@@ -747,19 +697,19 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49_999_999,
+            0,
             /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// vault loss
-            0,
+            40 * _1_USDC,
             /// vault debtPayment
-            uint128(49_999_999),
+            uint128(0),
             /// strategy gain - 9.99999 ETH
             0,
             /// strategy loss
-            uint128(40 * _1_USDC),
+            uint128(0),
             /// strategy total debt: not changing now
             0,
             /// credit 0 * _1_USDC due to transferring funds from strategy to vault
@@ -768,9 +718,8 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49_999_999, 0, 0, 0);
+        emit Harvested(0, 0, 49_999_999, 0);
 
-        /// only harvest 50% of profit, but it wont have any effect since its an emergency exit
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109_999_999);
         assertEq(IERC20(YVAULT_USDC_MAINNET).balanceOf(address(strategy)), 0);

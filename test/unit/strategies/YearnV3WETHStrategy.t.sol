@@ -551,18 +551,6 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testYearnV3WETH__Harvest_Negatives() public {
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-
-        /// Deposit into vault
-        vault.deposit(100 ether, users.alice);
-
-        // it should revert if profit harvest percentage is > 100 %
-        vm.startPrank(users.keeper);
-        vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, address(0), block.timestamp);
-    }
-
     function testYearnV3WETH__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -629,7 +617,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
             /// vault debtPayment
             0,
             /// strategy gain - 0 ETH
-            0,
+            10 ether,
             /// strategy loss
             0,
             /// strategy total debt: not changing now
@@ -641,7 +629,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
+        emit Harvested(10 ether, 0, 0, 0);
         /// dont report any profit
         strategy.harvest(0, 0, address(0), block.timestamp);
         /// vault balance doesnt increase at all
@@ -650,46 +638,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         uint256 shares = strategy.sharesForAmount(10 ether);
         assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares);
 
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2 : we request 45,23% profit harvest
-        vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain ~ 10 ETH * 45.23%
-            4.523 ether,
-            /// vault gain ~ 10 ETH * 45.23%
-            10 ether,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain ~ 10 ETH * 45.23%
-            4.523 ether,
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            40 ether,
-            /// credit 0 ether due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-
-        vm.expectEmit();
-        emit Harvested(4.523 ether, 0, 0, 0);
-        /// dont report any profit
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        /// vault balance doesnt increase at all                    // 4.52 ether
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether + 4.523 ether);
-        /// the strategy reinvests the profit partially          // 5.477 ether
-        shares = strategy.sharesForAmount(5.477 ether);
-        assertEq(
-            IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "here "
-        );
-
         vm.revertTo(snapshotId);
-
         snapshotId = vm.snapshot();
 
         /// ⭕️ SCENARIO 2:
@@ -697,7 +646,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         /// 2. Emergency exit is activated
         /// 2. Strategy earns 10 ETH. Strategy performs second harvest to request more funds.
         /// Due to emergency mode, all funds are returned back to vault
-        /*         vm.startPrank(users.alice);
+        vm.startPrank(users.alice);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
@@ -732,7 +681,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
-        strategy.harvest(0, 0, 0, address(0),block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
@@ -746,24 +695,24 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
 
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49.999999999999999999 ether,
+            0,
             /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// vault loss
-            0,
+            40 ether,
             /// vault debtPayment
-            49.999999999999999999 ether,
+            0,
             /// strategy gain - 9.99999 ETH
             0,
             /// strategy loss
-            40 ether,
+            0,
             /// strategy total debt: not changing now
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
@@ -772,20 +721,19 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49.999999999999999999 ether, 0, 0, 0);
+        emit Harvested(0, 0, 49.999999999999999999 ether, 0);
 
-        /// only harvest 50% of profit, but it wont have any effect since its an emergency exit
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 109.999999999999999999 ether);
         assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
-        vm.revertTo(snapshotId); */
+        vm.revertTo(snapshotId);
 
         /// ⭕️ SCENARIO 3:
         /// 1. Strategy performs initial harvest to request vault funds
         /// 2. Strategy loses 10 ETH. Strategy performs second harvest and its debt ratio gets reduced
         /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 ETH to vault, instead of 10 ETH
-        /*        vm.startPrank(users.alice);
+        vm.startPrank(users.alice);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
@@ -822,14 +770,14 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance); */
+        assertEq(IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         /// 2. Strategy loses 10 ETH
         /// - Expected a 1000 reduction in debt ratio, 30% of total funds should be in the strategy
         /// - Total funds are now 90 ETH, 30% of which must be in strategy
         /// - 30% of 90 ETH = 27 ETH, but strategy still has 30 ETH -> there is a debt outstanding of 3 ETH
         /// Fake loss in strategy
-        /*        uint256 expectedShares = strategy.sharesForAmount(10 ether);
+        uint256 expectedShares = strategy.sharesForAmount(10 ether);
 
         vm.startPrank(address(strategy));
         IERC20(YVAULT_WETH_MAINNET).transfer(makeAddr("random"), expectedShares);
@@ -860,9 +808,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 10 ether, 0, 3 ether);
         /// 10 ETH loss
-        /// if we request to harvest only 30% of profit it wont have any effect neither,
-        /// since the strategy has loses only
-        strategy.harvest(0, 0, 3_000, address(0));
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         StrategyData memory data = vault.strategies(address(strategy));
 
@@ -879,8 +825,9 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
             /// vault gain,
             0,
             1,
-        /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt should
-        be 27 ETH but was 30 ETH), causing 1 wei loss
+            /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 ETH from yearn (totalDebt
+            /// should
+            /// be 27 ETH but was 30 ETH), causing 1 wei loss
             2.999999999999999999 ether,
             /// vault debtPayment (3 ETH - 1 wei loss)
             0,
@@ -902,8 +849,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         uint256 vaultBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2.999999999999999999 ether);
-        // here requesting 20% wont have any effect neither
-        strategy.harvest(0, 0, 2000, address(0),block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         data = vault.strategies(address(strategy));
 
@@ -914,8 +860,8 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         assertEq(data.strategyTotalLoss, 10 ether + 1);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), vaultBalanceBefore + 2.999999999999999999 ether);
         assertLe(
-        IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
-        ); */
+            IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
+        );
     }
 
     ////////////////////////////////////////////////////////////////

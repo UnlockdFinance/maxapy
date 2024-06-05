@@ -553,18 +553,6 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testSommelierTurboEEthV2__Harvest_Negatives() public {
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-
-        /// Deposit into vault
-        vault.deposit(100 ether, users.alice);
-
-        // it should revert if deadline has expired
-        vm.startPrank(users.keeper);
-        vm.expectRevert();
-        strategy.harvest(0, 0, address(0), block.timestamp - 1);
-    }
-
     function testSommelierTurboEEthV2__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));

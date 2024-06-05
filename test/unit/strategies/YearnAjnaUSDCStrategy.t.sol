@@ -550,18 +550,6 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testYearnAjnaUSDC__Harvest_Negatives() public {
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-
-        /// Deposit into vault
-        vault.deposit(100 * _1_USDC, users.alice);
-
-        // it should revert if profit harvest percentage is > 100 %
-        vm.startPrank(users.keeper);
-        vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, address(0), block.timestamp);
-    }
-
     function testYearnAjnaUSDC__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -771,7 +759,6 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(49_999_999, 0, 0, 0);
 
-        /// only harvest 50% of profit, but it wont have any effect since its an emergency exit
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_999_999);
         assertEq(IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), 0);

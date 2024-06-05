@@ -548,18 +548,6 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testYearnDAI__Harvest_Negatives() public {
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-
-        /// Deposit into vault
-        vault.deposit(100 ether, users.alice);
-
-        // it should revert if profit harvest percentage is > 100 %
-        vm.startPrank(users.keeper);
-        vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, address(0), block.timestamp);
-    }
-
     function testYearnDAI__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -769,7 +757,6 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(49.999999999999999999 ether, 0, 0, 0);
 
-        /// only harvest 50% of profit, but it wont have any effect since its an emergency exit
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(DAI_MAINNET).balanceOf(address(vault)), 109.999999999999999999 ether);
         assertEq(IERC20(YVAULT_DAI_MAINNET).balanceOf(address(strategy)), 0);

@@ -259,17 +259,17 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         if (emergencyExit == 2) {
             // Do what needed before
             _beforePrepareReturn();
+
+            uint256 balanceBefore = _estimatedTotalAssets();
             // Free up as much capital as possible
             uint256 amountFreed = _liquidateAllPositions();
-            assembly {
-                // avoid writing to storage in case eq(amountFreed, debtOutstanding) == 1
 
-                if lt(amountFreed, debtOutstanding) {
-                    // if (amountFreed < debtOutstanding)
-                    loss := sub(debtOutstanding, amountFreed) // set loss = debtOutstanding - amountFreed
-                }
-                debtPayment := sub(debtOutstanding, loss) // can not overflow due to `debtOutstanding` being > `loss` in
-                    // both cases
+            uint256 balanceAfter = _estimatedTotalAssets();
+
+            assembly {
+                // send everything back to the vault
+                debtPayment := balanceAfter
+                if lt(balanceAfter, balanceBefore) { loss := sub(balanceBefore, balanceAfter) }
             }
         } else {
             // Do what needed before

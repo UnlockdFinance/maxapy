@@ -375,11 +375,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
             // Ensure loss reported is not greater than strategy total debt
             // if loss > strategyData.strategyTotalDebt
-            if gt(loss, strategyTotalDebt) {
-                // throw the `LossGreaterThanStrategyTotalDebt` error
-                mstore(0x00, 0xd5436ad8)
-                revert(0x1c, 0x04)
-            }
+            if gt(loss, strategyTotalDebt) { loss := strategyTotalDebt }
 
             // Obtain vault debtRatio
             debtRatio_ := sload(debtRatio.slot)
@@ -1564,7 +1560,9 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 credit = _creditAvailable(msg.sender);
 
         // Compute excess of debt the Strategy wants to transfer back to the Vault (if any)
-        uint256 debt = _debtOutstanding(msg.sender);
+        uint256 debt = strategies[msg.sender].strategyTotalDebt;
+
+        uint256 totalReportedAmount = debtPayment;
 
         // Adjust excess of reported debt payment by the debt outstanding computed
         debtPayment = uint128(Math.min(uint256(debtPayment), debt));
@@ -1582,8 +1580,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         }
 
         // Give/take corresponding amount to/from Strategy, based on the debt needed to be paid off (if any)
-        uint256 totalReportedAmount = debtPayment;
-
         unchecked {
             if (credit > totalReportedAmount) {
                 // Credit is greater than the amount reported by the strategy, send funds **to** strategy
@@ -1621,7 +1617,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         }
 
         // Otherwise, just return what we have as debt outstanding
-        return debt;
+        return _debtOutstanding(msg.sender);
     }
 
     ////////////////////////////////////////////////////////////////
