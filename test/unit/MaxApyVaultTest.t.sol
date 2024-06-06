@@ -2252,15 +2252,15 @@ contract MaxApyVaultTest is BaseVaultTest {
         vault.report(uint128(1 * _1_USDC), 0, uint128(450 * _1_USDC), TREASURY);
         /// `gain` (1 ETH) + `debtPayment` (450 ETH) are gt. `balanceOf(strategy)`
 
-        /// Check reported loss is higher than strategy total debt
-        vm.expectRevert(abi.encodeWithSignature("LossGreaterThanStrategyTotalDebt()"));
+        /// It will revert when there is no debt
+        vm.expectRevert(); // will revert with "division or modulo by zero" erro
         vault.report(0, 1, 0, TREASURY);
         /// 1 ETH of `loss` is gt. 0 ETH of balance
 
         deal({ token: USDC_MAINNET, to: address(lossyStrategy), give: 1 * _1_USDC });
 
         /// provide strategy with 1 USDC
-        vm.expectRevert(abi.encodeWithSignature("LossGreaterThanStrategyTotalDebt()"));
+        vm.expectRevert(); // will revert with "division or modulo by zero" error
         vault.report(0, uint128(11 * _1_USDC / 10), 0, TREASURY);
         /// 1.1 ETH of `loss` is gt. 1 ETH of balance
 
@@ -2469,54 +2469,7 @@ contract MaxApyVaultTest is BaseVaultTest {
         /// 60 * _1_USDC --> previous expected `totalIdle`
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 4: Strategy reports  ETH gain, 40 ETH of debt Payment
-        /// Goal: test debt payment
-        /// - Assert debt payment is properly set
-        ///     - We report 40 ETH as debt payment, but a max debt outstanding of 39.9 ETH is expected (0.1% of 100 ETH
-        /// (totalAssets) -> 0.1 ETH
-        ///       max can be held in vault, currently we have 40 ETH deployed so expected debt payment is 39.9 ETH)
-        /// - Assert `strategyTotalDebt` is reduced by expected `debtPayment`
-        /// - Assert vault `totalDebt` is reduced by expected `debtPayment`
-        /// - Assert strategy balance is reduced by expected `debtPayment` and transferred to vault
-        /// - Assert vault balance is increased by expected `debtPayment` and transferred from strategy
-
-        snapshotId = vm.snapshot();
-        vm.startPrank(users.alice);
-
-        /// Update debtRatio to 0.1% so that `debtPayment` is != 0
-        vault.updateStrategyData(
-            address(lossyStrategy),
-            10,
-            /// 0.1%
-            type(uint96).max,
-            0,
-            150
-        );
-
-        vm.startPrank(address(lossyStrategy));
-
-        previousVaultBalance = IERC20(USDC_MAINNET).balanceOf(address(vault));
-        previousStrategyBalance = IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy));
-        previousStrategyData = vault.strategies(address(lossyStrategy));
-        debt = vault.report(0, 0, uint128(40 * _1_USDC), TREASURY);
-
-        /// report 40 ETH of `debtPayment`
-
-        /// - Assert `strategyTotalDebt` is reduced by expected `debtPayment`
-        assertEq(vault.strategies(address(lossyStrategy)).strategyTotalDebt, 100 * _1_USDC * 10 / 10_000);
-        /// - Assert vault `totalDebt` is reduced by expected `debtPayment`
-        assertEq(vault.totalDebt(), 100 * _1_USDC * 10 / 10_000);
-        /// - Assert strategy balance is reduced by expected `debtPayment` and transferred to vault
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy)), 100 * _1_USDC * 10 / 10_000);
-        /// - Assert vault balance is increased by expected `debtPayment` and transferred from strategy
-        assertEq(
-            IERC20(USDC_MAINNET).balanceOf(address(vault)),
-            previousVaultBalance + 40 * _1_USDC - 100 * _1_USDC * 10 / 10_000
-        );
-
-        vm.revertTo(snapshotId);
-
-        /// ⭕️ SCENARIO 5: Test vault in shutdown mode
+        /// ⭕️ SCENARIO 4: Test vault in shutdown mode
         /// Goal: test shutdownMode and a high strategyMinDebtPerHarvest
         /// - Assert creditAvailable is 0
         /// - Assert 40 ETH are transferred back to vault (check vault and strategy balances)

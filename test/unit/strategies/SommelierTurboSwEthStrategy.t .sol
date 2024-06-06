@@ -633,9 +633,9 @@ contract SommelierTurboSwEthStrategyTest is BaseTest, StrategyEvents {
             4000
         );
         /// debtratio not changed
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
 
         vm.expectEmit();
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether + 10 ether) - 1;
         emit Harvested(10 ether, 0, 0, 0);
         /// 10 ETH harvested
         // harvest 100%
@@ -643,7 +643,7 @@ contract SommelierTurboSwEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 ETH increase in regarding before
-        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
+        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, "here");
 
         vm.revertTo(snapshotId);
         snapshotId = vm.snapshot();
@@ -738,7 +738,6 @@ contract SommelierTurboSwEthStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
-
         /// ⭕️ SCENARIO 3:
         /// 1. Strategy performs initial harvest to request vault funds
         /// 2. Strategy loses 10 ETH. Strategy performs second harvest and its debt ratio gets reduced

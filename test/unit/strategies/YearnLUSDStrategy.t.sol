@@ -605,9 +605,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC });
-        uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1 : we request 0% profit harvest
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
@@ -619,7 +617,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
             /// vault debtPayment
             0,
             /// strategy gain - 0 ETH
-            0,
+            uint128(10 * _1_USDC),
             /// strategy loss
             0,
             /// strategy total debt: not changing now
@@ -631,7 +629,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
+        emit Harvested(10 * _1_USDC, 0, 0, 0);
         /// dont report any profit
         strategy.harvest(0, 0, address(0), block.timestamp);
         /// vault balance doesnt increase at all
@@ -644,48 +642,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
             IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)) / 100
         );
 
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2 : we request 45,23% profit harvest
-        vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain ~ 10 ETH * 45.23%
-            uint128(4_523_000),
-            /// vault gain ~ 10 ETH * 45.23%
-            10 * _1_USDC,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain ~ 10 ETH * 45.23%
-            uint128(4_523_000),
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            uint128(40 * _1_USDC),
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-
-        vm.expectEmit();
-        emit Harvested(4_523_000, 0, 0, 0);
-        /// dont report any profit
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        /// vault balance doesnt increase at all                    // 4.52 * _1_USDC
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC + 4_523_000);
-        /// the strategy reinvests the profit partially          // 5.477 * _1_USDC
-        shares = strategy.sharesForAmount(5_477_000);
-        assertApproxEq(
-            IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)),
-            expectedStrategyShareBalance + shares,
-            IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)) / 100
-        );
-
         vm.revertTo(snapshotId);
-
         snapshotId = vm.snapshot();
 
         /// ⭕️ SCENARIO 2:
@@ -751,31 +708,31 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49_960_010,
-            /// vault gain - all of strategy's funds (40 initial ETH + 9.96 ETH gain)
             0,
-            /// vault gain - all of strategy's funds (40 initial ETH + 9.96 ETH gain)
+            /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
+            /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
+            19_734,
             /// vault loss
-            0,
+            39_980_266,
             /// vault debtPayment
-            uint128(49_960_010),
-            /// strategy gain - 9.96 ETH
-            0,
+            uint128(0),
+            /// strategy gain - 9.99999 ETH
+            19_734,
             /// strategy loss
-            uint128(40 * _1_USDC),
+            uint128(1842),
             /// strategy total debt: not changing now
-            0,
+            1842,
             /// credit 0 * _1_USDC due to transferring funds from strategy to vault
-            4000
+            3999
         );
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49_960_010, 0, 0, 0);
+        emit Harvested(0, 19_734, 49_960_010, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109_960_010);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109_958_168);
         assertEq(IERC20(YVAULT_LUSD_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);

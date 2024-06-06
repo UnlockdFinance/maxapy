@@ -373,7 +373,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             strategyDebtRatio := shr(240, shl(240, slot0Content))
             strategyTotalDebt := shr(128, shl(128, slot2Content))
 
-            // Ensure loss reported is not greater than strategy total debt
             // if loss > strategyData.strategyTotalDebt
             if gt(loss, strategyTotalDebt) { loss := strategyTotalDebt }
 

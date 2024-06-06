@@ -586,8 +586,8 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
         // strategy gets 10 USDC more as profit
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC });
-       
- vm.expectEmit();
+
+        vm.expectEmit();
         emit StrategyReported(
             address(strategy),
             /// vault gain - 0 ETH
@@ -619,7 +619,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), 0);
         /// 10 USDC  increase in regarding before
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance - 1);
-       
+
         vm.revertTo(snapshotId);
         snapshotId = vm.snapshot();
 
@@ -679,7 +679,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC });
 
- vm.expectEmit();
+        vm.expectEmit();
         emit StrategyReported(
             address(strategy),
             0,

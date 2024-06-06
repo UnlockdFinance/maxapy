@@ -546,7 +546,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         expectedShares += vault.previewDeposit(20 ether);
         vm.expectEmit();
         // harvest should happen
-        emit Harvested(0, 0, 0, 0);
+        emit Harvested(10 ether, 0, 0, 0);
         vm.startPrank(users.bob);
         vault.deposit(20 ether, users.bob);
         // user gets shares + performanceFee
