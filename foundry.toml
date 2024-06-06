@@ -1,7 +1,7 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = ["dependencies"]
 gas_reports = ['*']
 
 # needed to test de Morpho Eth Maximizer
