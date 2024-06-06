@@ -322,7 +322,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             mstore(0x40, debtPayment)
             mstore(0x60, debtOutstanding)
 
-            // TODO: remove harvested event signature
             log1(0x00, 0x80, _HARVESTED_EVENT_SIGNATURE)
 
             mstore(0x60, 0) // Restore the zero slot

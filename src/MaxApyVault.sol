@@ -154,7 +154,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
-        uint256 realizedGain,
         uint256 unrealizedGain,
         uint256 loss,
         uint256 debtPayment,
@@ -206,7 +205,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         0x25bf703141a84375d04ea08a0c4a21c7406f300f133e12aef555607b4f3ff238;
 
     uint256 internal constant _STRATEGY_REPORTED_EVENT_SIGNATURE =
-        0x76d4dbb6b8a8587ce9257d3c01366679401bb6abfa332fe63a1b4d52ae275f02;
+        0xc2d7e1173e37528dce423c72b129fa1ad2c5d51e50974c64fe13f1928eb27f89;
 
     uint256 private constant _DEPOSIT_EVENT_SIGNATURE =
         0xdcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7;
@@ -1599,7 +1598,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
         emit StrategyReported(
             msg.sender,
-            0, // TODO: update event
             unrealizedGain,
             loss,
             debtPayment,

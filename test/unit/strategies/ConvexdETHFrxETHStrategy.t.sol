@@ -799,8 +799,6 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         emit StrategyReported(
             address(strategy),
             0,
-            /// vault gain
-            0,
             /// unrealized gain
             0,
             /// vault loss
@@ -861,8 +859,6 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         emit StrategyReported(
             address(strategy),
             0,
-            /// vault gain
-            0,
             /// unrealized gain
             0,
             /// vault loss
@@ -920,8 +916,6 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            /// vault realized gain
-            0,
             /// vault unrealized gain
             0,
             /// vault loss

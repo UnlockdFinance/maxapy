@@ -2303,8 +2303,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         emit StrategyReported(
             address(lossyStrategy),
             0,
-            /// realizedgain
-            0,
             /// unrealized gain
             0,
             /// loss

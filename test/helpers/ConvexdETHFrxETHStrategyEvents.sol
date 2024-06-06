@@ -22,7 +22,6 @@ contract ConvexdETHFrxETHStrategyEvents is BaseStrategyEvents {
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
-        uint256 realizedGain,
         uint256 unrealizedGain,
         uint256 loss,
         uint256 debtPayment,

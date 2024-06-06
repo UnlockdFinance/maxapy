@@ -694,7 +694,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit
@@ -741,8 +740,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         // debt: 40 eth
         emit StrategyReported(
             address(strategy),
-            /// vault realized gain - 0
-            0,
             /// vault unrealized gain - 10 ETH
             10 ether,
             /// vault loss
@@ -788,7 +785,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit
@@ -834,7 +830,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain + all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             // unrealised vault gain is 0 because we dont want to assess fees
@@ -881,7 +876,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit
@@ -928,7 +922,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit
@@ -980,7 +973,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit
@@ -1025,7 +1017,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit
@@ -1071,7 +1062,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit
@@ -1109,8 +1099,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         // debt: 40 eth
         emit StrategyReported(
             address(strategy),
-            /// vault realized gain - 0
-            0,
             /// vault unrealized gain - 0
             0,
             /// vault loss 0
@@ -1152,7 +1140,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit
@@ -1191,7 +1178,6 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// realized profit
             0,
             /// unrealized profit

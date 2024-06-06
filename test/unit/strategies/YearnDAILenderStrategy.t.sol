@@ -570,7 +570,6 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             0,
@@ -605,8 +604,6 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            /// vault gain - 0 ETH
-            0,
             10 ether,
             /// vault loss
             0,
@@ -655,7 +652,6 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             0,
@@ -696,7 +692,6 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
@@ -741,7 +736,6 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             0,
@@ -782,7 +776,6 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             9.999999999999999999 ether,
@@ -819,7 +812,6 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             1,
