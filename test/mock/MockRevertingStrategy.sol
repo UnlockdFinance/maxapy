@@ -30,8 +30,8 @@ contract MockRevertingStrategy {
     function harvest(
         uint256 minExpectedBalance,
         uint256 minOutputAfterInvestment,
-        uint256 harvestedProfitBPS,
-        address harvester
+        address harvester,
+        uint256 deadline
     )
         external
     {

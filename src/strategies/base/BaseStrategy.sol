@@ -185,7 +185,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         _snapshotEstimatedTotalAssets();
     }
 
-    /// @notice Harvests the Strategy, but in this case a percentage of the profit(if there's any) is reinvested
+    /// @notice Harvests the Strategy and reports any gain in its positions to the vault
     /// In the rare case the Strategy is in emergency shutdown, this will exit
     /// the Strategy's position.
     /// @dev When `harvest()` is called, the strategy reinvests a percentage of the profit and
@@ -194,7 +194,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @param minExpectedBalance minimum balance amount of `underlyingAsset` expected after performing any
     /// @param minOutputAfterInvestment minimum expected output after `_invest()`
     /// strategy unwinding (if applies).
-    /// @param harvestedProfitBPS percentage of the profit realize and send to the vault as net profit
     /// @param harvester only relevant when the harvest is triggered from the vault, is the address of the user that is
     /// enduring the harvest gas cost
     /// from the vault and will receive the managemente fees in return
@@ -202,7 +201,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     function harvest(
         uint256 minExpectedBalance,
         uint256 minOutputAfterInvestment,
-        uint256 harvestedProfitBPS,
         address harvester,
         uint256 deadline
     )
@@ -215,13 +213,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
                 // revert
                 revert(0, 0)
             }
-
-            // if harvestedProfitBPS > MAX_BPS
-            if gt(harvestedProfitBPS, MAX_BPS) {
-                // throw the `InvalidHarvestedProfit` error
-                mstore(0x00, 0x76fbe33c)
-                revert(0x1c, 0x04)
-            }
         }
         // normally the treasury would get the management fee
         address managementFeeReceiver;
@@ -233,7 +224,6 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
             managementFeeReceiver = harvester;
         }
 
-        uint256 realizedProfit;
         uint256 unrealizedProfit;
         uint256 loss;
         uint256 debtPayment;
@@ -267,41 +257,36 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         }
 
         if (emergencyExit == 2) {
+            // Do what needed before
+            _beforePrepareReturn();
+
+            uint256 balanceBefore = _estimatedTotalAssets();
             // Free up as much capital as possible
             uint256 amountFreed = _liquidateAllPositions();
+
+            uint256 balanceAfter = _estimatedTotalAssets();
+
             assembly {
-                // avoid writing to storage in case eq(amountFreed, debtOutstanding) == 1
-
-                if lt(amountFreed, debtOutstanding) {
-                    // if (amountFreed < debtOutstanding)
-                    loss := sub(debtOutstanding, amountFreed) // set loss = debtOutstanding - amountFreed
-                }
-                if gt(amountFreed, debtOutstanding) {
-                    // if (amountFreed > debtOutstanding)
-                    // only report realized profit so no fees are assessed
-                    realizedProfit := sub(amountFreed, debtOutstanding) // set profit = amountFreed - debtOutstanding
-                }
-
-                debtPayment := sub(debtOutstanding, loss) // can not overflow due to `debtOutstanding` being > `loss` in
-                    // both cases
+                // send everything back to the vault
+                debtPayment := balanceAfter
+                if lt(balanceAfter, balanceBefore) { loss := sub(balanceBefore, balanceAfter) }
             }
         } else {
+            // Do what needed before
+            _beforePrepareReturn();
             // Free up returns for vault to pull
-            (realizedProfit, unrealizedProfit, loss, debtPayment) =
-                _prepareReturn(debtOutstanding, minExpectedBalance, harvestedProfitBPS);
+            (unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
         }
 
         assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
-
             // Store `vault`'s `report()` function selector:
-            // `bytes4(keccak256("report(uint128,uint128,uint128,uint128,address)"))`
-            mstore(0x00, 0xfb7053b2)
-            mstore(0x20, realizedProfit) // append the `profit` argument
-            mstore(0x40, unrealizedProfit) // append the `profit` argument
-            mstore(0x60, loss) // append the `loss` argument
-            mstore(0x80, debtPayment) // append the `debtPayment` argument
-            mstore(0xa0, managementFeeReceiver) // append the `debtPayment` argument
+            // `bytes4(keccak256("report(uint128,uint128,uint128,address)"))`
+            mstore(0x00, 0x80919dd5)
+            mstore(0x20, unrealizedProfit) // append the `profit` argument
+            mstore(0x40, loss) // append the `loss` argument
+            mstore(0x60, debtPayment) // append the `debtPayment` argument
+            mstore(0x80, managementFeeReceiver) // append the `debtPayment` argument
 
             // Report to vault
             if iszero(
@@ -310,7 +295,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
                     cachedVault, // Address of `vault`
                     0, // `msg.value`
                     0x1c, // byte offset in memory where calldata starts
-                    0xa4, // size of the calldata to copy
+                    0x84, // size of the calldata to copy
                     0x00, // byte offset in memory to store the return data
                     0x20 // size of the return data
                 )
@@ -332,7 +317,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
 
-            mstore(0x00, realizedProfit)
+            mstore(0x00, unrealizedProfit)
             mstore(0x20, loss)
             mstore(0x40, debtPayment)
             mstore(0x60, debtOutstanding)
@@ -452,12 +437,14 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// See `MaxApyVault.debtOutstanding()`.
     function _prepareReturn(
         uint256 debtOutstanding,
-        uint256 minExpectedBalance,
-        uint256 harvestedProfitBPS
+        uint256 minExpectedBalance
     )
         internal
         virtual
-        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
+        returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
+
+    /// @dev custom hook to perform extra actions/checks before preparing th return
+    function _beforePrepareReturn() internal virtual { }
 
     /// @notice Returns the current strategy's balance in underlying token
     /// @return the strategy's balance of underlying token

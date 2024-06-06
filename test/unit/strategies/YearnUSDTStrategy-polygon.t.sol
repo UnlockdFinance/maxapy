@@ -208,7 +208,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
@@ -219,7 +219,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         deal(USDT_POLYGON, address(strategy), 1 * _1_USDT);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(strategy.isActive(), true);
     }
 
@@ -258,7 +258,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         // Expect revert if output amount is gt amount obtained
         vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-        strategy.harvest(0, type(uint256).max, 10_000, address(0), block.timestamp);
+        strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -288,9 +288,8 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         /// Fake report to increase `strategyTotalDebt`
         strategy.mockReport(0, 0, 0, TREASURY);
 
-        (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) =
-            strategy.prepareReturn(1 * _1_USDT, 0, 5000);
-        assertEq(realizedProfit, 0);
+        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDT, 0);
+        // assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
         assertEq(loss, 0);
         assertEq(debtPayment, 1 * _1_USDT);
@@ -331,24 +330,24 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         uint256 beforeReturnSnapshotId = vm.snapshot();
 
-        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 0);
-        assertEq(realizedProfit, 0);
+        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
+        // assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 59_999_999);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
 
-        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
+        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
 
-        assertEq(realizedProfit, 59_999_998);
+        // assertEq(realizedProfit, 59_999_998);
         assertEq(unrealizedProfit, 59_999_999);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
 
         vm.revertTo(beforeReturnSnapshotId);
-        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 5000);
+        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
 
-        assertEq(realizedProfit, 29_999_999);
+        // assertEq(realizedProfit, 29_999_999);
         assertEq(unrealizedProfit, 59_999_999);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
@@ -379,15 +378,15 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         beforeReturnSnapshotId = vm.snapshot();
 
-        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 0);
-        assertEq(realizedProfit, 0);
+        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
+        // assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
         assertEq(loss, 10 * _1_USDT);
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
 
-        (realizedProfit, unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0, 10_000);
-        assertEq(realizedProfit, 0);
+        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
+        // assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
         assertEq(loss, 10 * _1_USDT);
         assertEq(debtPayment, 0);
@@ -551,22 +550,10 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testYearnUSDT__Harvest_Negatives() public {
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-
-        /// Deposit into vault
-        vault.deposit(100 * _1_USDT, users.alice);
-
-        // it should revert if profit harvest percentage is > 100 %
-        vm.startPrank(users.keeper);
-        vm.expectRevert(abi.encodeWithSignature("InvalidHarvestedProfit()"));
-        strategy.harvest(0, 0, 10_001, address(0), block.timestamp);
-    }
-
     function testYearnUSDT__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.harvest(0, 0, 10_000, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         /// ⭕️ SCENARIO 1:
         /// 1. Strategy performs initial harvest to request vault funds
@@ -584,7 +571,6 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             0,
@@ -605,31 +591,27 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        strategy.harvest(0, 0, 10_000, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDT);
         assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT);
         assertEq(IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
-        /// 2. Strategy takes 10 USDT profit
+        /// 2. Strategy takes 10 USD profit
 
-        /// Fake gains in strategy (10 USDT = 40 USDT transferred previously + 10 USDT gains)
+        /// Fake gains in strategy (10 USD = 40 USD transferred previously + 10 USD gains)
         deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
-        uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1 : we request 0% profit harvest
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            /// vault gain - 0 USDT
-            0,
             10 * _1_USDT,
             /// vault loss
             0,
             /// vault debtPayment
             0,
-            /// strategy gain - 0 USDT
-            0,
+            /// strategy gain - 10 USD
+            uint128(10 * _1_USDT),
             /// strategy loss
             0,
             /// strategy total debt: not changing now
@@ -641,53 +623,16 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
+        emit Harvested(10 * _1_USDT, 0, 0, 0);
         /// dont report any profit
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         /// vault balance doesnt increase at all
         assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT);
         /// the strategy reinvests all the profit
         uint256 shares = strategy.sharesForAmount(10 * _1_USDT);
-        assertEq(IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "1");
-
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2 : we request 45,23% profit harvest
-        vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain ~ 10 USDT * 45.23%
-            uint128(4_523_000),
-            /// vault gain ~ 10 USDT * 45.23%
-            10 * _1_USDT,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain ~ 10 USDT * 45.23%
-            uint128(4_523_000),
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            uint128(40 * _1_USDT),
-            /// credit 0 * _1_USDT due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-
-        vm.expectEmit();
-        emit Harvested(4_523_000, 0, 0, 0);
-        /// dont report any profit
-        strategy.harvest(0, 0, 4523, address(0), block.timestamp);
-        /// vault balance doesnt increase at all                    // 4.52 * _1_USDT
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT + 4_523_000);
-        /// the strategy reinvests the profit partially          // 5.477 * _1_USDT
-        shares = strategy.sharesForAmount(5_477_000);
-        assertEq(IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "2");
+        assertEq(IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares);
 
         vm.revertTo(snapshotId);
-
         snapshotId = vm.snapshot();
 
         /// ⭕️ SCENARIO 2:
@@ -708,7 +653,6 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             0,
@@ -730,11 +674,11 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDT);
         assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT);
-        assertEq(IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance, "3");
+        assertEq(IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         /// Step #2
         vm.startPrank(users.alice);
@@ -743,25 +687,24 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         /// Step #3
         vm.startPrank(users.keeper);
 
-        /// Fake gains in strategy (10 USDT = 40 USDT transferred previously + 10 USDT gains)
+        /// Fake gains in strategy (10 USD = 40 USD transferred previously + 10 USD gains)
         deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
 
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49_999_999,
-            /// vault gain - all of strategy's funds (40 initial USDT + 9.999999 USDT gain)
+            /// vault gain - all of strategy's funds (40 initial USD + 9.999999 USD gain)
             0,
-            /// vault gain - all of strategy's funds (40 initial USDT + 9.999999 USDT gain)
+            /// vault gain - all of strategy's funds (40 initial USD + 9.999999 USD gain)
             0,
             /// vault loss
-            0,
+            40 * _1_USDT,
             /// vault debtPayment
-            uint128(49_999_999),
-            /// strategy gain - 9.99999 USDT
+            uint128(0),
+            /// strategy gain - 9.99999 USD
             0,
             /// strategy loss
-            uint128(40 * _1_USDT),
+            0,
             /// strategy total debt: not changing now
             0,
             /// credit 0 * _1_USDT due to transferring funds from strategy to vault
@@ -770,12 +713,11 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49_999_999, 0, 0, 0);
+        emit Harvested(0, 0, 49_999_999, 0);
 
-        /// only harvest 50% of profit, but it wont have any effect since its an emergency exit
-        strategy.harvest(0, 0, 5000, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 109_999_999);
-        assertEq(IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), 0, "ZERO IN StRAT");
 
         vm.revertTo(snapshotId);
 
@@ -795,7 +737,6 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             0,
@@ -816,7 +757,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
-        strategy.harvest(0, 0, 10_000, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDT);
         assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT);
@@ -836,7 +777,6 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             10 * _1_USDT,
@@ -860,7 +800,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         /// 10 USDT loss
         /// if we request to harvest only 30% of profit it wont have any effect neither,
         /// since the strategy has loses only
-        strategy.harvest(0, 0, 3000, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         StrategyData memory data = vault.strategies(address(strategy));
 
@@ -873,7 +813,6 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            0,
             /// vault gain,
             0,
             1,
@@ -900,8 +839,8 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         uint256 vaultBalanceBefore = IERC20(USDT_POLYGON).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2_999_999);
-        // here requesting 20% wont have any effect neither
-        strategy.harvest(0, 0, 2000, address(0), block.timestamp);
+
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
         data = vault.strategies(address(strategy));
 
@@ -923,7 +862,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDT, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 expected = strategy.previewLiquidate(30 * _1_USDT);
         vm.startPrank(address(vault));
@@ -954,7 +893,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDT, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewLiquidateExact(30 * _1_USDT);
         vm.startPrank(address(vault));
@@ -993,7 +932,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDT, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 maxLiquidateExact = strategy.maxLiquidateExact();
         uint256 balanceBefore = IERC20(USDT_POLYGON).balanceOf(address(vault));
@@ -1035,7 +974,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDT, users.alice);
         vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxLiquidate();
         uint256 balanceBefore = IERC20(USDT_POLYGON).balanceOf(address(vault));

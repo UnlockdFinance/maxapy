@@ -55,10 +55,10 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         lusd.safeApprove(address(router), type(uint256).max);
 
         /// Mininmum single trade is 0.01 token units
-        minSingleTrade = 0.01 ether;
+        minSingleTrade = 1e6 / 100;
 
         /// Max single trade
-        maxSingleTrade = 10_000 ether;
+        maxSingleTrade = 10_000 * 1e6;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -199,18 +199,6 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         }
     }
 
-    /// @notice Performs any adjustments to the core position(s) of this Strategy given
-    /// what change the MaxApy Vault made in the "investable capital" available to the
-    /// Strategy.
-    /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
-    /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
-        uint256 toInvest = _underlyingBalance();
-        if (toInvest > minSingleTrade && toInvest < maxSingleTrade) {
-            _invest(toInvest, minOutputAfterInvestment);
-        }
-    }
-
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
@@ -218,18 +206,8 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view override returns (uint256) {
-        uint256 vaultTotalSupply;
-        assembly {
-            // get yVault.totalSupply()
-            mstore(0x00, 0x18160ddd)
-            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-            vaultTotalSupply := mload(0x00)
-        }
-        if (vaultTotalSupply == 0) return shares;
-
-        uint256 lusdValue = Math.mulDiv(shares, _freeFunds(), vaultTotalSupply);
-        // estimate USDC value of the LUSD tokens
-        return _estimateAmountOut(lusd, underlyingAsset, uint128(lusdValue), 1800); // use a 30 min TWAP interval
+        return _estimateAmountOut(lusd, underlyingAsset, uint128(super._shareValue(shares)), 1800); // use a 30 min TWAP
+            // interval
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.

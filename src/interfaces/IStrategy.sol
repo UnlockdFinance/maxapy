@@ -14,7 +14,6 @@ interface IStrategy {
     function harvest(
         uint256 minExpectedBalance,
         uint256 minOutputAfterInvestment,
-        uint256 harvestedPreofitBPS,
         address harvester,
         uint256 deadline
     )

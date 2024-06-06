@@ -254,15 +254,14 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// See `MaxApy.debtOutstanding()`.
     function _prepareReturn(
         uint256 debtOutstanding,
-        uint256,
-        uint256 harvestedProfitBPS
+        uint256
     )
         internal
         virtual
         override
-        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
+        returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        if (cellar.isPaused()) return (0, 0, 0, 0);
+        if (cellar.isPaused()) return (0, 0, 0);
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
@@ -292,10 +291,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 
-            // we will report harvestedProfitBPS % of the profits only so we can compound the rest
-            realizedProfit = unrealizedProfit * harvestedProfitBPS / MAX_BPS;
-
-            uint256 amountToWithdraw = realizedProfit + debtOutstanding;
+            uint256 amountToWithdraw = debtOutstanding;
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Cellar
@@ -321,25 +317,12 @@ contract BaseSommelierStrategy is BaseStrategy {
             }
 
             assembly {
-                // Net off realized profit and loss
-                switch lt(realizedProfit, loss)
-                // if (realizedProfit < loss)
-                case true {
-                    loss := sub(loss, realizedProfit)
-                    realizedProfit := 0
-                }
-                case false {
-                    realizedProfit := sub(realizedProfit, loss)
-                    loss := 0
-                }
-
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
                 case true {
                     loss := sub(loss, unrealizedProfit)
                     unrealizedProfit := 0
-                    realizedProfit := 0
                 }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
@@ -348,14 +331,11 @@ contract BaseSommelierStrategy is BaseStrategy {
             }
 
             // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
-            if (realizedProfit > underlyingBalance) {
-                // Profit is prioritised. In this case, no `debtPayment` will be reported
-                realizedProfit = underlyingBalance;
-            } else if (amountToWithdraw > underlyingBalance) {
+            if (amountToWithdraw > underlyingBalance) {
                 // same as `profit` + `debtOutstanding` > `underlyingBalance`
                 // Extract debt payment from divested amount
                 unchecked {
-                    debtPayment = underlyingBalance - realizedProfit;
+                    debtPayment = underlyingBalance;
                 }
             } else {
                 debtPayment = debtOutstanding;
@@ -485,7 +465,7 @@ contract BaseSommelierStrategy is BaseStrategy {
 
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
+    function _shareValue(uint256 shares) internal view virtual returns (uint256 _assets) {
         assembly {
             // return cellar.previewRedeem(shares);
             mstore(0x00, 0x4cdad506)
@@ -497,7 +477,7 @@ contract BaseSommelierStrategy is BaseStrategy {
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
+    function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 _shares) {
         assembly {
             // return cellar.convertToShares(amount);
             mstore(0x00, 0xc6e6f592)
@@ -509,7 +489,7 @@ contract BaseSommelierStrategy is BaseStrategy {
 
     /// @notice Returns the current strategy's amount of Cellar vault shares
     /// @return _balance balance the strategy's balance of Cellar vault shares
-    function _shareBalance() internal view returns (uint256 _balance) {
+    function _shareBalance() internal view virtual returns (uint256 _balance) {
         assembly {
             // return cellar.balanceOf(address(this));
             mstore(0x00, 0x70a08231)

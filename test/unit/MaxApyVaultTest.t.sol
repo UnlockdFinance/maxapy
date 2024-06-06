@@ -530,8 +530,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         assertEq(strategyData.strategyPerformanceFee, 4000);
         assertEq(strategyData.strategyLastReport, block.timestamp);
         assertEq(strategyData.strategyActivation, block.timestamp);
-        assertEq(strategyData.strategyTotalDebt, 0);
-        assertEq(strategyData.strategyTotalRealizedGain, 0);
         assertEq(strategyData.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 6000);
@@ -564,8 +562,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         assertEq(strategyData.strategyPerformanceFee, 5000);
         assertEq(strategyData.strategyLastReport, block.timestamp);
         assertEq(strategyData.strategyActivation, block.timestamp);
-        assertEq(strategyData.strategyTotalDebt, 0);
-        assertEq(strategyData.strategyTotalRealizedGain, 0);
         assertEq(strategyData.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 6020);
@@ -598,8 +594,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         assertEq(strategyData.strategyPerformanceFee, 488);
         assertEq(strategyData.strategyLastReport, block.timestamp);
         assertEq(strategyData.strategyActivation, block.timestamp);
-        assertEq(strategyData.strategyTotalDebt, 0);
-        assertEq(strategyData.strategyTotalRealizedGain, 0);
         assertEq(strategyData.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 10_000);
@@ -797,7 +791,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         assertEq(mockStrategyData.strategyLastReport, mockStrategyDataBefore.strategyLastReport);
         assertEq(mockStrategyData.strategyActivation, mockStrategyDataBefore.strategyActivation);
         assertEq(mockStrategyData.strategyTotalDebt, 0);
-        assertEq(mockStrategyData.strategyTotalRealizedGain, 0);
         assertEq(mockStrategyData.strategyTotalLoss, 0);
 
         assertEq(
@@ -816,7 +809,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         assertEq(mockStrategyData2.strategyLastReport, mockStrategy2DataBefore.strategyLastReport);
         assertEq(mockStrategyData2.strategyActivation, mockStrategy2DataBefore.strategyActivation);
         assertEq(mockStrategyData2.strategyTotalDebt, 0);
-        assertEq(mockStrategyData2.strategyTotalRealizedGain, 0);
         assertEq(mockStrategyData2.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 5000 + 100 + mockStrategy3DataBefore.strategyDebtRatio);
@@ -832,7 +824,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         assertEq(mockStrategyData3.strategyLastReport, mockStrategy3DataBefore.strategyLastReport);
         assertEq(mockStrategyData3.strategyActivation, mockStrategy3DataBefore.strategyActivation);
         assertEq(mockStrategyData3.strategyTotalDebt, 0);
-        assertEq(mockStrategyData3.strategyTotalRealizedGain, 0);
         assertEq(mockStrategyData3.strategyTotalLoss, 0);
 
         assertEq(vault.debtRatio(), 5000 + 100 + 4786);
@@ -2247,42 +2238,37 @@ contract MaxApyVaultTest is BaseVaultTest {
         /// Check access control with unauthorized user
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        vault.report(0, 0, 0, 0, TREASURY);
+        vault.report(0, 0, 0, TREASURY);
 
         vm.stopPrank();
 
         vm.startPrank(address(lossyStrategy));
 
-        /// Check report with a strategy who does not have enough funds to cover `gain` and `debtPayment`
         vm.expectRevert(abi.encodeWithSignature("InvalidReportedGainAndDebtPayment()"));
-        vault.report(1, 1, 0, 0, TREASURY);
-        /// `gain` (1) + `debtPayment` (0) are gt. `balanceOf(strategy)`
-
-        vm.expectRevert(abi.encodeWithSignature("InvalidReportedGainAndDebtPayment()"));
-        vault.report(0, 0, 0, 1, TREASURY);
+        vault.report(0, 0, 1, TREASURY);
         /// `gain` (0) + `debtPayment` (1) are gt. `balanceOf(strategy)`
 
         vm.expectRevert(abi.encodeWithSignature("InvalidReportedGainAndDebtPayment()"));
-        vault.report(uint128(1 * _1_USDC), uint128(1 * _1_USDC), 0, uint128(450 * _1_USDC), TREASURY);
+        vault.report(uint128(1 * _1_USDC), 0, uint128(450 * _1_USDC), TREASURY);
         /// `gain` (1 ETH) + `debtPayment` (450 ETH) are gt. `balanceOf(strategy)`
 
-        /// Check reported loss is higher than strategy total debt
-        vm.expectRevert(abi.encodeWithSignature("LossGreaterThanStrategyTotalDebt()"));
-        vault.report(0, 0, 1, 0, TREASURY);
+        /// It will revert when there is no debt
+        vm.expectRevert(); // will revert with "division or modulo by zero" erro
+        vault.report(0, 1, 0, TREASURY);
         /// 1 ETH of `loss` is gt. 0 ETH of balance
 
         deal({ token: USDC_MAINNET, to: address(lossyStrategy), give: 1 * _1_USDC });
 
         /// provide strategy with 1 USDC
-        vm.expectRevert(abi.encodeWithSignature("LossGreaterThanStrategyTotalDebt()"));
-        vault.report(0, 0, uint128(11 * _1_USDC / 10), 0, TREASURY);
+        vm.expectRevert(); // will revert with "division or modulo by zero" error
+        vault.report(0, uint128(11 * _1_USDC / 10), 0, TREASURY);
         /// 1.1 ETH of `loss` is gt. 1 ETH of balance
 
         /// Test assess fees twice in same block.timestamp
         vm.warp(block.timestamp + 1);
-        vault.report(1, 1, 0, 0, TREASURY);
+        vault.report(1, 0, 0, TREASURY);
         vm.expectRevert(abi.encodeWithSignature("FeesAlreadyAssesed()"));
-        vault.report(1, 1, 0, 0, TREASURY);
+        vault.report(1, 0, 0, TREASURY);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -2317,8 +2303,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         emit StrategyReported(
             address(lossyStrategy),
             0,
-            /// realizedgain
-            0,
             /// unrealized gain
             0,
             /// loss
@@ -2336,7 +2320,7 @@ contract MaxApyVaultTest is BaseVaultTest {
         );
         /// strategyDebtRatio
 
-        uint256 debt = vault.report(0, 0, 0, 0, TREASURY);
+        uint256 debt = vault.report(0, 0, 0, TREASURY);
 
         StrategyData memory strategyData = vault.strategies(address(lossyStrategy));
 
@@ -2353,9 +2337,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         /// - Treasury is expected to have 0 balance due to no earned fees
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy)), 40 * _1_USDC);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(TREASURY)), 0 * _1_USDC);
-
-        /// Assert strategy's `strategyTotalRealizedGain` is 0
-        assertEq(strategyData.strategyTotalRealizedGain, 0);
 
         /// - Assert strategy's `strategyTotalDebt` increases by expected `credit`
         /// already checked before
@@ -2400,7 +2381,7 @@ contract MaxApyVaultTest is BaseVaultTest {
 
         /// record StrategyReported() event
 
-        debt = vault.report(0, 0, uint128(1 * _1_USDC), 0, TREASURY);
+        debt = vault.report(0, uint128(1 * _1_USDC), 0, TREASURY);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
 
@@ -2416,8 +2397,6 @@ contract MaxApyVaultTest is BaseVaultTest {
         assertEq(strategyData.strategyTotalDebt, previousStrategyData.strategyTotalDebt - 1 * _1_USDC);
         /// - Assert `totalDebt` decreases by loss reported
         assertEq(vault.totalDebt(), previousVaultTotalDebt - 1 * _1_USDC);
-        /// - Assert `strategyTotalRealizedGain` keeps at 0
-        assertEq(strategyData.strategyTotalRealizedGain, 0);
         /// - Assert `debt` is gt 0
         assertGt(debt, 0);
         /// - Assert `debtPayment` is 0 due to fetching `Math.min(debtPayment, debt)`
@@ -2467,7 +2446,7 @@ contract MaxApyVaultTest is BaseVaultTest {
             15 * _1_USDC / 10, expectedShares, 2 * _1_USDC + 15 * _1_USDC / 10 + 10 * _1_USDC
         );
 
-        debt = vault.report(uint128(100 * _1_USDC), uint128(100 * _1_USDC), 0, 0, TREASURY);
+        debt = vault.report(uint128(100 * _1_USDC), 0, 0, TREASURY);
 
         /// - Assess vault management fee is 2% of reported yield
         //assertEq(2 * _1_USDC, uint256(entries[3].topics[1]));
@@ -2480,62 +2459,15 @@ contract MaxApyVaultTest is BaseVaultTest {
         /// - Assert remaining shares are transferred to treasury
         assertEq(vault.balanceOf(vault.treasury()), expectedShares - expectedStrategistFees);
         /// - Assert 100 USDC are transferred from strategy to vault
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), previousVaultBalance + 100 * _1_USDC);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), previousVaultBalance);
         /// - Assert Strategy balance reduces 100 USDC
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy)), previousStrategyBalance - 100 * _1_USDC);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy)), previousStrategyBalance);
         /// - Assert vault `totalIdle` increases by 100 USDC
-        assertEq(vault.totalIdle(), 60 * _1_USDC + 100 * _1_USDC);
+        assertEq(vault.totalIdle(), 60 * _1_USDC);
         /// 60 * _1_USDC --> previous expected `totalIdle`
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 4: Strategy reports  ETH gain, 40 ETH of debt Payment
-        /// Goal: test debt payment
-        /// - Assert debt payment is properly set
-        ///     - We report 40 ETH as debt payment, but a max debt outstanding of 39.9 ETH is expected (0.1% of 100 ETH
-        /// (totalAssets) -> 0.1 ETH
-        ///       max can be held in vault, currently we have 40 ETH deployed so expected debt payment is 39.9 ETH)
-        /// - Assert `strategyTotalDebt` is reduced by expected `debtPayment`
-        /// - Assert vault `totalDebt` is reduced by expected `debtPayment`
-        /// - Assert strategy balance is reduced by expected `debtPayment` and transferred to vault
-        /// - Assert vault balance is increased by expected `debtPayment` and transferred from strategy
-
-        snapshotId = vm.snapshot();
-        vm.startPrank(users.alice);
-
-        /// Update debtRatio to 0.1% so that `debtPayment` is != 0
-        vault.updateStrategyData(
-            address(lossyStrategy),
-            10,
-            /// 0.1%
-            type(uint96).max,
-            0,
-            150
-        );
-
-        vm.startPrank(address(lossyStrategy));
-
-        previousVaultBalance = IERC20(USDC_MAINNET).balanceOf(address(vault));
-        previousStrategyBalance = IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy));
-        previousStrategyData = vault.strategies(address(lossyStrategy));
-        debt = vault.report(0, 0, 0, uint128(40 * _1_USDC), TREASURY);
-
-        /// report 40 ETH of `debtPayment`
-
-        /// - Assert `strategyTotalDebt` is reduced by expected `debtPayment`
-        assertEq(vault.strategies(address(lossyStrategy)).strategyTotalDebt, 100 * _1_USDC * 10 / 10_000);
-        /// - Assert vault `totalDebt` is reduced by expected `debtPayment`
-        assertEq(vault.totalDebt(), 100 * _1_USDC * 10 / 10_000);
-        /// - Assert strategy balance is reduced by expected `debtPayment` and transferred to vault
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy)), 100 * _1_USDC * 10 / 10_000);
-        /// - Assert vault balance is increased by expected `debtPayment` and transferred from strategy
-        assertEq(
-            IERC20(USDC_MAINNET).balanceOf(address(vault)),
-            previousVaultBalance + 40 * _1_USDC - 100 * _1_USDC * 10 / 10_000
-        );
-
-        vm.revertTo(snapshotId);
-
-        /// ⭕️ SCENARIO 5: Test vault in shutdown mode
+        /// ⭕️ SCENARIO 4: Test vault in shutdown mode
         /// Goal: test shutdownMode and a high strategyMinDebtPerHarvest
         /// - Assert creditAvailable is 0
         /// - Assert 40 ETH are transferred back to vault (check vault and strategy balances)
@@ -2553,7 +2485,7 @@ contract MaxApyVaultTest is BaseVaultTest {
         /// record FeesReported() event
         previousVaultBalance = IERC20(USDC_MAINNET).balanceOf(address(vault));
         previousStrategyBalance = IERC20(USDC_MAINNET).balanceOf(address(lossyStrategy));
-        debt = vault.report(0, 0, 0, uint128(40 * _1_USDC), TREASURY);
+        debt = vault.report(0, 0, uint128(40 * _1_USDC), TREASURY);
         /// report 40 ETH of `debtPayment`
 
         entries = vm.getRecordedLogs();

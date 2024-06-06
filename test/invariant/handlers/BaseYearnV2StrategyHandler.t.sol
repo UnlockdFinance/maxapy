@@ -30,7 +30,7 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
         if (currentActor == address(0)) return; // for some reason this caused bugs
         amount = bound(amount, 0, 1000 ether);
         deal(address(token), address(strategy), amount);
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
     }
 
     function triggerLoss(uint256 amount, bool useLiquidateExact) public override countCall("triggerLoss") {
@@ -51,7 +51,7 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
             assertGe(strategyPreview, amount + loss);
             expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount + loss);
         }
-        strategy.harvest(0, 0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
         actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
     }
 
@@ -59,7 +59,7 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets();
-            strategy.harvest(0, 0, 0, address(0), block.timestamp);
+            strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
@@ -71,7 +71,7 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
                 ),
                 vault.debtOutstanding(address(strategy))
             );
-            strategy.harvest(0, 0, 0, address(0), block.timestamp);
+            strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
     }
@@ -79,7 +79,7 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
     ////////////////////////////////////////////////////////////////
     ///                      INVARIANTS                          ///
     ////////////////////////////////////////////////////////////////
-    function INVARIANT_A_ESTIMATED_TOTAL_ASSETS() public override {
+    function INVARIANT_A_ESTIMATED_TOTAL_ASSETS() public view override {
         assertGe(expectedEstimatedTotalAssets, actualEstimatedTotalAssets);
     }
 }
