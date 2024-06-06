@@ -349,7 +349,7 @@ contract ConvexdETHFrxETHStrategy is BaseStrategy {
         assembly {
             // If current underlying balance after swapping does not match swap output expectations, revert
             if gt(minExpectedBalance, underlyingBalance) {
-                // throw the `MinExpectedBalanceAfterSwapNotReached` error
+                // throw the `MinExpectedBalanceNotReached` error
                 mstore(0x00, 0xf52187c0)
                 revert(0x1c, 0x04)
             }
