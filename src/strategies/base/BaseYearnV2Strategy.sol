@@ -23,7 +23,6 @@ contract BaseYearnV2Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     error NotEnoughFundsToInvest();
     error InvalidZeroAddress();
-    error InvalidHarvestedProfit();
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -229,7 +228,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
 
     function _prepareReturn(
         uint256 debtOutstanding,
-        uint256
+        uint256 minExpectedBalance
     )
         internal
         virtual
@@ -280,14 +279,18 @@ contract BaseYearnV2Strategy is BaseStrategy {
 
                 uint256 withdrawn = _divest(sharesToWithdraw);
 
-                // Account for loss occured on withdrawal from Cellar
-                if (withdrawn < expectedAmountToWithdraw) {
-                    unchecked {
-                        loss = expectedAmountToWithdraw - withdrawn;
-                    }
-                }
                 // Overwrite underlyingBalance with the proper amount after withdrawing
                 underlyingBalance = _underlyingBalance();
+
+                assembly ("memory-safe") {
+                    if lt(underlyingBalance, minExpectedBalance) {
+                        // throw the `MinExpectedBalanceNotReached` error
+                        mstore(0x00, 0xbd277fff)
+                        revert(0x1c, 0x04)
+                    }
+
+                    if lt(withdrawn, expectedAmountToWithdraw) { loss := sub(expectedAmountToWithdraw, withdrawn) }
+                }
             }
 
             assembly {
@@ -302,17 +305,15 @@ contract BaseYearnV2Strategy is BaseStrategy {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
                 }
-            }
 
-            // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
-            if (amountToWithdraw > underlyingBalance) {
-                // same as `profit` + `debtOutstanding` > `underlyingBalance`
-                // Extract debt payment from divested amount
-                unchecked {
-                    debtPayment = underlyingBalance;
+                // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
+                switch gt(amountToWithdraw, underlyingBalance)
+                case true {
+                    // same as `profit` + `debtOutstanding` > `underlyingBalance`
+                    // Extract debt payment from divested amount
+                    debtPayment := underlyingBalance
                 }
-            } else {
-                debtPayment = debtOutstanding;
+                case false { debtPayment := debtOutstanding }
             }
         }
     }
