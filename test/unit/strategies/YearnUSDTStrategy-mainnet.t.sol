@@ -848,7 +848,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         uint256 vaultBalanceBefore = IERC20(USDT_MAINNET).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_USDT_MAINNET).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2_991_000);
-        // here requesting 20% wont have any effect neither
+
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         data = vault.strategies(address(strategy));

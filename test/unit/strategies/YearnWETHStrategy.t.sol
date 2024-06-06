@@ -602,9 +602,7 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
         deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
-        uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1 : we request 0% profit harvest
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
@@ -849,7 +847,7 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
         uint256 vaultBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_WETH_MAINNET).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2.991 ether);
-        // here requesting 20% wont have any effect neither
+
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         data = vault.strategies(address(strategy));

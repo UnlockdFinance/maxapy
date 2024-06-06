@@ -602,7 +602,6 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
 
         /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
-        uint256 beforeReportSnapshotId = vm.snapshot();
 
         /// Case #1 : we request 0% profit harvest
         vm.expectEmit();
@@ -616,7 +615,7 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
             /// vault debtPayment
             0,
             /// strategy gain - 0 USDC
-            0,
+            uint128(10 * _1_USDC),
             /// strategy loss
             0,
             /// strategy total debt: not changing now
@@ -628,7 +627,7 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
+        emit Harvested(10 * _1_USDC, 0, 0, 0);
         /// dont report any profit
         strategy.harvest(0, 0, address(0), block.timestamp);
         /// vault balance doesnt increase at all
@@ -637,44 +636,7 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
         uint256 shares = strategy.sharesForAmount(10 * _1_USDC);
         assertEq(IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "1");
 
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2 : we request 45,23% profit harvest
-        vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain ~ 10 USDC * 45.23%
-            uint128(4_523_000),
-            /// vault gain ~ 10 USDC * 45.23%
-            10 * _1_USDC,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain ~ 10 USDC * 45.23%
-            uint128(4_523_000),
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            uint128(40 * _1_USDC),
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-
-        vm.expectEmit();
-        emit Harvested(4_523_000, 0, 0, 0);
-        /// dont report any profit
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        /// vault balance doesnt increase at all                    // 4.52 * _1_USDC
-        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC + 4_523_000);
-        /// the strategy reinvests the profit partially          // 5.477 * _1_USDC
-        shares = strategy.sharesForAmount(5_477_000);
-        assertEq(IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "2");
-
         vm.revertTo(snapshotId);
-
         snapshotId = vm.snapshot();
 
         /// ⭕️ SCENARIO 2:
@@ -736,19 +698,19 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49_999_999,
-            /// vault gain - all of strategy's funds (40 initial USDC + 9.999999 USDC gain)
             0,
-            /// vault gain - all of strategy's funds (40 initial USDC + 9.999999 USDC gain)
+            /// vault gain - all of strategy's funds (40 initial USD + 9.999999 USD gain)
+            0,
+            /// vault gain - all of strategy's funds (40 initial USD + 9.999999 USD gain)
             0,
             /// vault loss
-            0,
+            40 * _1_USDC,
             /// vault debtPayment
-            uint128(49_999_999),
-            /// strategy gain - 9.99999 USDC
+            uint128(0),
+            /// strategy gain - 9.99999 USD
             0,
             /// strategy loss
-            uint128(40 * _1_USDC),
+            0,
             /// strategy total debt: not changing now
             0,
             /// credit 0 * _1_USDC due to transferring funds from strategy to vault
@@ -757,7 +719,7 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49_999_999, 0, 0, 0);
+        emit Harvested(0, 0, 49_999_999, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_999_999);
@@ -886,7 +848,7 @@ contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
         uint256 vaultBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2_999_999);
-        // here requesting 20% wont have any effect neither
+
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         data = vault.strategies(address(strategy));

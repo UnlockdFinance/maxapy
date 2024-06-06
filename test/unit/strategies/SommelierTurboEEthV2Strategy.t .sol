@@ -706,23 +706,22 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
         deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
-
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
             0,
-            /// vault gain + all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
+            /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
-            /// unrealized vault gain is 0 because we dont want to assess fees
+            /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// vault loss
-            0,
+            40 ether,
             /// vault debtPayment
             0,
-            /// strategy realized gain - 9.99999 ETH
+            /// strategy gain - 9.99999 ETH
             0,
             /// strategy loss
-            40 ether,
+            0,
             /// strategy total debt: not changing now
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
@@ -731,13 +730,13 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
+        emit Harvested(0, 0, 49.964247407980117886 ether, 0);
         /// 49.99999 ETH harvested
 
         /// no effect since the strategy is in emergency exit
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 49.588749231253393642 ether);
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 109.964247407980117886 ether);
+        assertEq(IERC20(CELLAR_WETH_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
 

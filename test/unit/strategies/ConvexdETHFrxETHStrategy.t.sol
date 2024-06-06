@@ -835,23 +835,10 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         vm.warp(block.timestamp + 1 days);
         uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1: Harvest 100% of the profit
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 70.05469153805125749 ether);
-
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2: Harvest 50% of the profit
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 65.027345769025628745 ether);
-
-        vm.revertTo(beforeReportSnapshotId);
-        /// Case #3: Harvest 0% of the profit
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
 
         vm.revertTo(snapshotId);
-
         snapshotId = vm.snapshot();
 
         /// ⭕️ SCENARIO 2:

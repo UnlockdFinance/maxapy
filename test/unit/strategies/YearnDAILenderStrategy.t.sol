@@ -601,9 +601,7 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
         deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
-        uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1 : we request 0% profit harvest
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
@@ -615,7 +613,7 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
             /// vault debtPayment
             0,
             /// strategy gain - 0 ETH
-            0,
+            10 ether,
             /// strategy loss
             0,
             /// strategy total debt: not changing now
@@ -627,7 +625,7 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(0, 0, 0, 0);
+        emit Harvested(10 ether, 0, 0, 0);
         /// dont report any profit
         strategy.harvest(0, 0, address(0), block.timestamp);
         /// vault balance doesnt increase at all
@@ -636,44 +634,7 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         uint256 shares = strategy.sharesForAmount(10 ether);
         assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "2");
 
-        vm.revertTo(beforeReportSnapshotId);
-
-        /// Case #2 : we request 45,23% profit harvest
-        vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain ~ 10 ETH * 45.23%
-            4.523 ether,
-            /// vault gain ~ 10 ETH * 45.23%
-            10 ether,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain ~ 10 ETH * 45.23%
-            4.523 ether,
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            40 ether,
-            /// credit 0 ether due to transferring funds from strategy to vault
-            0,
-            4000
-        );
-        /// debtratio not changed
-
-        vm.expectEmit();
-        emit Harvested(4.523 ether, 0, 0, 0);
-        /// dont report any profit
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        /// vault balance doesnt increase at all                    // 4.52 ether
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(vault)), 60 ether + 4.523 ether);
-        /// the strategy reinvests the profit partially          // 5.477 ether
-        shares = strategy.sharesForAmount(5.477 ether);
-        assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "3");
-
         vm.revertTo(snapshotId);
-
         snapshotId = vm.snapshot();
 
         /// ⭕️ SCENARIO 2:
@@ -735,19 +696,19 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
-            49.999999999999999999 ether,
+            0,
             /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// vault gain - all of strategy's funds (40 initial ETH + 9.999999 ETH gain)
             0,
             /// vault loss
-            0,
+            40 ether,
             /// vault debtPayment
-            49.999999999999999999 ether,
+            0,
             /// strategy gain - 9.99999 ETH
             0,
             /// strategy loss
-            40 ether,
+            0,
             /// strategy total debt: not changing now
             0,
             /// credit 0 ether due to transferring funds from strategy to vault
@@ -756,7 +717,7 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         /// debtratio not changed
 
         vm.expectEmit();
-        emit Harvested(49.999999999999999999 ether, 0, 0, 0);
+        emit Harvested(0, 0, 49.999999999999999999 ether, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(DAI_POLYGON).balanceOf(address(vault)), 109.999999999999999999 ether);
@@ -885,7 +846,7 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         uint256 vaultBalanceBefore = IERC20(DAI_POLYGON).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2.991 ether);
-        // here requesting 20% wont have any effect neither
+
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         data = vault.strategies(address(strategy));

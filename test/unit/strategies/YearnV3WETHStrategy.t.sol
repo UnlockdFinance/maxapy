@@ -603,9 +603,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
 
         /// Fake gains in strategy (10 ETH = 40 ETH transferred previously + 10 ETH gains)
         deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
-        uint256 beforeReportSnapshotId = vm.snapshot();
 
-        /// Case #1 : we request 0% profit harvest
         vm.expectEmit();
         emit StrategyReported(
             address(strategy),
