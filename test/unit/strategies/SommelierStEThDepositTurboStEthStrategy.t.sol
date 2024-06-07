@@ -9,7 +9,7 @@ import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import { ICellar } from "src/interfaces/ICellar.sol";
 import { ICurve } from "src/interfaces/ICurve.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
-import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
+import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SommelierStEthDepositTurboStEthStrategyWrapper } from

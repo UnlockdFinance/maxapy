@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import { IMaxApyVault } from "../../src/interfaces/IMaxApyVault.sol";
 import { MaxApyVault, StrategyData } from "../../src/MaxApyVault.sol";
-import { BaseTest, IERC20, console, Vm } from "../base/BaseTest.t.sol";
+import { BaseTest, IERC20, console2, Vm } from "../base/BaseTest.t.sol";
 import { MaxApyVaultEvents } from "../helpers/MaxApyVaultEvents.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
-import { Test, console, Vm } from "forge-std/Test.sol";
+import { Test, console2, Vm } from "forge-std/Test.sol";
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { Utilities } from "../utils/Utilities.sol";

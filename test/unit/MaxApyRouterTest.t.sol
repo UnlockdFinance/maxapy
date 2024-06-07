@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseTest, IERC20, Vm, console } from "../base/BaseTest.t.sol";
+import { BaseTest, IERC20, Vm, console2 } from "../base/BaseTest.t.sol";
 import { BaseVaultTest } from "../base/BaseVaultTest.t.sol";
 import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
 import { MaxApyRouter } from "src/MaxApyRouter.sol";

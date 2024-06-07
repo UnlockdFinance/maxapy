@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseHandler, console } from "./base/BaseHandler.t.sol";
+import { BaseHandler, console2 } from "./base/BaseHandler.t.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
 
@@ -253,14 +253,14 @@ contract MaxApyVaultHandler is BaseHandler {
     }
 
     function callSummary() public view override {
-        console.log("");
-        console.log("");
-        console.log("Call summary:");
-        console.log("-------------------");
-        console.log("deposit", calls["deposit"]);
-        console.log("mint", calls["mint"]);
-        console.log("redeem", calls["redeem"]);
-        console.log("withdraw", calls["withdraw"]);
-        console.log("-------------------");
+        console2.log("");
+        console2.log("");
+        console2.log("Call summary:");
+        console2.log("-------------------");
+        console2.log("deposit", calls["deposit"]);
+        console2.log("mint", calls["mint"]);
+        console2.log("redeem", calls["redeem"]);
+        console2.log("withdraw", calls["withdraw"]);
+        console2.log("-------------------");
     }
 }

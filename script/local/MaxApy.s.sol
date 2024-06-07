@@ -8,7 +8,7 @@ import {
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import { BaseTest, IERC20, Vm, console } from "../../test/base/BaseTest.t.sol";
+import { BaseTest, IERC20, Vm, console2 } from "../../test/base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../../test/interfaces/IStrategyWrapper.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
@@ -344,24 +344,24 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         vault.addStrategy(address(strategy4), 2250, type(uint72).max, 0, 0); // st-eth-deposit turbo st-eth
         vault.addStrategy(address(strategy10), 2250, type(uint72).max, 0, 0); // turbo st-eth
 
-        console.log("***************************DEPLOYMENT ADDRESSES**********************************");
-        console.log("[MAXAPY] Vault :", address(vault));
-        console.log("[CONVEX] dETh-ETH Strategy:", address(strategy1));
-        console.log("[YEARN] WETH Strategy:", address(strategy2));
-        console.log("[SOMMELIER] Morpho Eth Maximizer Strategy:", address(strategy3));
-        console.log("[SOMMELIER] (StEth deposit) Turbo StETh Strategy:", address(strategy4));
-        console.log("[SOMMELIER] Turbo DivEth Strategy:", address(strategy5));
-        console.log("[SOMMELIER] Turbo:EethStrategy :", address(strategy6));
-        console.log("[SOMMELIER] Turbo EThX Strategy :", address(strategy7));
-        console.log("[SOMMELIER] Turbo EzEth Strategy :", address(strategy8));
-        console.log("[SOMMELIER] Turbo RsEth Strategy :", address(strategy9));
-        console.log("[SOMMELIER] Turbo StEth Strategy :", address(strategy10));
-        console.log("[SOMMELIER] Turbo SwEth Strategy :", address(strategy11));
+        console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
+        console2.log("[MAXAPY] Vault :", address(vault));
+        console2.log("[CONVEX] dETh-ETH Strategy:", address(strategy1));
+        console2.log("[YEARN] WETH Strategy:", address(strategy2));
+        console2.log("[SOMMELIER] Morpho Eth Maximizer Strategy:", address(strategy3));
+        console2.log("[SOMMELIER] (StEth deposit) Turbo StETh Strategy:", address(strategy4));
+        console2.log("[SOMMELIER] Turbo DivEth Strategy:", address(strategy5));
+        console2.log("[SOMMELIER] Turbo:EethStrategy :", address(strategy6));
+        console2.log("[SOMMELIER] Turbo EThX Strategy :", address(strategy7));
+        console2.log("[SOMMELIER] Turbo EzEth Strategy :", address(strategy8));
+        console2.log("[SOMMELIER] Turbo RsEth Strategy :", address(strategy9));
+        console2.log("[SOMMELIER] Turbo StEth Strategy :", address(strategy10));
+        console2.log("[SOMMELIER] Turbo SwEth Strategy :", address(strategy11));
 
-        console.log("***************************ADDED TO VAULT**********************************");
-        console.log("[CONVEX] dETh-ETH Strategy:", address(strategy1));
-        console.log("[YEARN] WETH Strategy:", address(strategy2));
-        console.log("[SOMMELIER] (StEth deposit) Turbo StETh Strategy:", address(strategy4));
-        console.log("[SOMMELIER] Turbo StEth Strategy :", address(strategy10));
+        console2.log("***************************ADDED TO VAULT**********************************");
+        console2.log("[CONVEX] dETh-ETH Strategy:", address(strategy1));
+        console2.log("[YEARN] WETH Strategy:", address(strategy2));
+        console2.log("[SOMMELIER] (StEth deposit) Turbo StETh Strategy:", address(strategy4));
+        console2.log("[SOMMELIER] Turbo StEth Strategy :", address(strategy10));
     }
 }

@@ -56,13 +56,14 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     function harvest() public override countCall("harvest") {
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
-            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets();
+            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() - uint256(unharvestedAmount);
             strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
         if (unharvestedAmount > 0) {
-            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + uint256(strategy.unharvestedAmount());
+            expectedEstimatedTotalAssets =
+                strategy.estimatedTotalAssets() + uint256(unharvestedAmount) - vault.debtOutstanding(address(strategy));
             strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }

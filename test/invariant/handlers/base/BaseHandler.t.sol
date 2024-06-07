@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import { CommonBase } from "forge-std/Base.sol";
 import { Test } from "forge-std/Test.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
-import { console } from "forge-std/console.sol";
+import { console2 } from "forge-std/console2.sol";
 import { AddressSet, LibAddressSet } from "../../../helpers/AddressSet.sol";
 
 abstract contract BaseHandler is CommonBase, Test {

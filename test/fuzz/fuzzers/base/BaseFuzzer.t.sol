@@ -5,7 +5,7 @@ import { CommonBase } from "forge-std/Base.sol";
 import { StdAssertions } from "forge-std/StdAssertions.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
-import { console } from "forge-std/console.sol";
+import { console2 } from "forge-std/console2.sol";
 import { AddressSet, LibAddressSet } from "../../../helpers/AddressSet.sol";
 
 abstract contract BaseFuzzer is CommonBase, StdAssertions, StdUtils, StdCheats {

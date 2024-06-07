@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseHandler, console } from "./BaseHandler.t.sol";
+import { BaseHandler, console2 } from "./BaseHandler.t.sol";
 
 abstract contract BaseStrategyHandler is BaseHandler {
     ////////////////////////////////////////////////////////////////
@@ -31,14 +31,14 @@ abstract contract BaseStrategyHandler is BaseHandler {
     }
 
     function callSummary() public view override {
-        console.log("");
-        console.log("");
-        console.log("Call summary:");
-        console.log("-------------------");
-        console.log("gain", calls["gain"]);
-        console.log("trigerLoss", calls["trigerLoss"]);
-        console.log("harvest", calls["harvest"]);
-        console.log("-------------------");
+        console2.log("");
+        console2.log("");
+        console2.log("Call summary:");
+        console2.log("-------------------");
+        console2.log("gain", calls["gain"]);
+        console2.log("trigerLoss", calls["trigerLoss"]);
+        console2.log("harvest", calls["harvest"]);
+        console2.log("-------------------");
     }
 
     ////////////////////////////////////////////////////////////////

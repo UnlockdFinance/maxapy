@@ -7,7 +7,7 @@ import {
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import { BaseTest, IERC20, Vm, console } from "../../base/BaseTest.t.sol";
+import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { ICurve } from "src/interfaces/ICurve.sol";
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";

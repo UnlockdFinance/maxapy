@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseFuzzer, console } from "./base/BaseFuzzer.t.sol";
+import { BaseFuzzer, console2 } from "./base/BaseFuzzer.t.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { LibPRNG } from "solady/utils/LibPRNG.sol";

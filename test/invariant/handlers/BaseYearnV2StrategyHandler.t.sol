@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseHandler, console } from "./base/BaseHandler.t.sol";
 import { AddressSet, LibAddressSet } from "../../helpers/AddressSet.sol";
 import { BaseYearnV2StrategyWrapper } from "../../mock/BaseYearnV2StrategyWrapper.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
