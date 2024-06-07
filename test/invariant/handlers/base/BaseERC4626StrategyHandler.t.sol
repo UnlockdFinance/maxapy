@@ -27,8 +27,8 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     ////////////////////////////////////////////////////////////////
     function gain(uint256 amount) public override countCall("gain") {
         amount = bound(amount, 0, 1_000_000 ether);
+        expectedEstimatedTotalAssets = actualEstimatedTotalAssets;
         deal(address(token), address(strategy), amount);
-        strategy.harvest(0, 0, address(0), block.timestamp);
     }
 
     function triggerLoss(uint256 amount, bool useLiquidateExact) public override countCall("triggerLoss") {
@@ -38,35 +38,35 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
             if (amount == 0) return;
             uint256 liquidatePreview = strategy.previewLiquidate(amount);
             expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount);
-
             uint256 loss = strategy.liquidate(amount);
             assertGe(loss, amount - liquidatePreview);
         } else {
             amount = bound(amount, 0, maxLiquidation * 90 / 100);
             if (amount == 0) return;
             uint256 strategyPreview = strategy.previewLiquidateExact(amount);
+            uint256 _expectedEstimatedTotalAssets = strategy.estimatedTotalAssets();
             uint256 loss = strategy.liquidateExact(amount);
+            expectedEstimatedTotalAssets = _sub0(_expectedEstimatedTotalAssets, amount + loss);
             assertGe(strategyPreview, amount + loss);
-            expectedEstimatedTotalAssets = _sub0(strategy.estimatedTotalAssets(), amount);
         }
         actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
-        strategy.harvest(0, 0, address(0), block.timestamp);
     }
 
     function harvest() public override countCall("harvest") {
+        uint256 creditAvailable = vault.creditAvailable(address(strategy));
+        uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
-            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() - uint256(unharvestedAmount);
-            strategy.harvest(0, 0, address(0), block.timestamp);
-            actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
+            expectedEstimatedTotalAssets = actualEstimatedTotalAssets + creditAvailable;
+            strategy.harvest(0,0,address(0), block.timestamp);
         }
 
-        if (unharvestedAmount > 0) {
+        if (unharvestedAmount >= 0) {
             expectedEstimatedTotalAssets =
-                strategy.estimatedTotalAssets() + uint256(unharvestedAmount) - vault.debtOutstanding(address(strategy));
+                actualEstimatedTotalAssets + _sub0(uint256(unharvestedAmount),vault.debtOutstanding(address(strategy))) + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
-            actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
+        actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
     }
 
     ////////////////////////////////////////////////////////////////
