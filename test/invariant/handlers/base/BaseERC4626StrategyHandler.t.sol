@@ -58,12 +58,12 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
             expectedEstimatedTotalAssets = actualEstimatedTotalAssets + creditAvailable;
-            strategy.harvest(0,0,address(0), block.timestamp);
+            strategy.harvest(0, 0, address(0), block.timestamp);
         }
 
         if (unharvestedAmount >= 0) {
-            expectedEstimatedTotalAssets =
-                actualEstimatedTotalAssets + _sub0(uint256(unharvestedAmount),vault.debtOutstanding(address(strategy))) + creditAvailable;
+            expectedEstimatedTotalAssets = actualEstimatedTotalAssets
+                + _sub0(uint256(unharvestedAmount), vault.debtOutstanding(address(strategy))) + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
         }
         actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
