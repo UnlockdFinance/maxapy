@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {YearnDAIStrategy, SafeTransferLib} from "src/strategies/mainnet/DAI/yearn/YearnDAIStrategy.sol";
+import { YearnDAIStrategy, SafeTransferLib } from "src/strategies/mainnet/DAI/yearn/YearnDAIStrategy.sol";
 
 contract YearnDAIStrategyWrapper is YearnDAIStrategy {
     using SafeTransferLib for address;
@@ -15,15 +15,17 @@ contract YearnDAIStrategyWrapper is YearnDAIStrategy {
     }
 
     function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
-        vault.report(gain, gain, loss, debtPayment, treasury);
+        vault.report(gain, loss, debtPayment, treasury);
     }
 
-    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProvitBPS)
+    function prepareReturn(
+        uint256 debtOutstanding,
+        uint256 minExpectedBalance
+    )
         external
-        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
+        returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        (realizedProfit, unrealizedProfit, loss, debtPayment) =
-            _prepareReturn(debtOutstanding, minExpectedBalance, harvestedProvitBPS);
+        (unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
     }
 
     function adjustPosition() external {

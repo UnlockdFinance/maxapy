@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategy, IERC20, IMaxApyVaultV2, SafeTransferLib} from "src/strategies/base/BaseStrategy.sol";
-import {IYVaultV3} from "src/interfaces/IYVaultV3.sol";
+import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { IYVaultV3 } from "src/interfaces/IYVaultV3.sol";
 
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title BaseYearnV3Strategy
 /// @author MaxApy
@@ -16,10 +16,8 @@ contract BaseYearnV3Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
-
     error NotEnoughFundsToInvest();
     error InvalidZeroAddress();
-    error InvalidHarvestedProfit();
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -37,19 +35,19 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @notice Emitted when the strategy's min single trade value is updated
     event MinSingleTradeUpdated(uint256 minSingleTrade);
 
-    // @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Invested(uint256,uint256)"))`.
     uint256 internal constant _INVESTED_EVENT_SIGNATURE =
         0xc3f75dfc78f6efac88ad5abb5e606276b903647d97b2a62a1ef89840a658bbc3;
 
-    // @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
+    /// @dev `keccak256(bytes("Divested(uint256,uint256,uint256)"))`.
     uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
         0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
-    // @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
 
-    // @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
+    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
 
@@ -70,7 +68,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
 
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -78,17 +76,24 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @param _strategyName the name of the strategy
     /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
         IYVaultV3 _yVault
-    ) public virtual initializer {
+    )
+        public
+        virtual
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
         /// Perform needed approvals
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
+
+        /// Unlimited max single trade by default
+        maxSingleTrade = type(uint256).max;
     }
 
     /////////////////////////////////////////////////////////////////
@@ -107,11 +112,14 @@ contract BaseYearnV3Strategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
-            loss = _sub0(_shareValue(burntShares), amountNeeded);
+            loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }
@@ -200,7 +208,9 @@ contract BaseYearnV3Strategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < liquidatedAmount) {
-            liquidatedAmount = liquidatedAmount - underlyingBalance;
+            unchecked {
+                liquidatedAmount = liquidatedAmount - underlyingBalance;
+            }
             requestedAmount = _shareValue(yVault.previewWithdraw(liquidatedAmount));
         }
         return requestedAmount + underlyingBalance;
@@ -241,25 +251,19 @@ contract BaseYearnV3Strategy is BaseStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
+    function _prepareReturn(
+        uint256 debtOutstanding,
+        uint256 minExpectedBalance
+    )
         internal
         virtual
         override
-        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
+        returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
         uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
-
-        assembly {
-            // If current underlying balance after swapping does not match swap output expectations, revert
-            if gt(minExpectedBalance, underlyingBalance) {
-                // throw the `MinExpectedBalanceAfterSwapNotReached` error
-                mstore(0x00, 0xf52187c0)
-                revert(0x1c, 0x04)
-            }
-        }
 
         uint256 debt;
         assembly {
@@ -285,64 +289,56 @@ contract BaseYearnV3Strategy is BaseStrategy {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 
-            // we will report harvestedProfitBPS % of the profits only so we can compound the rest
-            realizedProfit = unrealizedProfit * harvestedProfitBPS / MAX_BPS;
-
-            uint256 amountToWithdraw = realizedProfit + debtOutstanding;
+            uint256 amountToWithdraw = debtOutstanding;
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
-            // If not, divest from yVault
+            // If not, divest from Cellar
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
+
+                // We cannot withdraw more than actual balance or maxSingleTrade
+                expectedAmountToWithdraw =
+                    Math.min(Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance())), maxSingleTrade);
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
 
                 uint256 withdrawn = _divest(sharesToWithdraw);
 
-                // Account for loss occured on withdrawal from yVault
-                if (withdrawn < expectedAmountToWithdraw) {
-                    unchecked {
-                        loss = expectedAmountToWithdraw - withdrawn;
-                    }
-                }
                 // Overwrite underlyingBalance with the proper amount after withdrawing
                 underlyingBalance = _underlyingBalance();
+
+                assembly ("memory-safe") {
+                    if lt(underlyingBalance, minExpectedBalance) {
+                        // throw the `MinExpectedBalanceNotReached` error
+                        mstore(0x00, 0xbd277fff)
+                        revert(0x1c, 0x04)
+                    }
+
+                    if lt(withdrawn, expectedAmountToWithdraw) { loss := sub(expectedAmountToWithdraw, withdrawn) }
+                }
             }
 
             assembly {
-                // Net off realized profit and loss
-                switch lt(realizedProfit, loss)
-                // if (realizedProfit < loss)
-                case true {
-                    loss := sub(loss, realizedProfit)
-                    realizedProfit := 0
-                }
-                case false {
-                    realizedProfit := sub(realizedProfit, loss)
-                    loss := 0
-                }
-
                 // Net off unrealized profit and loss
                 switch lt(unrealizedProfit, loss)
                 // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
+                case true {
+                    loss := sub(loss, unrealizedProfit)
+                    unrealizedProfit := 0
+                }
                 case false {
                     unrealizedProfit := sub(unrealizedProfit, loss)
                     loss := 0
                 }
-            }
-            // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
-            if (realizedProfit > underlyingBalance) {
-                // Profit is prioritised. In this case, no `debtPayment` will be reported
-                realizedProfit = underlyingBalance;
-            } else if (amountToWithdraw > underlyingBalance) {
-                // same as `profit` + `debtOutstanding` > `underlyingBalance`
-                // Extract debt payment from divested amount
-                unchecked {
-                    debtPayment = underlyingBalance - realizedProfit;
+
+                // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
+                switch gt(amountToWithdraw, underlyingBalance)
+                case true {
+                    // same as `profit` + `debtOutstanding` > `underlyingBalance`
+                    // Extract debt payment from divested amount
+                    debtPayment := underlyingBalance
                 }
-            } else {
-                debtPayment = debtOutstanding;
+                case false { debtPayment := debtOutstanding }
             }
         }
     }
@@ -363,7 +359,10 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+    function _invest(
+        uint256 amount,
+        uint256 minOutputAfterInvestment
+    )
         internal
         virtual
         returns (uint256 depositedAmount)
@@ -409,13 +408,15 @@ contract BaseYearnV3Strategy is BaseStrategy {
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
     /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
-    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether the
+    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
+    /// the
     /// difference is due to a realized loss, or if there is some other sitution at play
     /// (e.g. locked funds) where the amount made available is less than what is needed.
     /// NOTE: The invariant `liquidatedAmount + loss <= amountNeeded` should always be maintained
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
-    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
+    /// amount
 
     function _liquidatePosition(uint256 amountNeeded)
         internal

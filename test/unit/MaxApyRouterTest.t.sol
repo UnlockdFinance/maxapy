@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseTest, IERC20, Vm, console} from "../base/BaseTest.t.sol";
-import {BaseVaultV2Test} from "../base/BaseVaultV2Test.t.sol";
-import {MaxApyVaultV2, StrategyData} from "src/MaxApyVaultV2.sol";
-import {MaxApyRouter} from "src/MaxApyRouter.sol";
-import {IMaxApyRouter} from "src/interfaces/IMaxApyRouter.sol";
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {IWrappedToken} from "src/interfaces/IWrappedToken.sol";
+import { BaseTest, IERC20, Vm, console2 } from "../base/BaseTest.t.sol";
+import { BaseVaultTest } from "../base/BaseVaultTest.t.sol";
+import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
+import { MaxApyRouter } from "src/MaxApyRouter.sol";
+import { IMaxApyRouter } from "src/interfaces/IMaxApyRouter.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
-import {MockStrategy} from "../mock/MockStrategy.sol";
-import {MockLossyUSDCStrategy} from "../mock/MockLossyUSDCStrategy.sol";
-import {MockERC777, IERC1820Registry} from "../mock/MockERC777.sol";
-import {ReentrantERC777AttackerDeposit} from "../mock/ReentrantERC777AttackerDeposit.sol";
-import {ReentrantERC777AttackerWithdraw} from "../mock/ReentrantERC777AttackerWithdraw.sol";
-import {SigUtils} from "../utils/SigUtils.sol";
-import {IERC20Permit} from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
-import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import { MockStrategy } from "../mock/MockStrategy.sol";
+import { MockLossyUSDCStrategy } from "../mock/MockLossyUSDCStrategy.sol";
+import { MockERC777, IERC1820Registry } from "../mock/MockERC777.sol";
+import { ReentrantERC777AttackerDeposit } from "../mock/ReentrantERC777AttackerDeposit.sol";
+import { ReentrantERC777AttackerWithdraw } from "../mock/ReentrantERC777AttackerWithdraw.sol";
+import { SigUtils } from "../utils/SigUtils.sol";
+import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
+import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract MaxApyRouterTest is BaseVaultV2Test {
+contract MaxApyRouterTest is BaseVaultTest {
     IMaxApyRouter public router;
     SigUtils internal sigUtils;
     uint256 internal bobPrivateKey;
@@ -77,7 +77,7 @@ contract MaxApyRouterTest is BaseVaultV2Test {
     }
 
     function testMaxApyRouter__Deposit_Native() public {
-        uint256 shares = router.depositNative{value: 10 ether}(vault, users.alice, 1e25);
+        uint256 shares = router.depositNative{ value: 10 ether }(vault, users.alice, 1e25);
         assertEq(shares, 1e25);
         assertEq(vault.totalDeposits(), 10 ether);
         assertEq(vault.totalSupply(), 1e25);
@@ -85,16 +85,16 @@ contract MaxApyRouterTest is BaseVaultV2Test {
 
     function testMaxApyRouter__Deposit_Native_InsufficientShares() public {
         vm.expectRevert(abi.encodeWithSignature("InsufficientShares()"));
-        router.depositNative{value: 10 ether}(vault, users.alice, 1e25 + 1);
+        router.depositNative{ value: 10 ether }(vault, users.alice, 1e25 + 1);
         assertEq(vault.totalDeposits(), 0);
         assertEq(vault.totalSupply(), 0);
     }
 
     function testMaxApyRouter__Deposit_Permit() public {
         // Deploy the USDC vault
-        MaxApyVaultV2 maxApyVault = new MaxApyVaultV2(USDC_MAINNET, "MaxApyVaultV2USDC", "maxUSDCv2", TREASURY);
-        IMaxApyVaultV2 _vault = IMaxApyVaultV2(address(maxApyVault));
-        deal(USDC_MAINNET, users.bob, 1_000 * _1_USDC);
+        MaxApyVault maxApyVault = new MaxApyVault(USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
+        IMaxApyVault _vault = IMaxApyVault(address(maxApyVault));
+        deal(USDC_MAINNET, users.bob, 1000 * _1_USDC);
         vm.startPrank(users.bob);
 
         SigUtils.Permit memory permit = SigUtils.Permit({

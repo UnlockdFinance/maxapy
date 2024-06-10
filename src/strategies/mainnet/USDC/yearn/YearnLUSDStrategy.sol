@@ -3,14 +3,13 @@ pragma solidity ^0.8.19;
 
 import {
     BaseYearnV2Strategy,
-    IMaxApyVaultV2,
+    IMaxApyVault,
     SafeTransferLib,
     IYVault,
-    IERC20,
     Math
 } from "src/strategies/base/BaseYearnV2Strategy.sol";
-import {IUniswapV3Router as IRouter, IUniswapV3Pool} from "src/interfaces/IUniswap.sol";
-import {OracleLibrary} from "src/lib/OracleLibrary.sol";
+import { IUniswapV3Router as IRouter, IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 
 /// @title YearnLUSDStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -35,12 +34,16 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @param _strategyName the name of the strategy
     /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
         IYVault _yVault
-    ) public override initializer {
+    )
+        public
+        override
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
@@ -52,10 +55,10 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         lusd.safeApprove(address(router), type(uint256).max);
 
         /// Mininmum single trade is 0.01 token units
-        minSingleTrade = 10 ** IERC20(underlyingAsset).decimals() / 100;
+        minSingleTrade = 1e6 / 100;
 
         /// Max single trade
-        maxSingleTrade = 10 ** IERC20(underlyingAsset).decimals() * 10_000;
+        maxSingleTrade = 10_000 * 1e6;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -101,7 +104,10 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+    function _invest(
+        uint256 amount,
+        uint256 minOutputAfterInvestment
+    )
         internal
         override
         returns (uint256 depositedAmount)
@@ -193,45 +199,22 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         }
     }
 
-    /// @notice Performs any adjustments to the core position(s) of this Strategy given
-    /// what change the MaxApy Vault made in the "investable capital" available to the
-    /// Strategy.
-    /// @dev Note that all "free capital" (capital not invested) in the Strategy after the report
-    /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
-    function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal override {
-        uint256 toInvest = _underlyingBalance();
-        if (toInvest > minSingleTrade && toInvest < maxSingleTrade) {
-            _invest(toInvest, minOutputAfterInvestment);
-        }
-    }
-
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
-
     /// @notice Determines the current value of `shares`.
     /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view override returns (uint256) {
-        uint256 vaultTotalSupply;
-        assembly {
-            // get yVault.totalSupply()
-            mstore(0x00, 0x18160ddd)
-            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-            vaultTotalSupply := mload(0x00)
-        }
-        if (vaultTotalSupply == 0) return shares;
-
-        uint256 lusdValue = Math.mulDiv(shares, _freeFunds(), vaultTotalSupply);
-        // estimate USDC value of the LUSD tokens
-        return _estimateAmountOut(lusd, underlyingAsset, uint128(lusdValue), 10);
+        return _estimateAmountOut(lusd, underlyingAsset, uint128(super._shareValue(shares)), 1800); // use a 30 min TWAP
+            // interval
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares returns the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
         // estimate the LUSD value of the underlying amount
-        amount = _estimateAmountOut(underlyingAsset, lusd, uint128(amount), 10);
+        amount = _estimateAmountOut(underlyingAsset, lusd, uint128(amount), 1800); // use a 30 min TWAP interval
         uint256 freeFunds = _freeFunds();
         assembly {
             // if freeFunds != 0 return amount
@@ -257,7 +240,12 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
 
     /// @notice returns the estimated result of a Uniswap V3 swap
     /// @dev use TWAP oracle for more safety
-    function _estimateAmountOut(address tokenIn, address tokenOut, uint128 amountIn, uint32 secondsAgo)
+    function _estimateAmountOut(
+        address tokenIn,
+        address tokenOut,
+        uint128 amountIn,
+        uint32 secondsAgo
+    )
         internal
         view
         returns (uint256 amountOut)

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
-import {Test, console, Vm} from "forge-std/Test.sol";
+import { Test, console2, Vm } from "forge-std/Test.sol";
 
-import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
-import {Utilities} from "../utils/Utilities.sol";
-import {Tokens} from "../helpers/Tokens.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { Utilities } from "../utils/Utilities.sol";
+import { Tokens } from "../helpers/Tokens.sol";
 
 contract BaseTest is Tokens, Test {
     /*//////////////////////////////////////////////////////////////////////////
@@ -35,7 +35,7 @@ contract BaseTest is Tokens, Test {
     function _setUp(string memory chain) internal virtual {
         if (vm.envOr("FORK", false)) {
             chainFork = vm.createSelectFork(vm.envString(string.concat("RPC_", chain)));
-            vm.rollFork(17635792);
+            vm.rollFork(17_635_792);
         }
         // Setup utils
         utils = new Utilities();
@@ -52,14 +52,17 @@ contract BaseTest is Tokens, Test {
         });
 
         // Make Alice both the caller and the origin.
-        vm.startPrank({msgSender: users.alice, txOrigin: users.alice});
+        vm.startPrank({ msgSender: users.alice, txOrigin: users.alice });
     }
 
     function assertRelApproxEq(
         uint256 a,
         uint256 b,
         uint256 maxPercentDelta // An 18 decimal fixed point number, where 1e18 == 100%
-    ) internal virtual {
+    )
+        internal
+        virtual
+    {
         if (b == 0) return assertEq(a, b); // If the expected is 0, actual must be too.
 
         uint256 percentDelta = ((a > b ? a - b : b - a) * 1e18) / b;

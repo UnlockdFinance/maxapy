@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {IYearnStrategy} from "../../src/interfaces/IYearnStrategy.sol";
+import { IYearnStrategy } from "../../src/interfaces/IYearnStrategy.sol";
 
 interface IStrategyWrapper is IYearnStrategy {
-    function prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
+    function prepareReturn(
+        uint256 debtOutstanding,
+        uint256 minExpectedBalance
+    )
         external
-        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
+        returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment);
 
     function adjustPosition() external;
 
@@ -79,4 +82,6 @@ interface IStrategyWrapper is IYearnStrategy {
     function lastEstimatedTotalAssets() external view returns (uint256);
 
     function setAutopilot(bool) external;
+
+    function unharvestedAmount() external view returns (int256);
 }
