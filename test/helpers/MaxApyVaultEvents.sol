@@ -46,10 +46,12 @@ contract MaxApyVaultEvents {
     event TreasuryUpdated(address treasury);
 
     /// @notice Emitted on vault deposits
-    event Deposit(address indexed recipient, uint256 shares, uint256 amount);
+    event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
 
     /// @notice Emitted on vault withdrawals
-    event Withdraw(address indexed recipient, uint256 shares, uint256 amount);
+    event Withdraw(
+        address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
+    );
 
     /// @notice Emitted on withdrawal strategy withdrawals
     event WithdrawFromStrategy(address indexed strategy, uint128 strategyTotalDebt, uint128 loss);
@@ -58,15 +60,18 @@ contract MaxApyVaultEvents {
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
-        uint256 gain,
+        uint256 unrealizedGain,
         uint256 loss,
         uint256 debtPayment,
-        uint128 strategyTotalGain,
+        uint128 strategyTotalRealizedGain,
         uint128 strategyTotalLoss,
         uint128 strategyTotalDebt,
         uint256 credit,
         uint16 strategyDebtRatio
     );
+
+    /// @notice Emitted when a vault's autopilot mode is enabled or disabled
+    event AutopilotEnabled(bool isEnabled);
 
     /// OWNERSHIP
 

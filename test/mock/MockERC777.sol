@@ -49,13 +49,14 @@ library Address {
      * IMPORTANT: because control is transferred to `recipient`, care must be
      * taken to not create reentrancy vulnerabilities. Consider using
      * {ReentrancyGuard} or the
-     * https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
+     * https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions
+     * pattern].
      */
     function sendValue(address payable recipient, uint256 amount) internal {
         require(address(this).balance >= amount, "Address: insufficient balance");
 
         // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
-        (bool success,) = recipient.call{value: amount}("");
+        (bool success,) = recipient.call{ value: amount }("");
         require(success, "Address: unable to send value, recipient may have reverted");
     }
 
@@ -68,7 +69,8 @@ library Address {
      * function (like regular Solidity function calls).
      *
      * Returns the raw returned data. To convert to the expected return value,
-     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
+     * use
+     * https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
      *
      * Requirements:
      *
@@ -87,7 +89,11 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCall(address target, bytes memory data, string memory errorMessage)
+    function functionCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    )
         internal
         returns (bytes memory)
     {
@@ -115,7 +121,12 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage)
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value,
+        string memory errorMessage
+    )
         internal
         returns (bytes memory)
     {
@@ -123,7 +134,7 @@ library Address {
         require(isContract(target), "Address: call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.call{value: value}(data);
+        (bool success, bytes memory returndata) = target.call{ value: value }(data);
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
@@ -143,7 +154,11 @@ library Address {
      *
      * _Available since v3.3._
      */
-    function functionStaticCall(address target, bytes memory data, string memory errorMessage)
+    function functionStaticCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    )
         internal
         view
         returns (bytes memory)
@@ -171,7 +186,11 @@ library Address {
      *
      * _Available since v3.4._
      */
-    function functionDelegateCall(address target, bytes memory data, string memory errorMessage)
+    function functionDelegateCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    )
         internal
         returns (bytes memory)
     {
@@ -182,7 +201,11 @@ library Address {
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
-    function _verifyCallResult(bool success, bytes memory returndata, string memory errorMessage)
+    function _verifyCallResult(
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    )
         private
         pure
         returns (bytes memory)
@@ -615,7 +638,8 @@ abstract contract Context {
     }
 
     function _msgData() internal view virtual returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        this; // silence state mutability warning without generating bytecode - see
+            // https://github.com/ethereum/solidity/issues/2691
         return msg.data;
     }
 }
@@ -648,7 +672,8 @@ interface IERC777Sender {
         uint256 amount,
         bytes calldata userData,
         bytes calldata operatorData
-    ) external;
+    )
+        external;
 }
 
 /**
@@ -679,7 +704,8 @@ interface IERC777Recipient {
         uint256 amount,
         bytes calldata userData,
         bytes calldata operatorData
-    ) external;
+    )
+        external;
 }
 
 /**
@@ -825,7 +851,8 @@ interface IERC777 {
         uint256 amount,
         bytes calldata data,
         bytes calldata operatorData
-    ) external;
+    )
+        external;
 
     /**
      * @dev Destroys `amount` tokens from `account`, reducing the total supply.
@@ -1075,7 +1102,11 @@ contract MockERC777 is Context, IERC777, IERC20 {
         uint256 amount,
         bytes memory data,
         bytes memory operatorData
-    ) public virtual override {
+    )
+        public
+        virtual
+        override
+    {
         require(isOperatorFor(_msgSender(), sender), "ERC777: caller is not an operator for holder");
         _send(sender, recipient, amount, data, operatorData, true);
     }
@@ -1085,7 +1116,12 @@ contract MockERC777 is Context, IERC777, IERC20 {
      *
      * Emits {Burned} and {IERC20-Transfer} events.
      */
-    function operatorBurn(address account, uint256 amount, bytes memory data, bytes memory operatorData)
+    function operatorBurn(
+        address account,
+        uint256 amount,
+        bytes memory data,
+        bytes memory operatorData
+    )
         public
         virtual
         override
@@ -1158,7 +1194,12 @@ contract MockERC777 is Context, IERC777, IERC20 {
      * - if `account` is a contract, it must implement the {IERC777Recipient}
      * interface.
      */
-    function _mint(address account, uint256 amount, bytes memory userData, bytes memory operatorData)
+    function _mint(
+        address account,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData
+    )
         internal
         virtual
     {
@@ -1202,7 +1243,10 @@ contract MockERC777 is Context, IERC777, IERC20 {
         bytes memory userData,
         bytes memory operatorData,
         bool requireReceptionAck
-    ) internal virtual {
+    )
+        internal
+        virtual
+    {
         require(from != address(0), "ERC777: send from the zero address");
         require(to != address(0), "ERC777: send to the zero address");
 
@@ -1246,7 +1290,9 @@ contract MockERC777 is Context, IERC777, IERC20 {
         uint256 amount,
         bytes memory userData,
         bytes memory operatorData
-    ) private {
+    )
+        private
+    {
         _beforeTokenTransfer(operator, from, to, amount);
 
         _balances[from] = _balances[from].sub(amount, "ERC777: transfer amount exceeds balance");
@@ -1294,7 +1340,9 @@ contract MockERC777 is Context, IERC777, IERC20 {
         bytes memory userData,
         bytes memory operatorData,
         bool
-    ) private {
+    )
+        private
+    {
         IERC777Recipient(attacker).tokensReceived(operator, from, to, amount, userData, operatorData);
     }
 
@@ -1312,5 +1360,5 @@ contract MockERC777 is Context, IERC777, IERC20 {
      *
      * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
-    function _beforeTokenTransfer(address operator, address from, address to, uint256 amount) internal virtual {}
+    function _beforeTokenTransfer(address operator, address from, address to, uint256 amount) internal virtual { }
 }

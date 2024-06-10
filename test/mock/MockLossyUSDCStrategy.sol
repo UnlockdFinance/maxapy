@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {IMaxApyVaultV2} from "src/interfaces/IMaxApyVaultV2.sol";
-import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 
 contract MockLossyUSDCStrategy {
     address public immutable vault;
@@ -56,7 +56,7 @@ contract MockLossyUSDCStrategy {
     }
 
     function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
-        IMaxApyVaultV2(vault).report(gain, gain, loss, debtPayment, treasury);
+        IMaxApyVault(vault).report(gain, loss, debtPayment, treasury);
     }
 
     function delegatedAssets() external pure returns (uint256) {

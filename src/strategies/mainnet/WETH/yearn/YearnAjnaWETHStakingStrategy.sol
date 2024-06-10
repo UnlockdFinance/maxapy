@@ -2,13 +2,11 @@
 pragma solidity ^0.8.19;
 
 import {
-    BaseYearnV3Strategy,
-    SafeTransferLib,
-    IMaxApyVaultV2,
-    IYVaultV3
+    BaseYearnV3Strategy, SafeTransferLib, IMaxApyVault, IYVaultV3
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
-import {IStakingRewardsMulti} from "src/interfaces/IStakingRewardsMulti.sol";
-import {IUniswapV3Router as IRouter} from "src/interfaces/IUniswap.sol";
+import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
+import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title YearnAjnaWETHStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -40,7 +38,7 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
 
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -48,12 +46,16 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     /// @param _strategyName the name of the strategy
     /// @param _yVault The Yearn Finance vault this strategy will interact with
     function initialize(
-        IMaxApyVaultV2 _vault,
+        IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
         IYVaultV3 _yVault
-    ) public override initializer {
+    )
+        public
+        override
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
@@ -63,7 +65,7 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
         address(_yVault).safeApprove(address(yearnStakingRewards), type(uint256).max);
 
         minSingleTrade = 1e4;
-        maxSingleTrade = 1_000e18;
+        maxSingleTrade = 1000e18;
 
         minSwapAjna = 1e18;
     }
@@ -78,13 +80,22 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
         uint256 underlyingBalance = _underlyingBalance();
         if (underlyingBalance < amountNeeded) {
-            uint256 amountToWithdraw = amountNeeded - underlyingBalance;
-            uint256 neededVaultShares = yVault.previewWithdraw(amountNeeded);
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = amountNeeded - underlyingBalance;
+            }
+            uint256 neededVaultShares = yVault.previewWithdraw(amountToWithdraw);
             yearnStakingRewards.withdraw(neededVaultShares);
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
-            loss = _shareValue(burntShares) - amountNeeded;
+            loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
-        underlyingAsset.safeTransfer(msg.sender, amountNeeded);
+        underlyingAsset.safeTransfer(address(vault), amountNeeded);
+        // In case all shares were not burnt reinvest them
+        uint256 sharesLeft = yVault.balanceOf(address(this));
+        if (sharesLeft != 0) {
+            yearnStakingRewards.stake(sharesLeft);
+        }
+
         // Note: Reinvest anything leftover on next `harvest`
         _snapshotEstimatedTotalAssets();
     }
@@ -92,141 +103,20 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
-
-    /// @notice Perform any Strategy unwinding or other calls necessary to capture the
-    /// "free return" this Strategy has generated since the last time its core
-    /// position(s) were adjusted. Examples include unwrapping extra rewards.
-    /// This call is only used during "normal operation" of a Strategy, and
-    /// should be optimized to minimize losses as much as possible.
-    /// @dev This method returns any realized profits and/or realized losses
-    /// incurred, and should return the total amounts of profits/losses/debt
-    /// payments (in MaxApy Vault's `underlyingAsset` tokens) for the MaxApy Vault's accounting (e.g.
-    /// `underlyingAsset.balanceOf(this) >= debtPayment + profit`).
-    ///
-    /// `debtOutstanding` will be 0 if the Strategy is not past the configured
-    /// debt limit, otherwise its value will be how far past the debt limit
-    /// the Strategy is. The Strategy's debt limit is configured in the MaxApy Vault.
-    ///
-    /// NOTE: `debtPayment` should be less than or equal to `debtOutstanding`.
-    ///       It is okay for it to be less than `debtOutstanding`, as that
-    ///       should only be used as a guide for how much is left to pay back.
-    ///       Payments should be made to minimize loss from slippage, debt,
-    ///       withdrawal fees, etc.
-    /// See `MaxApy.debtOutstanding()`.
-    function _prepareReturn(uint256 debtOutstanding, uint256 minExpectedBalance, uint256 harvestedProfitBPS)
-        internal
-        override
-        returns (uint256 realizedProfit, uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
-    {
-        // unwind extra staking rewards
+    /// @notice unwind extra staking rewards before preparing return
+    function _beforePrepareReturn() internal override {
         IStakingRewardsMulti rewardPool = yearnStakingRewards;
         _unwindRewards(rewardPool);
-
-        // Fetch initial strategy state
-        uint256 underlyingBalance = _underlyingBalance();
-        uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
-        uint256 _lastEstimatedTotalAssets = lastEstimatedTotalAssets;
-
-        assembly {
-            // If current underlying balance after swapping does not match swap output expectations, revert
-            if gt(minExpectedBalance, underlyingBalance) {
-                // throw the `MinExpectedBalanceAfterSwapNotReached` error
-                mstore(0x00, 0xf52187c0)
-                revert(0x1c, 0x04)
-            }
-        }
-
-        uint256 debt;
-        assembly {
-            // debt = vault.strategies(address(this)).strategyTotalDebt;
-            mstore(0x00, 0xd81d5e87)
-            mstore(0x20, address())
-            if iszero(call(gas(), sload(vault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
-            debt := mload(0x00)
-        }
-
-        // initialize the lastEstimatedTotalAssets in case it is not
-        if (_lastEstimatedTotalAssets == 0) _lastEstimatedTotalAssets = debt;
-
-        assembly {
-            switch lt(_estimatedTotalAssets_, _lastEstimatedTotalAssets)
-            // if _estimatedTotalAssets_ < _lastEstimatedTotalAssets
-            case true { loss := sub(_lastEstimatedTotalAssets, _estimatedTotalAssets_) }
-            // else
-            case false { unrealizedProfit := sub(_estimatedTotalAssets_, _lastEstimatedTotalAssets) }
-        }
-
-        if (_estimatedTotalAssets_ >= _lastEstimatedTotalAssets) {
-            // Strategy has obtained profit or holds more funds than it should
-            // considering the current debt
-
-            // we will report harvestedProfitBPS % of the profits only so we can compound the rest
-            realizedProfit = unrealizedProfit * harvestedProfitBPS / MAX_BPS;
-
-            uint256 amountToWithdraw = realizedProfit + debtOutstanding;
-
-            // Check if underlying funds held in the strategy are enough to cover withdrawal.
-            // If not, divest from yVault
-            if (amountToWithdraw > underlyingBalance) {
-                uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
-
-                uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
-
-                uint256 withdrawn = _divest(sharesToWithdraw);
-
-                // Account for loss occured on withdrawal from yVault
-                if (withdrawn < expectedAmountToWithdraw) {
-                    unchecked {
-                        loss = expectedAmountToWithdraw - withdrawn;
-                    }
-                }
-                // Overwrite underlyingBalance with the proper amount after withdrawing
-                underlyingBalance = _underlyingBalance();
-            }
-
-            assembly {
-                // Net off realized profit and loss
-                switch lt(realizedProfit, loss)
-                // if (realizedProfit < loss)
-                case true {
-                    loss := sub(loss, realizedProfit)
-                    realizedProfit := 0
-                }
-                case false {
-                    realizedProfit := sub(realizedProfit, loss)
-                    loss := 0
-                }
-
-                // Net off unrealized profit and loss
-                switch lt(unrealizedProfit, loss)
-                // if (unrealizedProfit < loss)
-                case true { realizedProfit := 0 }
-                case false {
-                    unrealizedProfit := sub(unrealizedProfit, loss)
-                    loss := 0
-                }
-            }
-            // `profit` + `debtOutstanding` must be <= `underlyingBalance`. Prioritise profit first
-            if (realizedProfit > underlyingBalance) {
-                // Profit is prioritised. In this case, no `debtPayment` will be reported
-                realizedProfit = underlyingBalance;
-            } else if (amountToWithdraw > underlyingBalance) {
-                // same as `profit` + `debtOutstanding` > `underlyingBalance`
-                // Extract debt payment from divested amount
-                unchecked {
-                    debtPayment = underlyingBalance - realizedProfit;
-                }
-            } else {
-                debtPayment = debtOutstanding;
-            }
-        }
     }
 
     /// @notice Invests `amount` of underlying, depositing it in the Yearn Vault
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
-    function _invest(uint256 amount, uint256 minOutputAfterInvestment)
+    function _invest(
+        uint256 amount,
+        uint256 minOutputAfterInvestment
+    )
         internal
         override
         returns (uint256 depositedAmount)
@@ -275,13 +165,15 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
     /// irregardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
     /// @dev This function should return the amount of MaxApy Vault's `underlyingAsset` tokens made available by the
-    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether the
+    /// liquidation. If there is a difference between `amountNeeded` and `liquidatedAmount`, `loss` indicates whether
+    /// the
     /// difference is due to a realized loss, or if there is some other sitution at play
     /// (e.g. locked funds) where the amount made available is less than what is needed.
     /// NOTE: The invariant `liquidatedAmount + loss <= amountNeeded` should always be maintained
     /// @param amountNeeded amount of MaxApy Vault's `underlyingAsset` needed to be liquidated
     /// @return liquidatedAmount the actual liquidated amount
-    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated amount
+    /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
+    /// amount
 
     function _liquidatePosition(uint256 amountNeeded)
         internal
@@ -309,16 +201,6 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
         }
     }
 
-    /// @notice Liquidates everything and returns the amount that got freed.
-    /// @dev This function is used during emergency exit instead of `_prepareReturn()` to
-    /// liquidate all of the Strategy's positions back to the MaxApy Vault.
-    function _liquidateAllPositions() internal override returns (uint256 amountFreed) {
-        IStakingRewardsMulti rewardPool = yearnStakingRewards;
-        _unwindRewards(rewardPool);
-        _divest(_shareBalance());
-        amountFreed = _underlyingBalance();
-    }
-
     /// @notice Claims rewards, converting them to `underlyingAsset`.
     /// @dev MinOutputAmounts are left as 0 and properly asserted globally on `harvest()`.
     function _unwindRewards(IStakingRewardsMulti _yearnStakingRewards) internal {
@@ -332,7 +214,7 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
                 IRouter.ExactInputSingleParams({
                     tokenIn: ajna,
                     tokenOut: underlyingAsset,
-                    fee: 10000,
+                    fee: 10_000,
                     recipient: address(this),
                     deadline: block.timestamp,
                     amountIn: ajnaBalance,

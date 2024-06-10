@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseStrategyEvents} from "./BaseStrategyEvents.sol";
+import { BaseStrategyEvents } from "./BaseStrategyEvents.sol";
 
 contract StrategyEvents is BaseStrategyEvents {
     /// @notice Emitted when underlying asset is deposited into the Yearn Vault
@@ -19,7 +19,6 @@ contract StrategyEvents is BaseStrategyEvents {
     /// @notice Emitted after a strategy reports to the vault
     event StrategyReported(
         address indexed strategy,
-        uint256 realizedGain,
         uint256 unrealizGain,
         uint256 loss,
         uint256 debtPayment,

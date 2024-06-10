@@ -4,7 +4,8 @@ pragma solidity ^0.8.4;
 /// @notice Simple ERC20 + EIP-2612 implementation.
 /// @author Solady (https://github.com/vectorized/solady/blob/main/src/tokens/ERC20.sol)
 /// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC20.sol)
-/// @author Modified from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol)
+/// @author Modified from OpenZeppelin
+/// (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol)
 ///
 /// @dev Note:
 /// The ERC20 standard allows minting and transferring to and from the zero address,
@@ -12,7 +13,8 @@ pragma solidity ^0.8.4;
 /// For performance, this implementation WILL NOT revert for such actions.
 /// Please add any checks with overrides if desired.
 
-library StringPacker { // This library is used to pack and unpack strings into bytes32. This is used to store the name and symbol of the token in the contract.
+library StringPacker { // This library is used to pack and unpack strings into bytes32. This is used to store the
+        // name and symbol of the token in the contract.
     function pack(string memory unpacked) internal pure returns (bytes32 packed) {
         require(bytes(unpacked).length < 32);
         assembly {
@@ -484,9 +486,9 @@ abstract contract ERC20 {
 
     /// @dev Hook that is called before any transfer of tokens.
     /// This includes minting and burning.
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual {}
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 
     /// @dev Hook that is called after any transfer of tokens.
     /// This includes minting and burning.
-    function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual {}
+    function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }
