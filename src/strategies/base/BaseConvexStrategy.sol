@@ -475,7 +475,4 @@ abstract contract BaseConvexStrategy is BaseStrategy {
     function _crv() internal pure virtual returns (address);
 
     function _cvx() internal pure virtual returns (address);
-
-    //solhint-disable no-empty-blocks
-    receive() external payable { }
 }
