@@ -9,7 +9,7 @@ import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { ICurve } from "src/interfaces/ICurve.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 
@@ -345,7 +345,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256[] memory expectedAmountCrv =
             IRouter(strategy.router()).swapExactTokensForTokens(10 ether, 0, path, users.keeper, block.timestamp);
 
-        uint256 expectedAmountCvx = ICurve(strategy.cvxWethPool()).exchange(1, 0, 10 ether, 0, false);
+        uint256 expectedAmountCvx = ICurveLpPool(strategy.cvxWethPool()).exchange(1, 0, 10 ether, 0, false);
 
         /// 4. Strategy takes 10 ETH profit + cvx/crv rewards
         /// Fake crv + cvx rewards in strategy
@@ -386,7 +386,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256[] memory expectedAmountCrv =
             IRouter(strategy.router()).swapExactTokensForTokens(10 ether, 0, path, users.keeper, block.timestamp);
 
-        uint256 expectedAmountCvx = ICurve(strategy.cvxWethPool()).exchange(1, 0, 10 ether, 0, false);
+        uint256 expectedAmountCvx = ICurveLpPool(strategy.cvxWethPool()).exchange(1, 0, 10 ether, 0, false);
 
         /// 4. Strategy takes 10 ETH profit + cvx/crv rewards
         /// Fake crv + cvx rewards in strategy

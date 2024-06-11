@@ -32,7 +32,7 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
     /// @notice Main Convex's deposit contract for LP tokens
     IConvexBooster public constant convexBooster = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
     /// @notice CVX-WETH pool in Curve
-    ICurve public constant cvxWethPool = ICurve(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4);
+    ICurveLpPool public constant cvxWethPool = ICurveLpPool(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4);
     /// @notice Identifier for the crvUsd(WETH collateral) Convex lending pool
     uint256 public constant CRVUSD_WETH_COLLATERAL_POOL_ID = 326;
 
@@ -46,7 +46,7 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
 
     /*==================CURVE-RELATED STORAGE VARIABLES==================*/
     /// @notice Curve's usdc-crvUsd pool
-    ICurve public curveUsdcCrvUsdPool;
+    ICurveLpPool public curveUsdcCrvUsdPool;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -96,7 +96,7 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
         // Approve pools
         address(_curveLendingPool).safeApprove(address(convexBooster), type(uint256).max);
 
-        crv.safeApprove(address(_router), type(uint256).max);
+        /*  crv.safeApprove(address(_router), type(uint256).max); */
         cvx.safeApprove(address(cvxWethPool), type(uint256).max);
         crvUsd.safeApprove(address(curveLendingPool), type(uint256).max);
         crvUsd.safeApprove(address(curveUsdcCrvUsdPool), type(uint256).max);
@@ -175,11 +175,7 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
         convexRewardPool.withdrawAndUnwrap(amount, false);
 
         // Remove liquidity and obtain crvUsd
-        uint256 amountWithdrawn = curveLendingPool.redeem(
-            amount,
-            address(this),
-            address(this)
-        );
+        uint256 amountWithdrawn = curveLendingPool.redeem(amount, address(this), address(this));
 
         // Swap crvUsd for USDC
         uint256 usdcReceived = curveUsdcCrvUsdPool.exchange(1, 0, amountWithdrawn, 0);
@@ -193,14 +189,14 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
         // Claim CRV and CVX rewards
         rewardPool.getReward(address(this), true);
 
-        // Exchange CRV <> WETH
+        /*    // Exchange CRV <> WETH
         uint256 crvBalance = _crvBalance();
         if (crvBalance > minSwapCrv) {
             address[] memory path = new address[](2);
             path[0] = crv;
             path[1] = underlyingAsset;
             router.swapExactTokensForTokens(crvBalance, 0, path, address(this), block.timestamp);
-        }
+        } */
 
         // Exchange CVX <> WETH
         uint256 cvxBalance = _cvxBalance();
@@ -247,13 +243,13 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
     /// @dev Some loss of precision is occured, but it is not critical as this is only an underestimation of
     /// the actual assets, and profit will be later accounted for.
     /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
-    function _lpValue(uint256 lp) internal view virtual returns (uint256) {
+    function _lpValue(uint256 lp) internal view override returns (uint256) {
         return curveLendingPool.previewRedeem(lp);
     }
 
     /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
     /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
-    function _lpForAmount(uint256 amount) internal view virtual returns (uint256) {
+    function _lpForAmount(uint256 amount) internal view override returns (uint256) {
         return curveLendingPool.convertToShares(amount);
     }
 

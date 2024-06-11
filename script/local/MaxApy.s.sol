@@ -14,7 +14,6 @@ import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
-import { ICurve } from "src/interfaces/ICurve.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 import { ConvexPools } from "../../test/helpers/ConvexPools.sol";
 

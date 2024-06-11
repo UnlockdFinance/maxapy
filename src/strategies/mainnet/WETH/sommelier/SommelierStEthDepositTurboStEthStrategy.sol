@@ -9,7 +9,7 @@ import {
     SafeTransferLib
 } from "src/strategies/base/BaseSommelierStrategy.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { ICurve } from "src/interfaces/ICurve.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 
 /// @title SommelierStEthDepositTurboStEthStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -29,7 +29,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
     /// @notice The Curve pool
-    ICurve public constant pool = ICurve(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
+    ICurveLpPool public constant pool = ICurveLpPool(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022);
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
