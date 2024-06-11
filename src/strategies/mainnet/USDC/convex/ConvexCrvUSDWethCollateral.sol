@@ -6,15 +6,15 @@ import {
 } from "src/strategies/base/BaseConvexStrategy.sol";
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
 import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
-import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
+import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { ICurveLpPool, ICurveLendingPool } from "src/interfaces/ICurve.sol";
-import { IWETH } from "src/interfaces/IWETH.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title ConvexCrvUSDWethCollateral
 /// @author MaxApy
-/// @notice `ConvexCrvUSDWethCollateral` supplies ETH into the dETH-crvUsd pool in Curve, then stakes the curve LP
+/// @notice `ConvexCrvUSDWethCollateral` supplies CrvUSD into the CrvUSD(WETH Collateral) lending pool in Curve, then
+/// stakes the curve LP
 /// in Convex in order to maximize yield.
 contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
     using SafeTransferLib for address;
@@ -23,6 +23,8 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
 
+    /// @notice Ethereum mainnet's WETH Token
+    address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     /// @notice Ethereum mainnet's CRV Token
     address public constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     /// @notice Ethereum mainnet's CVX Token
@@ -31,10 +33,10 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
     address public constant crvUsd = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E;
     /// @notice Main Convex's deposit contract for LP tokens
     IConvexBooster public constant convexBooster = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-    /// @notice CVX-WETH pool in Curve
-    ICurveLpPool public constant cvxWethPool = ICurveLpPool(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4);
     /// @notice Identifier for the crvUsd(WETH collateral) Convex lending pool
     uint256 public constant CRVUSD_WETH_COLLATERAL_POOL_ID = 326;
+    /// @notice Uniswap V3 router
+    IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -44,7 +46,6 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
     /// @notice Main Curve pool for this Strategy
     ICurveLendingPool public curveLendingPool;
 
-    /*==================CURVE-RELATED STORAGE VARIABLES==================*/
     /// @notice Curve's usdc-crvUsd pool
     ICurveLpPool public curveUsdcCrvUsdPool;
 
@@ -96,8 +97,8 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
         // Approve pools
         address(_curveLendingPool).safeApprove(address(convexBooster), type(uint256).max);
 
-        /*  crv.safeApprove(address(_router), type(uint256).max); */
-        cvx.safeApprove(address(cvxWethPool), type(uint256).max);
+        crv.safeApprove(address(router), type(uint256).max);
+        cvx.safeApprove(address(router), type(uint256).max);
         crvUsd.safeApprove(address(curveLendingPool), type(uint256).max);
         crvUsd.safeApprove(address(curveUsdcCrvUsdPool), type(uint256).max);
 
@@ -189,19 +190,42 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
         // Claim CRV and CVX rewards
         rewardPool.getReward(address(this), true);
 
-        /*    // Exchange CRV <> WETH
-        uint256 crvBalance = _crvBalance();
-        if (crvBalance > minSwapCrv) {
-            address[] memory path = new address[](2);
-            path[0] = crv;
-            path[1] = underlyingAsset;
-            router.swapExactTokensForTokens(crvBalance, 0, path, address(this), block.timestamp);
-        } */
-
-        // Exchange CVX <> WETH
+        // Exchange CVX <> CRV
         uint256 cvxBalance = _cvxBalance();
         if (cvxBalance > minSwapCvx) {
-            cvxWethPool.exchange(1, 0, cvxBalance, 0, false);
+            router.exactInputSingle(
+                IRouter.ExactInputSingleParams({
+                    tokenIn: _cvx(),
+                    tokenOut: _crv(),
+                    fee: 10_000, // 1%
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: cvxBalance,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
+            );
+        }
+
+        // Exchange CRV <> USDC
+        uint256 crvBalance = _crvBalance();
+        if (crvBalance > minSwapCrv) {
+            bytes memory path = abi.encodePacked(
+                _crv(),
+                uint24(3000), // CRV <> WETH 0.3%
+                weth,
+                uint24(500), // WETH <> USDC 0.005%
+                underlyingAsset
+            );
+            router.exactInput(
+                IRouter.ExactInputParams({
+                    path: path,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: crvBalance,
+                    amountOutMinimum: 0
+                })
+            );
         }
     }
 
@@ -257,10 +281,12 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
     /// @return returns the estimated lp token price
     function _lpPrice() internal view override returns (uint256) { }
 
+    /// @dev returns the address of the CRV token for this context
     function _crv() internal pure override returns (address) {
         return crv;
     }
 
+    /// @dev returns the address of the CVX token for this context
     function _cvx() internal pure override returns (address) {
         return cvx;
     }

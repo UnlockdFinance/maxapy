@@ -472,7 +472,9 @@ abstract contract BaseConvexStrategy is BaseStrategy {
         return _underlyingBalance() + _lpValue(_stakedBalance(convexRewardPool));
     }
 
+    /// @dev returns the address of the CRV token for this context
     function _crv() internal pure virtual returns (address);
 
+    /// @dev returns the address of the CVX token for this context
     function _cvx() internal pure virtual returns (address);
 }

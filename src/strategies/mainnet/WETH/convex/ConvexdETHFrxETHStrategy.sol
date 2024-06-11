@@ -284,10 +284,12 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         );
     }
 
+    /// @dev returns the address of the CRV token for this context
     function _crv() internal pure override returns (address) {
         return crv;
     }
 
+    /// @dev returns the address of the CVX token for this context
     function _cvx() internal pure override returns (address) {
         return cvx;
     }
