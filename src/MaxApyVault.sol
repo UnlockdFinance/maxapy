@@ -9,7 +9,6 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
 import { ERC4626, ERC20 } from "solady/tokens/ERC4626.sol";
-import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
