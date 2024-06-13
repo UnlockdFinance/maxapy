@@ -108,7 +108,7 @@ contract YearnUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
                 YVAULT_USDCE_POLYGON
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

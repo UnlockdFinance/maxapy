@@ -111,7 +111,7 @@ contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
                 CELLAR_WETH_MAINNET
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

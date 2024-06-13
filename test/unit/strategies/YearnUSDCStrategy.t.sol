@@ -108,7 +108,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
                 YVAULT_USDC_MAINNET
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///
