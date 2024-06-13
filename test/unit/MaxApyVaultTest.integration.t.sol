@@ -13,7 +13,7 @@ import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../helpers/StrategyEvents.sol";
-import { ICurve } from "src/interfaces/ICurve.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 import { ConvexPools } from "../helpers/ConvexPools.sol";
 
@@ -57,7 +57,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ////////////////////////////////////////////////////////////////
     function _dealStEth(address give, uint256 wethIn) internal returns (uint256 stEthOut) {
         vm.deal(give, wethIn);
-        stEthOut = ICurve(CURVE_POOL).exchange{ value: wethIn }(0, 1, wethIn, 0);
+        stEthOut = ICurveLpPool(CURVE_POOL).exchange{ value: wethIn }(0, 1, wethIn, 0);
         IERC20(ST_ETH_MAINNET).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
     }
 

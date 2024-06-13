@@ -7,7 +7,7 @@ import {
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import { ICellar } from "src/interfaces/ICellar.sol";
-import { ICurve } from "src/interfaces/ICurve.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
@@ -34,7 +34,7 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
 
     function _dealStEth(address give, uint256 wethIn) internal returns (uint256 stEthOut) {
         vm.deal(give, wethIn);
-        stEthOut = ICurve(CURVE_POOL).exchange{ value: wethIn }(0, 1, wethIn, 0);
+        stEthOut = ICurveLpPool(CURVE_POOL).exchange{ value: wethIn }(0, 1, wethIn, 0);
         IERC20(ST_ETH_MAINNET).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
     }
 

@@ -6,37 +6,38 @@ import {
 } from "src/strategies/base/BaseConvexStrategy.sol";
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
 import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
-import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { IWETH } from "src/interfaces/IWETH.sol";
+import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
+import { ICurveLpPool, ICurveLendingPool } from "src/interfaces/ICurve.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-/// @title ConvexdETHFrxETHStrategy
+/// @title ConvexCrvUSDWethCollateralStrategy
 /// @author MaxApy
-/// @notice `ConvexdETHFrxETHStrategy` supplies ETH into the dETH-frxETH pool in Curve, then stakes the curve LP
+/// @notice `ConvexCrvUSDWethCollateralStrategy` supplies CrvUSD into the CrvUSD(WETH Collateral) lending pool in Curve,
+/// then
+/// stakes the curve LP
 /// in Convex in order to maximize yield.
-contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
+contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
 
+    /// @notice Ethereum mainnet's WETH Token
+    address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     /// @notice Ethereum mainnet's CRV Token
     address public constant crv = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     /// @notice Ethereum mainnet's CVX Token
     address public constant cvx = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-    /// @notice Ethereum mainnet's frxETH Token
-    address public constant frxETH = 0x5E8422345238F34275888049021821E8E08CAa1f;
+    /// @notice Ethereum mainnet's crvUsd Token
+    address public constant crvUsd = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E;
     /// @notice Main Convex's deposit contract for LP tokens
     IConvexBooster public constant convexBooster = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-    /// @notice Router to perform CRV-WETH swaps
-    IRouter public router;
-    /// @notice CVX-WETH pool in Curve
-    ICurveLpPool public constant cvxWethPool = ICurveLpPool(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4);
-    /// @notice Identifier for the dETH<>frxETH Convex pool
-    uint256 public constant DETH_FRXETH_CONVEX_POOL_ID = 195;
+    /// @notice Identifier for the crvUsd(WETH collateral) Convex lending pool
+    uint256 public constant CRVUSD_WETH_COLLATERAL_POOL_ID = 326;
+    /// @notice Uniswap V3 router
+    IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -44,11 +45,10 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
 
     /*==================CURVE-RELATED STORAGE VARIABLES==================*/
     /// @notice Main Curve pool for this Strategy
-    ICurveLpPool public curveLpPool;
+    ICurveLendingPool public curveLendingPool;
 
-    /*==================CURVE-RELATED STORAGE VARIABLES==================*/
-    /// @notice Curve's ETH-frxETH pool
-    ICurveLpPool public curveEthFrxEthPool;
+    /// @notice Curve's usdc-crvUsd pool
+    ICurveLpPool public curveUsdcCrvUsdPool;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -59,17 +59,15 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _curveLpPool The address of the strategy's main Curve pool, dETH-frxETH pool
-    /// @param _curveEthFrxEthPool The address of Curve's ETH-frxETH pool
-    /// @param _router The router address to perform swaps
+    /// @param _curveLendingPool The address of the strategy's main Curve pool, dETH-crvUsd pool
+    /// @param _curveUsdcCrvUsdPool The address of Curve's ETH-crvUsd pool
     function initialize(
         IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
-        ICurveLpPool _curveLpPool,
-        ICurveLpPool _curveEthFrxEthPool,
-        IRouter _router
+        ICurveLendingPool _curveLendingPool,
+        ICurveLpPool _curveUsdcCrvUsdPool
     )
         public
         initializer
@@ -77,7 +75,8 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
 
         // Fetch convex pool data
-        (, address _token,, address _crvRewards,, bool _shutdown) = convexBooster.poolInfo(DETH_FRXETH_CONVEX_POOL_ID);
+        (, address _token,, address _crvRewards,, bool _shutdown) =
+            convexBooster.poolInfo(CRVUSD_WETH_COLLATERAL_POOL_ID);
 
         assembly {
             // Check if Convex pool is in shutdown mode
@@ -93,42 +92,22 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         rewardToken = IConvexRewards(_crvRewards).rewardToken();
 
         // Curve init
-        curveLpPool = _curveLpPool;
-        curveEthFrxEthPool = _curveEthFrxEthPool;
+        curveLendingPool = _curveLendingPool;
+        curveUsdcCrvUsdPool = _curveUsdcCrvUsdPool;
 
         // Approve pools
-        address(_curveLpPool).safeApprove(address(convexBooster), type(uint256).max);
+        address(_curveLendingPool).safeApprove(address(convexBooster), type(uint256).max);
 
-        // Set router
-        router = _router;
+        crv.safeApprove(address(router), type(uint256).max);
+        cvx.safeApprove(address(router), type(uint256).max);
+        crvUsd.safeApprove(address(curveLendingPool), type(uint256).max);
+        crvUsd.safeApprove(address(curveUsdcCrvUsdPool), type(uint256).max);
+        underlyingAsset.safeApprove(address(curveUsdcCrvUsdPool), type(uint256).max);
 
-        crv.safeApprove(address(_router), type(uint256).max);
-        cvx.safeApprove(address(cvxWethPool), type(uint256).max);
-        frxETH.safeApprove(address(curveLpPool), type(uint256).max);
-        frxETH.safeApprove(address(curveEthFrxEthPool), type(uint256).max);
+        maxSingleTrade = 1000 * 1e6;
 
-        maxSingleTrade = 1000 * 1e18;
-
-        minSwapCrv = 1e17;
-        minSwapCvx = 1e18;
-    }
-
-    /// @notice Sets the new router
-    /// @dev Approval for CRV will be granted to the new router if it was not already granted
-    /// @param _newRouter The new router address
-    function setRouter(address _newRouter) external checkRoles(ADMIN_ROLE) {
-        // Remove previous router allowance
-        crv.safeApprove(address(router), 0);
-        // Set new router allowance
-        crv.safeApprove(_newRouter, type(uint256).max);
-
-        assembly ("memory-safe") {
-            sstore(router.slot, _newRouter) // set the new router in storage
-
-            // Emit the `RouterUpdated` event
-            mstore(0x00, _newRouter)
-            log1(0x00, 0x20, _ROUTER_UPDATED_EVENT_SIGNATURE)
-        }
+        minSwapCrv = 1e14;
+        minSwapCvx = 1e14;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -160,14 +139,11 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         // Invested amount will be a maximum of `maxSingleTrade`
         amount = Math.min(maxSingleTrade, amount);
 
-        // Unwrap WETH to interact with Curve
-        IWETH(address(underlyingAsset)).withdraw(amount);
+        // Swap USDC for crvUsd
+        uint256 crvUsdReceived = curveUsdcCrvUsdPool.exchange(0, 1, amount, 0);
 
-        // Swap ETH for frxETH
-        uint256 frxEthReceivedAmount = curveEthFrxEthPool.exchange{ value: amount }(0, 1, amount, 0);
-
-        // Add liquidity to the dETH-frxETH pool in frxETH [coin1 -> frxETH]
-        uint256 lpReceived = curveLpPool.add_liquidity([0, frxEthReceivedAmount], 0);
+        // Add liquidity to the lending pool
+        uint256 lpReceived = curveLendingPool.deposit(crvUsdReceived, address(this));
 
         assembly ("memory-safe") {
             // if (lpReceived < minOutputAfterInvestment)
@@ -178,9 +154,10 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             }
         }
 
-        // Deposit Curve LP into Convex pool with id `DETH_FRXETH_CONVEX_POOL_ID` and immediately stake convex LP tokens
+        // Deposit Curve LP into Convex pool with id `CRVUSD_WETH_COLLATERAL_POOL_ID` and immediately stake convex LP
+        // tokens
         // into the rewards contract
-        convexBooster.deposit(DETH_FRXETH_CONVEX_POOL_ID, lpReceived, true);
+        convexBooster.deposit(CRVUSD_WETH_COLLATERAL_POOL_ID, lpReceived, true);
 
         emit Invested(address(this), amount);
 
@@ -200,21 +177,13 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         // Withdraw from Convex and unwrap directly to Curve LP tokens
         convexRewardPool.withdrawAndUnwrap(amount, false);
 
-        // Remove liquidity and obtain frxETH
-        uint256 amountWithdrawn = curveLpPool.remove_liquidity_one_coin(
-            amount,
-            1,
-            //frxETH
-            0
-        );
+        // Remove liquidity and obtain crvUsd
+        uint256 amountWithdrawn = curveLendingPool.redeem(amount, address(this), address(this));
 
-        // Swap frxETH for ETH
-        uint256 ethReceived = curveEthFrxEthPool.exchange(1, 0, amountWithdrawn, 0);
+        // Swap crvUsd for USDC
+        uint256 usdcReceived = curveUsdcCrvUsdPool.exchange(1, 0, amountWithdrawn, 0);
 
-        // Wrap ETH into WETH
-        IWETH(address(underlyingAsset)).deposit{ value: ethReceived }();
-
-        return ethReceived;
+        return usdcReceived;
     }
 
     /// @notice Claims rewards, converting them to `underlyingAsset`.
@@ -223,19 +192,42 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         // Claim CRV and CVX rewards
         rewardPool.getReward(address(this), true);
 
-        // Exchange CRV <> WETH
-        uint256 crvBalance = _crvBalance();
-        if (crvBalance > minSwapCrv) {
-            address[] memory path = new address[](2);
-            path[0] = crv;
-            path[1] = underlyingAsset;
-            router.swapExactTokensForTokens(crvBalance, 0, path, address(this), block.timestamp);
-        }
-
-        // Exchange CVX <> WETH
+        // Exchange CVX <> CRV
         uint256 cvxBalance = _cvxBalance();
         if (cvxBalance > minSwapCvx) {
-            cvxWethPool.exchange(1, 0, cvxBalance, 0, false);
+            router.exactInputSingle(
+                IRouter.ExactInputSingleParams({
+                    tokenIn: _cvx(),
+                    tokenOut: _crv(),
+                    fee: 10_000, // 1%
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: cvxBalance,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
+            );
+        }
+
+        // Exchange CRV <> USDC
+        uint256 crvBalance = _crvBalance();
+        if (crvBalance > minSwapCrv) {
+            bytes memory path = abi.encodePacked(
+                _crv(),
+                uint24(3000), // CRV <> WETH 0.3%
+                weth,
+                uint24(500), // WETH <> USDC 0.005%
+                underlyingAsset
+            );
+            router.exactInput(
+                IRouter.ExactInputParams({
+                    path: path,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: crvBalance,
+                    amountOutMinimum: 0
+                })
+            );
         }
     }
 
@@ -263,8 +255,8 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 value = _lpForAmount(amountToWithdraw);
-            uint256 withdrawn = curveLpPool.calc_withdraw_one_coin(value, 1);
-            withdrawn = curveEthFrxEthPool.get_dy(1, 0, withdrawn);
+            uint256 withdrawn = _lpValue(value);
+
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
@@ -273,16 +265,25 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
+    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
+    /// @dev Some loss of precision is occured, but it is not critical as this is only an underestimation of
+    /// the actual assets, and profit will be later accounted for.
+    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
+    function _lpValue(uint256 lp) internal view override returns (uint256) {
+        if (lp == 0) return 0;
+        return curveUsdcCrvUsdPool.get_dy(1, 0, curveLendingPool.previewRedeem(lp));
+    }
+
+    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
+    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
+    function _lpForAmount(uint256 amount) internal view override returns (uint256) {
+        if (amount == 0) return 0;
+        return curveLendingPool.convertToShares(curveUsdcCrvUsdPool.get_dy(0, 1, amount));
+    }
+
     /// @notice Returns the estimated price for the strategy's Convex's LP token
     /// @return returns the estimated lp token price
-    function _lpPrice() internal view override returns (uint256) {
-        return (
-            (
-                curveLpPool.get_virtual_price()
-                    * Math.min(curveLpPool.get_dy(1, 0, 1 ether), curveLpPool.get_dy(0, 1, 1 ether))
-            ) / 1e18
-        );
-    }
+    function _lpPrice() internal view override returns (uint256) { }
 
     /// @dev returns the address of the CRV token for this context
     function _crv() internal pure override returns (address) {
@@ -293,7 +294,4 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
     function _cvx() internal pure override returns (address) {
         return cvx;
     }
-
-    //solhint-disable no-empty-blocks
-    receive() external payable { }
 }
