@@ -110,8 +110,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
                 YVAULT_USDT_POLYGON
             )
         );
-        ITransparentUpgradeableProxy proxyInit = ITransparentUpgradeableProxy(address(_proxy));
-
+        
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

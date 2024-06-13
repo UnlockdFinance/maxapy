@@ -108,8 +108,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
                 YVAULT_USDC_MAINNET
             )
         );
-        ITransparentUpgradeableProxy proxyInit = ITransparentUpgradeableProxy(address(_proxy));
-
+        
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

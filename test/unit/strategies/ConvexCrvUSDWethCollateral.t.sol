@@ -114,8 +114,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
             )
         );
 
-        ITransparentUpgradeableProxy proxyInit = ITransparentUpgradeableProxy(address(_proxy));
-
+        
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

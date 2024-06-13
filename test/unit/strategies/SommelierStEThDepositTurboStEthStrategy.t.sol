@@ -127,8 +127,7 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
                 CELLAR_STETH_MAINNET
             )
         );
-        ITransparentUpgradeableProxy proxyInit = ITransparentUpgradeableProxy(address(_proxy));
-
+        
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

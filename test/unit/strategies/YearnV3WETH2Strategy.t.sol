@@ -108,8 +108,7 @@ contract YearnV3WETH2StrategyTest is BaseTest, StrategyEvents {
                 YVAULT_WETH_MAINNET
             )
         );
-        ITransparentUpgradeableProxy proxyInit = ITransparentUpgradeableProxy(address(_proxy));
-
+        
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///
