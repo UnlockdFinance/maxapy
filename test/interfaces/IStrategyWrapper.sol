@@ -55,6 +55,10 @@ interface IStrategyWrapper is IYearnStrategy {
 
     function curveEthFrxEthPool() external view returns (address);
 
+    function curveUsdcCrvUsdPool() external view returns (address);
+
+    function curveLendingPool() external view returns (address);
+
     function cvxWethPool() external view returns (address);
 
     function cellar() external view returns (address);

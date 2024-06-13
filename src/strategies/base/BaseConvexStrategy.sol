@@ -239,7 +239,7 @@ abstract contract BaseConvexStrategy is BaseStrategy {
         assembly {
             // If current underlying balance after swapping does not match swap output expectations, revert
             if gt(minExpectedBalance, underlyingBalance) {
-                // throw the `MinExpectedBalanceNotReached` error
+                // throw the `MinExpectedBalanceAfterSwapNotReached` error
                 mstore(0x00, 0xf52187c0)
                 revert(0x1c, 0x04)
             }

@@ -11,12 +11,13 @@ import { ICurveLpPool, ICurveLendingPool } from "src/interfaces/ICurve.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-/// @title ConvexCrvUSDWethCollateral
+/// @title ConvexCrvUSDWethCollateralStrategy
 /// @author MaxApy
-/// @notice `ConvexCrvUSDWethCollateral` supplies CrvUSD into the CrvUSD(WETH Collateral) lending pool in Curve, then
+/// @notice `ConvexCrvUSDWethCollateralStrategy` supplies CrvUSD into the CrvUSD(WETH Collateral) lending pool in Curve,
+/// then
 /// stakes the curve LP
 /// in Convex in order to maximize yield.
-contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
+contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
@@ -101,11 +102,12 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
         cvx.safeApprove(address(router), type(uint256).max);
         crvUsd.safeApprove(address(curveLendingPool), type(uint256).max);
         crvUsd.safeApprove(address(curveUsdcCrvUsdPool), type(uint256).max);
+        underlyingAsset.safeApprove(address(curveUsdcCrvUsdPool), type(uint256).max);
 
         maxSingleTrade = 1000 * 1e6;
 
-        minSwapCrv = 1e17;
-        minSwapCvx = 1e18;
+        minSwapCrv = 1e14;
+        minSwapCvx = 1e14;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -254,7 +256,7 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
             }
             uint256 value = _lpForAmount(amountToWithdraw);
             uint256 withdrawn = _lpValue(value);
-            withdrawn = curveUsdcCrvUsdPool.get_dy(1, 0, withdrawn);
+
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
@@ -268,13 +270,15 @@ contract ConvexCrvUSDWethCollateral is BaseConvexStrategy {
     /// the actual assets, and profit will be later accounted for.
     /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
     function _lpValue(uint256 lp) internal view override returns (uint256) {
-        return curveLendingPool.previewRedeem(lp);
+        if (lp == 0) return 0;
+        return curveUsdcCrvUsdPool.get_dy(1, 0, curveLendingPool.previewRedeem(lp));
     }
 
     /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
     /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
     function _lpForAmount(uint256 amount) internal view override returns (uint256) {
-        return curveLendingPool.convertToShares(amount);
+        if (amount == 0) return 0;
+        return curveLendingPool.convertToShares(curveUsdcCrvUsdPool.get_dy(0, 1, amount));
     }
 
     /// @notice Returns the estimated price for the strategy's Convex's LP token
