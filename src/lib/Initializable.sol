@@ -98,7 +98,8 @@ abstract contract Initializable {
 
             if and(
                 iszero(and(eq(isTopLevelCall, 1), lt(cachedInitialized, 1))), // !(isTopLevelCall && _initialized < 1)
-                iszero(and(iszero(extcodesize(address())), eq(cachedInitialized, 1))) // !(!Address.isContract(address(this)) && _initialized == 1)
+                iszero(and(iszero(extcodesize(address())), eq(cachedInitialized, 1))) // !(!Address.isContract(address(this))
+                    // && _initialized == 1)
             ) {
                 // throw the `AlreadyInitialized` error
                 mstore(0x00, 0x0dc149f0)

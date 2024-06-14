@@ -5,65 +5,96 @@ MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault impl
 ## Contracts
 
 ```ml
-src
-├─ helpers
-    ├─ VaultTypes — "Contains data structures of the vault"
-├─ interfaces  — "Interfaces of all the contracts involved in the protocol"
-    ├─ IBalancer
-    ├─ IConvexBooster
-    ├─ IConvexRewards
-    ├─ IMaxApyVaultV2
-    ├─ IStrategy
-    ├─ IWETH
-    ├─ IWrappedToken
-    ├─ IYVault
-    ├─ ICellar
-    ├─ IConvexdETHFrxETHStrategy
-    ├─ ICurve
-    ├─ ISommelierStrategy  
-    ├─ IUniswap
-    ├─ IWrappedTokenGateway
-    ├─ IYearnStrategy
-    ├─ IStakingRewardsMulti
-    ├─ IYVaultV3
-├─ lib
-    ├─ ERC20 — "Abstract ERC20 implementation"
-    ├─ Initializable — "Base contract for proxy initialization"
-    ├─ ReentrancyGuard — "Efficient Solidity & assembly version of ReentrancyGuard"
-├─ strategies
-    ├─ base
-        ├─ BaseStrategy — "Base vault strategy implementation"
-    ├─ mainnet — "Mainent chain strategies" 
-        ├─ DAI — "DAI strategies" 
-            ├─ yearn — "Strategies interacting with Yearn Finance"
-                ├─YearnAjnaDAIStakingStrategy
-        ├─ USDC — "USDC strategies" 
-            ├─ sommelier — "Strategies interacting with Sommelier Finance"
-                ├─SommelierTurboGHOStrategy
-            ├─ yearn — "Strategies interacting with Yearn"
-                ├─YearnUSDCStrategy
-        ├─ WETH — "Wrapped Ether strategies" 
-            ├─ convex — "Strategies interacting with Convex Finance"
-                ├─ConvexdETHFrxETHStrategy 
-            ├─ sommelier — "Stratgies interacting with Sommelier Finance"
-                ├─SommelierMorphoEthMaximizerStrategy
-                ├─SommelierStEthDepositTurboStEthStrategy
-                ├─SommelierTurboStEthStrategy
-                ├─SommelierTurboSwEthStrategy
-                ├─SommelierTurboEzEthStrategy
-                ├─SommelierTurboEthXStrategy
-                ├─SommelierTurboDivEthStrategy
-            ├─ yearn — "Strategies interacting with Yearn Finance"
-                ├─YearnWETHStrategy
-                ├─YearnAjnaWETHStakingStrategy
-    ├─ polygon — "Polygon chain strategies" 
-        ├─ USDC — "USDC strategies" 
-            ├─ yearn — "Strategies interacting with Yearn Finance"
-                ├─YearnMaticUSDCStakingStrategy
-├─ MaxApyVaultV2 — "Yield farming vault"
+├── src
+│   ├── helpers
+│   │   └── VaultTypes.sol
+│   ├── interfaces
+│   │   ├── IBalancer.sol
+│   │   ├── ICellar.sol
+│   │   ├── IConvexBooster.sol
+│   │   ├── IConvexdETHFrxETHStrategy.sol
+│   │   ├── IConvexRewards.sol
+│   │   ├── ICurve.sol
+│   │   ├── IMaxApyRouter.sol
+│   │   ├── IMaxApyVault.sol
+│   │   ├── ISommelierStrategy.sol
+│   │   ├── IStakingRewardsMulti.sol
+│   │   ├── IStrategy.sol
+│   │   ├── IUniswap.sol
+│   │   ├── IWETH.sol
+│   │   ├── IWrappedTokenGateway.sol
+│   │   ├── IWrappedToken.sol
+│   │   ├── IYearnStrategy.sol
+│   │   ├── IYVault.sol
+│   │   └── IYVaultV3.sol
+│   ├── lib
+│   │   ├── ERC20.sol
+│   │   ├── Initializable.sol
+│   │   ├── OracleLibrary.sol
+│   │   └── ReentrancyGuard.sol
+│   ├── MaxApyRouter.sol
+│   ├── MaxApyVault.sol
+│   └── strategies
+│       ├── base
+│       │   ├── BaseConvexStrategy.sol
+│       │   ├── BaseSommelierStrategy.sol
+│       │   ├── BaseStrategy.sol
+│       │   ├── BaseYearnV2Strategy.sol
+│       │   └── BaseYearnV3Strategy.sol
+│       ├── mainnet
+│       │   ├── DAI
+│       │   │   └── yearn
+│       │   │       ├── YearnAjnaDAIStakingStrategy.sol
+│       │   │       └── YearnDAIStrategy.sol
+│       │   ├── USDC
+│       │   │   ├── convex
+│       │   │   │   └── ConvexCrvUSDWethCollateral.sol
+│       │   │   ├── sommelier
+│       │   │   │   └── SommelierTurboGHOStrategy.sol
+│       │   │   └── yearn
+│       │   │       ├── YearnLUSDStrategy.sol
+│       │   │       └── YearnUSDCStrategy.sol
+│       │   ├── USDT
+│       │   │   └── yearn
+│       │   │       └── YearnUSDTStrategy.sol
+│       │   └── WETH
+│       │       ├── convex
+│       │       │   └── ConvexdETHFrxETHStrategy.sol
+│       │       ├── sommelier
+│       │       │   ├── SommelierMorphoEthMaximizerStrategy.sol
+│       │       │   ├── SommelierStEthDepositTurboStEthStrategy.sol
+│       │       │   ├── SommelierTurboDivEthStrategy.sol
+│       │       │   ├── SommelierTurboEEthV2Strategy.sol
+│       │       │   ├── SommelierTurboEthXStrategy.sol
+│       │       │   ├── SommelierTurboEzEthStrategy.sol
+│       │       │   ├── SommelierTurboRsEthStrategy.sol
+│       │       │   ├── SommelierTurboStEthStrategy.sol
+│       │       │   └── SommelierTurboSwEthStrategy.sol
+│       │       └── yearn
+│       │           ├── YearnAjnaWETHStakingStrategy.sol
+│       │           ├── YearnCompoundV3WETHLenderStrategy.sol
+│       │           ├── YearnV3WETH2Strategy.sol
+│       │           ├── YearnV3WETHStrategy.sol
+│       │           └── YearnWETHStrategy.sol
+│       └── polygon
+│           ├── DAI
+│           │   └── yearn
+│           │       ├── YearnDAILenderStrategy.sol
+│           │       └── YearnDAIStrategy.sol
+│           ├── USDCe
+│           │   └── yearn
+│           │       ├── YearnAjnaUSDCStrategy.sol
+│           │       ├── YearnCompoundUSDCeLenderStrategy.sol
+│           │       ├── YearnMaticUSDCStakingStrategy.sol
+│           │       ├── YearnUSDCeLenderStrategy.sol
+│           │       └── YearnUSDCeStrategy.sol
+│           └── USDT
+│               └── yearn
+│                   └── YearnUSDTStrategy.sol
+
 ```
 
-## Install 
+## Install
 
 ```bash
 git clone https://github.com/UnlockdFinance/maxapy-v2.git
@@ -71,12 +102,12 @@ git clone https://github.com/UnlockdFinance/maxapy-v2.git
 
 ## Compile
 
-```bash
+```
 forge build
 ```
 
 ## Test
 
-```bash
+```
 forge test
 ```

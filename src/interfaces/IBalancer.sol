@@ -48,10 +48,15 @@ enum ExitKind {
     BPT_IN_FOR_EXACT_TOKENS_OUT
 }
 
-interface IAsset {}
+interface IAsset { }
 
 interface IBalancerVault {
-    function swap(SingleSwap memory singleSwap, FundManagement memory funds, uint256 limit, uint256 deadline)
+    function swap(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline
+    )
         external
         returns (uint256 amountCalculated);
     function joinPool(bytes32 poolId, address sender, address recipient, JoinPoolRequest memory request) external;
@@ -71,12 +76,22 @@ interface IBalancerStablePool {
 interface IBalancerQueries {
     function querySwap(SingleSwap memory singleSwap, FundManagement memory funds) external view returns (uint256);
 
-    function queryJoin(bytes32 poolId, address sender, address recipient, JoinPoolRequest memory request)
+    function queryJoin(
+        bytes32 poolId,
+        address sender,
+        address recipient,
+        JoinPoolRequest memory request
+    )
         external
         view
         returns (uint256 bptOut, uint256[] memory amountsIn);
 
-    function queryExit(bytes32 poolId, address sender, address recipient, ExitPoolRequest memory request)
+    function queryExit(
+        bytes32 poolId,
+        address sender,
+        address recipient,
+        ExitPoolRequest memory request
+    )
         external
         view
         returns (uint256 bptIn, uint256[] memory amountsOut);
