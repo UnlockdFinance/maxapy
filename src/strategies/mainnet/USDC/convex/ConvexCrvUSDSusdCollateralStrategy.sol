@@ -11,13 +11,13 @@ import { ICurveLpPool, ICurveLendingPool } from "src/interfaces/ICurve.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-/// @title ConvexCrvUSDWethCollateralStrategy
+/// @title ConvexCrvUSDSusdCollateralStrategy
 /// @author MaxApy
-/// @notice `ConvexCrvUSDWethCollateralStrategy` supplies CrvUSD into the CrvUSD(WETH Collateral) lending pool in Curve,
+/// @notice `ConvexCrvUSDSusdCollateralStrategy` supplies CrvUSD into the CrvUSD(sUSDE collaeral) lending pool in Curve,
 /// then
 /// stakes the curve LP
 /// in Convex in order to maximize yield.
-contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
+contract ConvexCrvUSDSusdCollateralStrategy is BaseConvexStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
@@ -34,8 +34,8 @@ contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
     address public constant crvUsd = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E;
     /// @notice Main Convex's deposit contract for LP tokens
     IConvexBooster public constant convexBooster = IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-    /// @notice Identifier for the crvUsd(WETH collateral) Convex lending pool
-    uint256 public constant CRVUSD_WETH_COLLATERAL_POOL_ID = 326;
+    /// @notice Identifier for the crvUsd(sUSD collateral) Convex lending pool
+    uint256 public constant CRVUSD_SUSD_COLLATERAL_POOL_ID = 334;
     /// @notice Uniswap V3 router
     IRouter public constant router = IRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
@@ -76,7 +76,7 @@ contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
 
         // Fetch convex pool data
         (, address _token,, address _crvRewards,, bool _shutdown) =
-            convexBooster.poolInfo(CRVUSD_WETH_COLLATERAL_POOL_ID);
+            convexBooster.poolInfo(CRVUSD_SUSD_COLLATERAL_POOL_ID);
 
         assembly {
             // Check if Convex pool is in shutdown mode
@@ -154,10 +154,10 @@ contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
             }
         }
 
-        // Deposit Curve LP into Convex pool with id `CRVUSD_WETH_COLLATERAL_POOL_ID` and immediately stake convex LP
+        // Deposit Curve LP into Convex pool with id `CRVUSD_SUSD_COLLATERAL_POOL_ID` and immediately stake convex LP
         // tokens
         // into the rewards contract
-        convexBooster.deposit(CRVUSD_WETH_COLLATERAL_POOL_ID, lpReceived, true);
+        convexBooster.deposit(CRVUSD_SUSD_COLLATERAL_POOL_ID, lpReceived, true);
 
         emit Invested(address(this), amount);
 

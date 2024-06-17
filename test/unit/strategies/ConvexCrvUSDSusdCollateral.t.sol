@@ -17,19 +17,19 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { ConvexdETHFrxETHStrategyEvents } from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
 import { ConvexPools } from "../../helpers/ConvexPools.sol";
-import { ConvexCrvUSDWethCollateralStrategyWrapper } from "../../mock/ConvexCrvUSDWethCollateralStrategyWrapper.sol";
+import { ConvexCrvUSDSusdCollateralStrategyWrapper } from "../../mock/ConvexCrvUSDSusdCollateralStrategyWrapper.sol";
 import { MockConvexBooster } from "../../mock/MockConvexBooster.sol";
 import { MockCurvePool } from "../../mock/MockCurvePool.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 
-contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents, ConvexPools {
+contract ConvexCrvUSDSusdCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents, ConvexPools {
     ////////////////////////////////////////////////////////////////
     ///                      STORAGE                             ///
     ////////////////////////////////////////////////////////////////
 
     address public TREASURY;
     IStrategyWrapper public strategy;
-    ConvexCrvUSDWethCollateralStrategyWrapper public implementation;
+    ConvexCrvUSDSusdCollateralStrategyWrapper public implementation;
     MaxApyVault public vaultDeployment;
     IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
@@ -53,7 +53,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin(users.alice);
         /// Deploy strategy implementation
-        implementation = new ConvexCrvUSDWethCollateralStrategyWrapper();
+        implementation = new ConvexCrvUSDSusdCollateralStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
@@ -67,7 +67,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
                 keepers,
                 bytes32(abi.encode("MaxApy dETH<>frxETH Strategy")),
                 users.alice,
-                0x5AE28c9197a4a6570216fC7e53E7e0221D7A0FEF,
+                0x52096539ed1391CB50C6b9e4Fd18aFd2438ED23b,
                 0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E
             )
         );
@@ -77,7 +77,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         /// Alice approves vault for deposits
         IERC20(USDC_MAINNET).approve(address(vault), type(uint256).max);
-        vm.label(0x5AE28c9197a4a6570216fC7e53E7e0221D7A0FEF, "CURVE_CRVUSD_LENDING_POOL");
+        vm.label(0x52096539ed1391CB50C6b9e4Fd18aFd2438ED23b, "CURVE_CRVUSD_LENDING_POOL");
         vm.label(0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E, "CURVE_CRVUSD_USDC_SWAP_POOL");
     }
 
@@ -86,7 +86,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                  TEST initialize()                       ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__Initialization() public {
+    function testConvexCrvUSDSusdCollateral__Initialization() public {
         /// *************** Convex Strategy initialization *************** ///
         /// Deploy MaxApyVault
         MaxApyVault _vault = new MaxApyVault(USDC_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
@@ -94,7 +94,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         /// Deploy strategy implementation
-        ConvexCrvUSDWethCollateralStrategyWrapper _implementation = new ConvexCrvUSDWethCollateralStrategyWrapper();
+        ConvexCrvUSDSusdCollateralStrategyWrapper _implementation = new ConvexCrvUSDSusdCollateralStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
@@ -109,7 +109,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
                 keepers,
                 bytes32(abi.encode("MaxApy dETH<>frxETH Strategy")),
                 users.alice,
-                0x5AE28c9197a4a6570216fC7e53E7e0221D7A0FEF,
+                0x52096539ed1391CB50C6b9e4Fd18aFd2438ED23b,
                 0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E
             )
         );
@@ -138,7 +138,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         /// Assert router is correctly set
         assertEq(_strategy.router(), 0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
-        assertEq(_strategy.curveLendingPool(), 0x5AE28c9197a4a6570216fC7e53E7e0221D7A0FEF);
+        assertEq(_strategy.curveLendingPool(), 0x52096539ed1391CB50C6b9e4Fd18aFd2438ED23b);
         assertEq(_strategy.curveUsdcCrvUsdPool(), 0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E);
         /// Assert pools are approved
         assertEq(
@@ -177,7 +177,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     //  ///                   TEST setEmergencyExit()                ///
     //  ////////////////////////////////////////////////////////////////
 
-    function testConvexCrvUSDWethCollateral__SetEmergencyExit() public {
+    function testConvexCrvUSDSusdCollateral__SetEmergencyExit() public {
         /// Test unauthorized access with a user without privileges
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -200,7 +200,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                  TEST setMaxSingleTrade()                ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__SetMaxSingleTrade() public {
+    function testConvexCrvUSDSusdCollateral__SetMaxSingleTrade() public {
         /// Test unauthorized access with a user without privileges
         vm.stopPrank();
         vm.startPrank(users.bob);
@@ -229,7 +229,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                     TEST isActive()                      ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__IsActive() public {
+    function testConvexCrvUSDSusdCollateral__IsActive() public {
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
@@ -255,7 +255,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                TEST setMinSwaps [CRV,CVX]                ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__SetMinSwaps() public {
+    function testConvexCrvUSDSusdCollateral__SetMinSwaps() public {
         // Negatives
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -277,7 +277,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     }
 
     /*==================STRATEGY CORE LOGIC TESTS==================*/
-    function testConvexCrvUSDWethCollateral__InvestmentSlippage() public {
+    function testConvexCrvUSDSusdCollateral__InvestmentSlippage() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
         /// 1. Deposit into vault
@@ -327,7 +327,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ///                   TEST _prepareReturn()                  ///
     ////////////////////////////////////////////////////////////////
 
-    function testConvexCrvUSDWethCollateral__PrepareReturn() public {
+    function testConvexCrvUSDSusdCollateral__PrepareReturn() public {
         /// ⭕️ SCENARIO 1:
         /// 1. Initial State:
         ///     - `underlyingBalance` = 40 * _1_USDC
@@ -460,7 +460,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                   TEST _adjustPosition()                 ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__AdjustPosition() public {
+    function testConvexCrvUSDSusdCollateral__AdjustPosition() public {
         /// Test if `_underlyingBalance()` is 0, no investment is performed
         strategy.adjustPosition();
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
@@ -513,7 +513,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                   TEST _invest()                         ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__Invest() public {
+    function testConvexCrvUSDSusdCollateral__Invest() public {
         /// Test if `amount` is 0, no investment is performed
         uint256 returned = strategy.invest(0, 0);
         assertEq(returned, 0);
@@ -554,7 +554,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                   TEST _divest()                         ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__Divest() public {
+    function testConvexCrvUSDSusdCollateral__Divest() public {
         /// Perform 10 ETH investment
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC });
         uint256 expectedLp = strategy.lpForAmount(10 * _1_USDC);
@@ -574,7 +574,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///               TEST _liquidatePosition()                  ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__LiquidatePosition() public {
+    function testConvexCrvUSDSusdCollateral__LiquidatePosition() public {
         /// Liquidate position where underlying balance can cover liquidation
         /// Scenario 1
 
@@ -613,7 +613,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///               TEST _liquidateAllPositions()              ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__LiquidateAllPositions() public {
+    function testConvexCrvUSDSusdCollateral__LiquidateAllPositions() public {
         uint256 snapshotId = vm.snapshot();
 
         /// Perform 10 ETH investment
@@ -658,20 +658,18 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                   TEST _unwindRewards()                  ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__UnwindRewards() public {
+    function testConvexCrvUSDSusdCollateral__UnwindRewards() public {
         /// Perform 10 ETH investment without rewards
-        deal({ token: USDC_MAINNET, to: address(strategy), give: 100 * _1_USDC });
+        deal({ token: USDC_MAINNET, to: address(strategy), give: 10_000 * _1_USDC });
         vm.expectEmit();
-        emit Invested(address(strategy), 100 * _1_USDC);
-        strategy.invest(100 * _1_USDC, 0);
+        emit Invested(address(strategy), 10_000 * _1_USDC);
+        strategy.invest(10_000 * _1_USDC, 0);
 
         strategy.unwindRewards();
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), 0);
-
+        console2.log("reward pool: ", strategy.convexRewardPool());
         /// Expect rewards in CVX, CRV
-        vm.warp(block.timestamp + 30 days);
-
-        console2.log("weth rewards : ", strategy.convexRewardPool());
+        vm.warp(block.timestamp + 100 days);
 
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), 0);
         strategy.unwindRewards();
@@ -683,7 +681,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                     TEST harvest()                       ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__Harvest() public {
+    function testConvexCrvUSDSusdCollateral__Harvest() public {
         /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, address(0), block.timestamp);
@@ -803,7 +801,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 110_007_585);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109994231);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
@@ -874,7 +872,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidate()               ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__PreviewLiquidate() public {
+    function testConvexCrvUSDSusdCollateral__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -886,7 +884,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertEq(expected, 30 * _1_USDC - loss);
     }
 
-    /*     function testConvexCrvUSDWethCollateral__PreviewLiquidate__FUZZY(uint256 amount) public {
+    /*     function testConvexCrvUSDSusdCollateral__PreviewLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 * _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
@@ -904,7 +902,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                     TEST previewLiquidateExact()        ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__PreviewLiquidateExact() public {
+    function testConvexCrvUSDSusdCollateral__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -921,7 +919,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertLe(withdrawn - 30 * _1_USDC, requestedAmount - 30 * _1_USDC);
     }
 
-    /*  function testConvexCrvUSDWethCollateral__PreviewLiquidateExact__FUZZY(uint256 amount) public {
+    /*  function testConvexCrvUSDSusdCollateral__PreviewLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 * _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
@@ -944,7 +942,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                     TEST maxLiquidateExact()                    ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__maxLiquidateExact() public {
+    function testConvexCrvUSDSusdCollateral__maxLiquidateExact() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -962,7 +960,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertLe(losses, requestedAmount - maxLiquidateExact);
     }
 
-    /*     function testConvexCrvUSDWethCollateral__maxLiquidateExact__FUZZY(uint256 amount) public {
+    /*     function testConvexCrvUSDSusdCollateral__maxLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.0001 * _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
@@ -985,7 +983,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     ////////////////////////////////////////////////////////////////
     ///                     TEST maxWithdraw()                   ///
     ////////////////////////////////////////////////////////////////
-    function testConvexCrvUSDWethCollateral__MaxLiquidate() public {
+    function testConvexCrvUSDSusdCollateral__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -999,7 +997,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertLe(withdrawn, maxWithdraw);
     }
 
-    /*     function testConvexCrvUSDWethCollateral__MaxLiquidate__FUZZY(uint256 amount) public {
+    /*     function testConvexCrvUSDSusdCollateral__MaxLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount >= 0.00001 * _1_USDC && amount <= 1000 * _1_USDC);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         deal(USDC_MAINNET, users.alice, amount * 2);
