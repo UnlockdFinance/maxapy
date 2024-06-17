@@ -7,6 +7,7 @@ import { IStrategyWrapper } from "../../../interfaces/IStrategyWrapper.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../../mock/MockERC20.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import "forge-std/console2.sol";
 
 contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     MaxApyVault vault;
@@ -27,8 +28,9 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     ////////////////////////////////////////////////////////////////
     function gain(uint256 amount) public override countCall("gain") {
         amount = bound(amount, 0, 1_000_000 ether);
-        expectedEstimatedTotalAssets = actualEstimatedTotalAssets;
+        actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         deal(address(token), address(strategy), amount);
+        expectedEstimatedTotalAssets = actualEstimatedTotalAssets;
     }
 
     function triggerLoss(uint256 amount, bool useLiquidateExact) public override countCall("triggerLoss") {
@@ -57,13 +59,15 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
         uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
-            expectedEstimatedTotalAssets = actualEstimatedTotalAssets + creditAvailable;
+            console2.log("losses");
+            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
         }
 
         if (unharvestedAmount >= 0) {
+            console2.log("gains");
             expectedEstimatedTotalAssets = actualEstimatedTotalAssets
-                + _sub0(uint256(unharvestedAmount), vault.debtOutstanding(address(strategy))) + creditAvailable;
+                + uint256(unharvestedAmount) - debtOutstanding + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
         }
         actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
