@@ -29,6 +29,7 @@ contract VaultFactory is OwnableRoles {
     constructor(address _treasury) {
         _initializeOwner(msg.sender);
         _grantRoles(msg.sender, ADMIN_ROLE);
+        _grantRoles(msg.sender, DEPLOYER_ROLE); 
         treasury = _treasury;
     }
 
@@ -52,10 +53,12 @@ contract VaultFactory is OwnableRoles {
         deployed = CREATE3.deploy(
             salt,
             abi.encodePacked(
-                type(MaxApyVault).creationCode, abi.encode(underlyingAsset, parseName(symbol), parseSymbol(symbol), treasury)
+                type(MaxApyVault).creationCode,
+                abi.encode(this.owner(),underlyingAsset, parseName(symbol), parseSymbol(symbol), treasury)
             ),
             0
         );
+
         assembly {
             // Emit `CreateVault` event
             mstore(0x00, deployed)
