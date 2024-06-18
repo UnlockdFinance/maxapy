@@ -110,7 +110,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
                 YVAULT_USDT_POLYGON
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

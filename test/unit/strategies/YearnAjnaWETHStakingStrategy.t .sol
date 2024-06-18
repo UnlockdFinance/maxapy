@@ -111,7 +111,7 @@ contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
                 YVAULT_WETH_MAINNET
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

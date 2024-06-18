@@ -107,7 +107,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
                 YVAULT_DAI_MAINNET
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

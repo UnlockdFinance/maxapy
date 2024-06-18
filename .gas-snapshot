@@ -1,0 +1,1 @@
+VaultFactoryFuzzTest:testFuzzDeployDeterministicVault(bytes32) (runs: 101, μ: 5398470, ~: 5398470)
