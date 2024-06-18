@@ -8,7 +8,7 @@ import {
 import {
     BaseSommelierStrategyHandler, BaseSommelierStrategyWrapper
 } from "./handlers/BaseSommelierStrategyHandler.t.sol";
-import { MaxApyVaultHandler, MaxApyVault } from "./handlers/MaxApyVaultHandler.t.sol";
+import { MaxApyVaultHandler, MaxApyVault, ERC4626 } from "./handlers/MaxApyVaultHandler.t.sol";
 import { SetUp } from "./helpers/SetUp.t.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import { MockCellar } from "../mock/MockCellar.sol";
@@ -43,7 +43,7 @@ contract BaseSommelierStrategyInvariants is SetUp {
 
         BaseSommelierStrategyWrapper _strategy = BaseSommelierStrategyWrapper(address(_proxy));
         vaultHandler = new MaxApyVaultHandler(vault, token);
-        BaseSommelierStrategyHandler _strategyHandler = new BaseSommelierStrategyHandler(vault, _strategy, token);
+        BaseSommelierStrategyHandler _strategyHandler = new BaseSommelierStrategyHandler(vault, _strategy, token, ERC4626(_underlyingCellar));
 
         _setUpStrategy(IStrategyWrapper(address(_strategy)), IStrategyHandler(address(_strategyHandler)));
 

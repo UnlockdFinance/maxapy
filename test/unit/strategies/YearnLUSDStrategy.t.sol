@@ -110,7 +110,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
                 YVAULT_LUSD_MAINNET
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

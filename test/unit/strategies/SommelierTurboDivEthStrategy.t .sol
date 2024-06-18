@@ -111,7 +111,7 @@ contract SommelierTurboDivEthStrategyTest is BaseTest, StrategyEvents {
                 CELLAR_BAL_MAINNET
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///

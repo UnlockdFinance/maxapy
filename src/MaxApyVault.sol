@@ -9,7 +9,6 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
 import { ERC4626, ERC20 } from "solady/tokens/ERC4626.sol";
-import "forge-std/console2.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
@@ -381,11 +380,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             totalDebt_ := sload(totalDebt.slot)
         }
 
-        console2.log("error here");
-        console2.log("totalDebt :" , totalDebt_);
         // Reduce trust in this strategy by the amount of loss, lowering the corresponding strategy debt ratio
         uint256 ratioChange = Math.min((loss * debtRatio_) / totalDebt_, strategyDebtRatio);
-        console2.log("error here");
 
         assembly {
             // Overflow checks
@@ -1547,12 +1543,10 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
 
-        console2.log("before revert");
         // If strategy suffered a loss, report it
         if (loss > 0) {
             _reportLoss(msg.sender, loss);
         }
-        console2.log("after revert");
 
         uint256 _totalFees = _assessFees(msg.sender, uint256(unrealizedGain), managementFeeReceiver);
 

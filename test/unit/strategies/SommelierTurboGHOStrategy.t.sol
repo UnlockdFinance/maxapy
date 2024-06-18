@@ -111,7 +111,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
                 CELLAR_USDC_MAINNET
             )
         );
-        
+
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         /// *************** Tests *************** ///
