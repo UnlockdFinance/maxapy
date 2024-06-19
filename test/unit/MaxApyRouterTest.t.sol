@@ -92,7 +92,7 @@ contract MaxApyRouterTest is BaseVaultTest {
 
     function testMaxApyRouter__Deposit_Permit() public {
         // Deploy the USDC vault
-        MaxApyVault maxApyVault = new MaxApyVault(USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
+        MaxApyVault maxApyVault = new MaxApyVault(address(this),USDC_MAINNET, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
         IMaxApyVault _vault = IMaxApyVault(address(maxApyVault));
         deal(USDC_MAINNET, users.bob, 1000 * _1_USDC);
         vm.startPrank(users.bob);

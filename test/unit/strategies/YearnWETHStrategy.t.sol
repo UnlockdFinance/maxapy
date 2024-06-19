@@ -43,7 +43,7 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
+        vaultDeployment = new MaxApyVault(address(this),WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -86,7 +86,7 @@ contract YearnWETHStrategyTest is BaseTest, StrategyEvents {
     function testYearnWETH__Initialization() public {
         /// *************** Yearn Strategy initialization *************** ///
         /// Deploy MaxApyVault
-        MaxApyVault _vault = new MaxApyVault(WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(address(this),WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         /// Deploy strategy implementation
