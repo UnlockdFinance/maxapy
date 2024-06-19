@@ -257,7 +257,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategy4.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
-    function testFuzzMaxApyVault___DepositAndRedeemWithoutHarvests(
+    function testFuzzMaxApyVault__DepositAndRedeemWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
         uint256 shares
@@ -298,7 +298,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
-    function testFuzzMaxApyVault___MintAndWithdrawWithoutHarvests(
+    function testFuzzMaxApyVault__MintAndWithdrawWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
         uint256 shares
