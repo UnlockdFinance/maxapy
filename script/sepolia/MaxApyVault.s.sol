@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import "forge-std/Script.sol";
+import { Script, console2 } from "forge-std/Script.sol";
 import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
@@ -16,6 +16,7 @@ import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { BaseSommelierStrategy } from "src/strategies/base/BaseSommelierStrategy.sol";
 import { MockCellar } from "test/mock/MockCellar.sol";
 import { MockWETH } from "test/mock/MockWETH.sol";
+import { VaultFactory } from "src/VaultFactory.sol";
 
 contract DeploymentScript is Script, OwnableRoles {
     ////////////////////////////////////////////////////////////////
@@ -29,6 +30,7 @@ contract DeploymentScript is Script, OwnableRoles {
     MockWETH public token;
     MockCellar public cellar;
     MaxApyRouter public router;
+    VaultFactory public vaultFactory;
 
     ////////////////////////////////////////////////////////////////
     ///                      SETUP                               ///
@@ -64,15 +66,11 @@ contract DeploymentScript is Script, OwnableRoles {
         /// Deploy router
         router = new MaxApyRouter(IWrappedToken(address(token)));
 
-        /// Deploy MaxApyVault
-        MaxApyVault vaultDeployment = new MaxApyVault(address(token), "MaxApyWETHVault", "maxWETH", treasury);
+        /// Deploy factory and MaxApyVault
+        vaultFactory = new VaultFactory(treasury);
+        address deployedVault = vaultFactory.deploy(address(token), vaultAdmin, "Max APY");
 
-        console.log("MAXAPY VAULT Deployed to : ", address(vaultDeployment));
-
-        vault = IMaxApyVault(address(vaultDeployment));
-        // grant roles
-        vault.grantRoles(vaultAdmin, vault.ADMIN_ROLE());
-        vault.grantRoles(vaultEmergencyAdmin, vault.EMERGENCY_ADMIN_ROLE());
+        vault = IMaxApyVault(address(deployedVault));
 
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin(vaultAdmin);
@@ -99,12 +97,17 @@ contract DeploymentScript is Script, OwnableRoles {
         strategy.grantRoles(strategyAdmin, strategy.ADMIN_ROLE());
         strategy.grantRoles(strategyEmergencyAdmin, strategy.EMERGENCY_ADMIN_ROLE());
 
-        console.log("MOCK STRATEGY Deployed to : ", address(strategy));
-
         // Add strategy
         vault.addStrategy(address(strategy), 6000, type(uint72).max, 0, 0);
 
+        // Remove strategy
+        vault.exitStrategy(address(strategy));
+
+        // Add it back
+        vault.addStrategy(address(strategy), 6000, type(uint72).max, 0, 0);
+
         console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
+        console2.log("[MAXAPY] Factory :", address(vaultFactory));
         console2.log("[MAXAPY] Vault :", address(vault));
         console2.log("[MAXAPY] Router:", address(router));
         console2.log("[MOCK] WETH Token:", address(token));

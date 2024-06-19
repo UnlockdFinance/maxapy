@@ -44,7 +44,7 @@ contract YearnUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(USDCE_POLYGON, "MaxApyUSDCEVault", "maxUSDCE", TREASURY);
+        vaultDeployment = new MaxApyVault(address(this), USDCE_POLYGON, "MaxApyUSDCEVault", "maxUSDCE", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -87,7 +87,7 @@ contract YearnUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
     function testYearnUSDCeLender__Initialization() public {
         /// *************** Yearn Strategy initialization *************** ///
         /// Deploy MaxApyVault
-        MaxApyVault _vault = new MaxApyVault(USDCE_POLYGON, "MaxApyUSDCEVault", "maxUSDCE", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(address(this), USDCE_POLYGON, "MaxApyUSDCEVault", "maxUSDCE", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         /// Deploy strategy implementation
