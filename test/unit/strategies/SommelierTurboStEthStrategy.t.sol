@@ -426,7 +426,6 @@ contract SommelierTurboStEthStrategyTest is BaseTest, StrategyEvents {
 
         // strategy gets 10 eth more as profit
         deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
-        
 
         vm.expectEmit();
         emit StrategyReported(address(strategy), 10 ether, 0, 0, 10 ether, 0, 40 ether, 0, 4000);

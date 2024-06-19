@@ -94,20 +94,97 @@ MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault impl
 
 ```
 
-## Install
+## Installation
 
-```bash
+### Clone the repo
+
+```sh
 git clone https://github.com/UnlockdFinance/maxapy-v2.git
 ```
 
-## Compile
+### Install the dependencies
 
+```sh
+forge soldeer update
 ```
+
+### Compile
+
+```sh
 forge build
 ```
 
-## Test
+### Set local environment variables
 
+Create a `.env` file and create the necessary environment variables following the example in `env.example`.
+
+
+## Usage
+
+To install Foundry:
+
+```sh
+curl -L https://foundry.paradigm.xyz | bash
 ```
-forge test
+
+This will download foundryup. To start Foundry, run:
+
+```sh
+foundryup
 ```
+
+
+
+## Testing
+
+To run the unit tests:
+
+```sh
+forge test --mt test
+```
+
+To run the invariant(stateful fuzz) tests:
+
+```sh
+forge test --mt invariant
+```
+
+To run the invariant(stateless fuzz) tests:
+
+```sh
+forge test --mt testFuzz
+```
+
+## Run a local simulation
+
+We created a custom suite to run and test the protocol in a mainnet local fork.This allows to interact with a mock protocol in the most realistic environment possible.
+
+Fetch the local environment variables from the dotenv file:
+
+```sh
+source .env
+```
+
+Run the local fork:
+
+```sh
+anvil --fork-url $RPC_MAINNET  --fork-block-number $FORK_BLOCK_NUMBER --accounts 10
+```
+
+**Note:** It's recommended using one of the private keys provided by anvil for testing
+
+```sh
+forge script script/local/MaxApy.s.sol:DeploymentScript --fork-url http://localhost:8545 --etherscan-api-key $ETHERSCAN_API_KEY --broadcast -vvv --legacy
+```
+
+### Interacting with the local fork
+
+Use the sh utils for easier interactions : 
+
+```sh
+./script/local/utils/setupProtocol.sh
+```
+
+## License
+
+This project is licensed under the GPL License - see the [LICENSE](LICENSE) file for details.

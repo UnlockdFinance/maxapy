@@ -528,7 +528,6 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC });
         vm.warp(block.timestamp + 1 days);
-        
 
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);

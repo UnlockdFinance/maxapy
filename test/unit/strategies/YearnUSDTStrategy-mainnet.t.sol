@@ -415,7 +415,6 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(YVAULT_USDT_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
         deal({ token: USDT_MAINNET, to: address(strategy), give: 10 * _1_USDT });
-        
 
         vm.expectEmit();
         emit StrategyReported(
