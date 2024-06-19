@@ -12,6 +12,7 @@ contract VaultFactoryFuzzTest is Test {
     MockERC20 asset;
     address treasury = makeAddr("treasury");
     address deployer = makeAddr("deployer");
+    address vaultAdmin = makeAddr("vaultAdmin");
     VaultFactory public factory;
 
     function setUp() public {
@@ -20,15 +21,24 @@ contract VaultFactoryFuzzTest is Test {
         asset = new MockERC20("Wrapped Ethereum", "WETH", 18);
     }
 
-    function testFuzzDeployDeterministicVault(bytes32 salt) public {
+    function testFuzzVaultFactory__Initialization() public {
+        assertTrue(factory.hasAnyRole(address(this), factory.ADMIN_ROLE()));
+        assertTrue(factory.hasAnyRole(address(this), factory.DEPLOYER_ROLE()));
+        assertEq(factory.owner(), address(this));
+    }
+
+    function testFuzzVaultFactory__DeployDeterministicVault(bytes32 salt) public {
         address computedAddress = factory.computeAddress(salt);
         vm.prank(deployer);
-        address deployed = factory.deploy(address(asset), salt);
+        address deployed = factory.deploy(address(asset), vaultAdmin, salt);
         IMaxApyVault deployedVault = IMaxApyVault(deployed);
         string memory expectedName = "MaxApy-WETH Vault";
         string memory expectedSymbol = "maxWETH";
         assertEq(keccak256(abi.encodePacked(expectedName)), keccak256(abi.encodePacked(deployedVault.name())));
         assertEq(keccak256(abi.encodePacked(expectedSymbol)), keccak256(abi.encodePacked(deployedVault.symbol())));
         assertEq(deployed, computedAddress);
+        assertEq(deployedVault.owner(), vaultAdmin);
+        assertTrue(deployedVault.hasAnyRole(vaultAdmin, deployedVault.ADMIN_ROLE()));
+        assertEq(deployedVault.asset(), address(asset));
     }
 }

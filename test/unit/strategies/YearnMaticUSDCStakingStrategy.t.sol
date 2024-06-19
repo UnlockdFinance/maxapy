@@ -45,7 +45,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(address(this),USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
+        vaultDeployment = new MaxApyVault(address(this), USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -90,7 +90,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
     function testYearnMaticUSDC_Staking__Initialization() public {
         /// *************** Yearn Strategy initialization *************** ///
         /// Deploy MaxApyVault
-        MaxApyVault _vault = new MaxApyVault(address(this),USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(address(this), USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         /// Deploy strategy implementation

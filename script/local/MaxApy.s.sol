@@ -112,7 +112,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         vm.startBroadcast(deployerPrivateKey);
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(address(this),WETH, "MaxApyWETHVault", "maxApy", treasury);
+        vaultDeployment = new MaxApyVault(address(this), WETH, "MaxApyWETHVault", "maxApy", treasury);
 
         vault = IMaxApyVault(address(vaultDeployment));
         // grant roles

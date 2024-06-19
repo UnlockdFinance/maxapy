@@ -26,10 +26,13 @@ contract VaultFactory is OwnableRoles {
     /// MaxApy treasury
     address public immutable treasury;
 
+    ////////////////////////////////////////////////////////////////
+    ///                         STORAGE                          ///
+    ////////////////////////////////////////////////////////////////
     constructor(address _treasury) {
         _initializeOwner(msg.sender);
         _grantRoles(msg.sender, ADMIN_ROLE);
-        _grantRoles(msg.sender, DEPLOYER_ROLE); 
+        _grantRoles(msg.sender, DEPLOYER_ROLE);
         treasury = _treasury;
     }
 
@@ -41,6 +44,7 @@ contract VaultFactory is OwnableRoles {
     /// @param salt seed hash to compute the new address from
     function deploy(
         address underlyingAsset,
+        address vaultAdmin,
         bytes32 salt
     )
         external
@@ -54,7 +58,7 @@ contract VaultFactory is OwnableRoles {
             salt,
             abi.encodePacked(
                 type(MaxApyVault).creationCode,
-                abi.encode(this.owner(),underlyingAsset, parseName(symbol), parseSymbol(symbol), treasury)
+                abi.encode(vaultAdmin, underlyingAsset, parseName(symbol), parseSymbol(symbol), treasury)
             ),
             0
         );
@@ -66,10 +70,17 @@ contract VaultFactory is OwnableRoles {
         }
     }
 
+    ////////////////////////////////////////////////////////////////
+    ///                    INTERNAL VIEW FUNCTIONS               ///
+    ////////////////////////////////////////////////////////////////
+    /// @dev return the new vault name for a given asset symbol
+    /// @param symbol underlying asset symbol
     function parseName(string memory symbol) private pure returns (string memory) {
         return string.concat(string.concat("MaxApy-", symbol), " Vault");
     }
 
+    /// @dev return the new vault symbol for a given asset symbol
+    /// @param symbol underlying asset symbol
     function parseSymbol(string memory symbol) private pure returns (string memory) {
         return string.concat("max", symbol);
     }

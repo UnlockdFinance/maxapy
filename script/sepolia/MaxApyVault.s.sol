@@ -68,12 +68,9 @@ contract DeploymentScript is Script, OwnableRoles {
 
         /// Deploy factory and MaxApyVault
         vaultFactory = new VaultFactory(treasury);
-        address deployedVault = vaultFactory.deploy(address(token), "Max APY");
+        address deployedVault = vaultFactory.deploy(address(token), vaultAdmin, "Max APY");
 
         vault = IMaxApyVault(address(deployedVault));
-        // grant roles
-        vault.grantRoles(vaultAdmin, vault.ADMIN_ROLE());
-        vault.grantRoles(vaultEmergencyAdmin, vault.EMERGENCY_ADMIN_ROLE());
 
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin(vaultAdmin);

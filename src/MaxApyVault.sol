@@ -273,7 +273,13 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         _;
     }
 
-    constructor(address admin,address underlyingAsset_, string memory name_, string memory symbol_, address _treasury) {
+    constructor(
+        address admin,
+        address underlyingAsset_,
+        string memory name_,
+        string memory symbol_,
+        address _treasury
+    ) {
         _initializeOwner(admin);
         _grantRoles(admin, ADMIN_ROLE);
         performanceFee = 1000; // 10% of reported yield (per Strategy)
