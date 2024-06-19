@@ -23,44 +23,31 @@ contract MaxApyRouterTest is BaseVaultTest {
     SigUtils internal sigUtils;
     uint256 internal bobPrivateKey;
 
-    ////////////////////////////////////////////////////////////////
-    ///                      SETUP                               ///
-    ////////////////////////////////////////////////////////////////
     function setUp() public {
         setupVault("MAINNET", WETH_MAINNET);
-        /// Deploy  MaxApy router
         MaxApyRouter _router = new MaxApyRouter(IWrappedToken(WETH_MAINNET));
         router = IMaxApyRouter(address(_router));
 
-        /// Alice approval
         IERC20(WETH_MAINNET).approve(address(router), type(uint256).max);
         vault.approve(address(router), type(uint256).max);
 
         vm.stopPrank();
-        /// Bob approval
-        /// Prepare signature tests
         sigUtils = new SigUtils(IERC20Permit(USDC_MAINNET).DOMAIN_SEPARATOR());
         bobPrivateKey = 0xA11CE;
         users.bob = payable(vm.addr(bobPrivateKey));
         vm.startPrank(users.bob);
         vault.approve(address(router), type(uint256).max);
 
-        /// Eve approval
         vm.startPrank(users.eve);
         IERC20(WETH_MAINNET).approve(address(router), type(uint256).max);
         vault.approve(address(router), type(uint256).max);
 
         vm.startPrank(users.alice);
 
-        /// Grant extra emergency admin role to alice
         vault.grantRoles(users.alice, vault.EMERGENCY_ADMIN_ROLE());
 
         vm.label(address(WETH_MAINNET), "WETH");
     }
-
-    ////////////////////////////////////////////////////////////////
-    ///                      Test deposit(                       ///
-    ////////////////////////////////////////////////////////////////
 
     function testMaxApyRouter__Deposit() public {
         uint256 shares = router.deposit(vault, 10 ether, users.alice, 1e25);
@@ -113,10 +100,6 @@ contract MaxApyRouterTest is BaseVaultTest {
         assertEq(_vault.totalDeposits(), 100 * _1_USDC);
         assertEq(_vault.totalSupply(), 1e14);
     }
-
-    ////////////////////////////////////////////////////////////////
-    ///                      Test redeem()                       ///
-    ////////////////////////////////////////////////////////////////
 
     function testMaxApyRouter__Redeem() public {
         router.deposit(vault, 10 ether, users.alice, 1e25);

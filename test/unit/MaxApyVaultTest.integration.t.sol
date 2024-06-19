@@ -34,9 +34,6 @@ import { YearnWETHStrategyWrapper } from "../mock/YearnWETHStrategyWrapper.sol";
 import { MockRevertingStrategy } from "../mock/MockRevertingStrategy.sol";
 
 contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
-    ////////////////////////////////////////////////////////////////
-    ///                    CONSTANTS                             ///
-    ////////////////////////////////////////////////////////////////
     address public constant CELLAR_WETH_MAINNET_MORPHO = 0xcf4B531b4Cde95BD35d71926e09B2b54c564F5b6;
     address public constant CELLAR_WETH_MAINNET_STETH = 0xfd6db5011b171B05E1Ea3b92f9EAcaEEb055e971;
     address public constant CELLAR_STETH_MAINNET = 0xc7372Ab5dd315606dB799246E8aA112405abAeFf;
@@ -52,18 +49,11 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
     address public TREASURY;
 
-    ////////////////////////////////////////////////////////////////
-    ///                      HELPER FUNCTION                     ///
-    ////////////////////////////////////////////////////////////////
     function _dealStEth(address give, uint256 wethIn) internal returns (uint256 stEthOut) {
         vm.deal(give, wethIn);
         stEthOut = ICurveLpPool(CURVE_POOL).exchange{ value: wethIn }(0, 1, wethIn, 0);
         IERC20(ST_ETH_MAINNET).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
     }
-
-    ////////////////////////////////////////////////////////////////
-    ///                      STORAGE                             ///
-    ////////////////////////////////////////////////////////////////
 
     IStrategyWrapper public strategy1; // yearn
     IStrategyWrapper public strategy2; // sommelier turbo steth
@@ -74,21 +64,14 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ITransparentUpgradeableProxy public proxy;
     ProxyAdmin public proxyAdmin;
 
-    ////////////////////////////////////////////////////////////////
-    ///                      SETUP                               ///
-    ////////////////////////////////////////////////////////////////
-
     function setUp() public {
         super._setUp("MAINNET");
 
         TREASURY = makeAddr("treasury");
 
-        /// Deploy MaxApyVault
-        MaxApyVault vaultDeployment =
-            new MaxApyVault(users.alice, WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
+        MaxApyVault vaultDeployment = new MaxApyVault(users.alice, WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
-        /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin(users.alice);
 
         address[] memory keepers = new address[](1);
@@ -184,7 +167,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         vm.rollFork(19_267_583);
         vm.label(address(WETH_MAINNET), "WETH");
-        /// Alice approves vault for deposits
         IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
         vm.startPrank(users.bob);
         IERC20(WETH_MAINNET).approve(address(vault), type(uint256).max);
@@ -192,19 +174,13 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.startPrank(users.alice);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                  TEST previews                           ///
-    ////////////////////////////////////////////////////////////////
-
     function testMaxApyVault_ERC4626__PreviewDeposit() public {
-        /// 1.deposit when the vault is empty
         uint256 expectedShares = vault.previewDeposit(20 ether);
         uint256 sharesReturn = vault.deposit(20 ether, users.alice);
         assertEq(sharesReturn, expectedShares);
         assertEq(vault.balanceOf(users.alice), expectedShares);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 20 ether);
 
-        /// 2. deposit when the vault has funds
         expectedShares = vault.previewDeposit(20 ether);
         sharesReturn = vault.deposit(20 ether, users.alice);
         assertEq(sharesReturn, expectedShares);
@@ -213,14 +189,12 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     }
 
     function testMaxApyVault_ERC4626__PreviewMint() public {
-        /// 1.mint when the vault is empty
         uint256 expectedAssets = vault.previewMint(20 ether);
         uint256 assetsReturn = vault.mint(20 ether, users.alice);
         assertEq(assetsReturn, expectedAssets);
         assertEq(vault.balanceOf(users.alice), 20 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), expectedAssets);
 
-        /// 2. mint when the vault has funds
         expectedAssets = vault.previewMint(20 ether);
         assetsReturn = vault.mint(20 ether, users.alice);
         assertEq(assetsReturn, expectedAssets);
@@ -229,10 +203,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     }
 
     function testMaxApyVault_ERC4626__PreviewRedeem() public {
-        /// ⭕️ SCENARIO 1: Redeem when all the funds are in the vault
-        /// - Alice deposits 20 WETH
-        /// - Bob deposits 500 WETH
-        /// - Alice and Bob redeem
         uint256 sharesAlice = vault.deposit(20 ether, users.alice);
         // other uses deposits as well
         deal(WETH_MAINNET, users.bob, 500 ether);
@@ -245,11 +215,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertEq(vault.redeem(type(uint256).max, users.alice, users.alice), vault.previewRedeem(sharesAlice));
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 2: Redeem when some funds are in strategies
-        /// - Alice deposits 20 WETH
-        /// - Bob deposits 500 WETH
-        /// - Harvest strategies so they take the vault money
-        /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, address(0), block.timestamp);
         strategy2.harvest(0, 0, address(0), block.timestamp);
@@ -268,13 +233,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 3: Redeem when some funds are in strategies and they have profits
-        /// - Alice deposits 20 WETH
-        /// - Bob deposits 500 WETH
-        /// - Harvest strategies so they take the vault money
-        /// - Strategies make profit
-        /// - Harvest again
-        /// - Alice and Bob redeem
         vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, address(0), block.timestamp);
         strategy2.harvest(0, 0, address(0), block.timestamp);
@@ -299,10 +257,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     }
 
     function testMaxApyVault_ERC4626__PreviewWithdraw() public {
-        /// ⭕️ SCENARIO 1: withdraw when all the funds are in the vault
-        /// - Alice deposits 20 WETH
-        /// - Bob deposits 5,000 WETH
-        /// - Alice and Bob withdraw
         vault.deposit(20 ether, users.alice);
         // other users deposits as well
         deal(WETH_MAINNET, users.bob, 500 ether);
@@ -332,11 +286,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 2: withdraw when some funds are in strategies
-        /// - Alice deposits 18 WETH
-        /// - Bob deposits 400 WETH
-        /// - Harvest strategies so they take the vault money
-        /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, address(0), block.timestamp);
         strategy2.harvest(0, 0, address(0), block.timestamp);
@@ -361,13 +310,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 3: withdraw when some funds are in strategies and they have profits
-        /// - Alice deposits 19 WETH
-        /// - Bob deposits 400 WETH
-        /// - Harvest strategies so they take the vault money
-        /// - Strategies make profit
-        /// - Harvest again
-        /// - Alice and Bob withdraw
         vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, address(0), block.timestamp);
         strategy2.harvest(0, 0, address(0), block.timestamp);
@@ -429,10 +371,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vm.stopPrank();
     } */
 
-    ////////////////////////////////////////////////////////////////
-    ///                  TEST redeem/withdraw max amount         ///
-    ////////////////////////////////////////////////////////////////
-
     function testMaxApyVault_ERC4626_RedeemMax() public {
         deal(WETH_MAINNET, users.alice, 500 ether);
 
@@ -472,10 +410,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.withdraw(type(uint256).max, users.alice, users.alice);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                  TEST sharePrice()                       ///
-    ////////////////////////////////////////////////////////////////
-
     function testMaxApyVault__SharePrice() external {
         vault.deposit(20 ether, users.alice);
         assertEq(vault.sharePrice(), 1 ether);
@@ -512,10 +446,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         // the share price gets back to the initial value approx
         assertApproxEq(vault.sharePrice(), 1 ether, 0.03 ether);
     }
-
-    ////////////////////////////////////////////////////////////////
-    ///                  TEST setAutoPilot()                     ///
-    ////////////////////////////////////////////////////////////////
 
     function testMaxApyVault_AutoPilot() public {
         MockRevertingStrategy revertingStrategy = new MockRevertingStrategy(address(vault), WETH_MAINNET);
@@ -561,13 +491,8 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vault.deposit(20 ether, users.bob);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                  TEST exitStrategy()                     ///
-    ////////////////////////////////////////////////////////////////
-
     function testMaxApyVault__ExitStrategy() public {
         uint256 snapshotId = vm.snapshot();
-        /// ⭕️ SCENARIO 1: exit empty strategies
 
         // Strategy 1: Yearn
         assertEq(vault.strategies(address(strategy1)).strategyDebtRatio, 2250);
@@ -630,10 +555,8 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         assertFalse(vault.withdrawalQueue(0) == address(strategy4));
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 2: exit a strategy with funds
         snapshotId = vm.snapshot();
 
-        /// Deposit and harvest funds
         vault.deposit(10 ether, users.alice);
         vm.startPrank(users.keeper);
         strategy1.harvest(0, 0, address(0), block.timestamp);
