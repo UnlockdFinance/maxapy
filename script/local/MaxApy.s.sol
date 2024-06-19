@@ -16,6 +16,7 @@ import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 import { ConvexPools } from "../../test/helpers/ConvexPools.sol";
+import  {IWrappedToken} from "src/interfaces/IWrappedToken.sol";
 
 // Convex strategies
 import { ConvexdETHFrxETHStrategyWrapper } from "../../test/mock/ConvexdETHFrxETHStrategyWrapper.sol";
@@ -99,6 +100,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
     function run() public {
         // use another private key here, dont use a keeper account for deployment
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployerAddress = vm.envAddress("DEPLOYER_ADDRESS");
         keepers.push(vm.envAddress("KEEPER1_ADDRESS"));
         keepers.push(vm.envAddress("KEEPER2_ADDRESS"));
         keepers.push(vm.envAddress("KEEPER3_ADDRESS"));
@@ -112,7 +114,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         vm.startBroadcast(deployerPrivateKey);
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(address(this), WETH, "MaxApyWETHVault", "maxApy", treasury);
+        vaultDeployment = new MaxApyVault(deployerAddress, WETH, "MaxApyWETHVault", "maxApy", treasury);
 
         vault = IMaxApyVault(address(vaultDeployment));
         // grant roles
@@ -362,5 +364,22 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         console2.log("[YEARN] WETH Strategy:", address(strategy2));
         console2.log("[SOMMELIER] (StEth deposit) Turbo StETh Strategy:", address(strategy4));
         console2.log("[SOMMELIER] Turbo StEth Strategy :", address(strategy10));
+        // Simulate setup
+        // setUpProtocol();
+    }
+
+
+    function setUpProtocol() internal {
+        IWrappedToken token = IWrappedToken(WETH);
+        token.deposit{value : 100000000000000000000}();
+        token.approve(address(vault), type(uint256).max);
+        vault.deposit(100000000000000000000, address(1));
+        vm.stopBroadcast();
+        uint256 keeperPrivateKey = vm.envUint("KEEPER1_PRIVATE_KEY");
+        vm.startBroadcast(keeperPrivateKey);
+        strategy2.harvest(0,0,address(vault), type(uint256).max);
+        strategy1.harvest(0,0,address(vault), type(uint256).max);
+        strategy10.harvest(0,0,address(vault), type(uint256).max);
+        strategy4.harvest(0,0,address(vault), type(uint256).max);
     }
 }
