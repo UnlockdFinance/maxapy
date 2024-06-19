@@ -43,7 +43,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(address(this), DAI_MAINNET, "MaxApyDAIVault", "maxDAI", TREASURY);
+        vaultDeployment = new MaxApyVault(users.alice, DAI_MAINNET, "MaxApyDAIVault", "maxDAI", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -86,7 +86,7 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
     function testYearnDAI__Initialization() public {
         /// *************** Yearn Strategy initialization *************** ///
         /// Deploy MaxApyVault
-        MaxApyVault _vault = new MaxApyVault(address(this), DAI_MAINNET, "MaxApyDAIVault", "maxDAI", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(users.alice, DAI_MAINNET, "MaxApyDAIVault", "maxDAI", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         /// Deploy strategy implementation

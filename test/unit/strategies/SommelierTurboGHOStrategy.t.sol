@@ -45,7 +45,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(address(this), USDC_MAINNET, "MaxApyUSDCVault", "maxApy", TREASURY);
+        vaultDeployment = new MaxApyVault(users.alice, USDC_MAINNET, "MaxApyUSDCVault", "maxApy", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -90,7 +90,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     function testSommelierTurboGHO__Initialization() public {
         /// *************** sommelier Strategy initialization *************** ///
         /// Deploy MaxApyVault
-        MaxApyVault _vault = new MaxApyVault(address(this), USDC_MAINNET, "MaxApyUSDCVault", "maxUSDC", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(users.alice, USDC_MAINNET, "MaxApyUSDCVault", "maxUSDC", TREASURY);
         /// Deploy transparent upgradeable proxy admin
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         /// Deploy strategy implementation

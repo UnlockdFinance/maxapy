@@ -132,7 +132,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         /// Deploy MaxApyVault
         MaxApyVault vaultDeployment =
-            new MaxApyVault(address(this), WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
+            new MaxApyVault(users.alice, WETH_MAINNET, "MaxApyWETHVault", "maxApy", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
