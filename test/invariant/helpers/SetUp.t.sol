@@ -19,7 +19,7 @@ contract SetUp is StdInvariant, Test {
     }
 
     function _setUpVault() internal {
-        vault = new MaxApyVault(address(token), "MaxApyVault", "max", address(1));
+        vault = new MaxApyVault(address(this), address(token), "MaxApyVault", "max", address(1));
         vaultHandler = new MaxApyVaultHandler(vault, token);
         targetContract(address(vaultHandler));
         bytes4[] memory selectors = vaultHandler.getEntryPoints();

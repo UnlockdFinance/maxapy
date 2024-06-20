@@ -16,15 +16,8 @@ import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 
 contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
-    ////////////////////////////////////////////////////////////////
-    ///                    CONSTANTS                             ///
-    ////////////////////////////////////////////////////////////////
     address public constant YVAULT_USDCE_POLYGON = 0xF54a15F6da443041Bb075959EA66EE47655DDFcA;
     address public TREASURY;
-
-    ////////////////////////////////////////////////////////////////
-    ///                      STORAGE                             ///
-    ////////////////////////////////////////////////////////////////
 
     IStrategyWrapper public strategy;
     YearnMaticUSDCStakingStrategyWrapper public implementation;
@@ -34,28 +27,20 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
     ProxyAdmin public proxyAdmin;
     address stakingRewards;
 
-    ////////////////////////////////////////////////////////////////
-    ///                      SETUP                               ///
-    ////////////////////////////////////////////////////////////////
-
     function setUp() public {
         super._setUp("POLYGON");
         vm.rollFork(53_869_145);
 
         TREASURY = makeAddr("treasury");
 
-        /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
+        vaultDeployment = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
-        /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin(users.alice);
-        /// Deploy strategy implementation
         implementation = new YearnMaticUSDCStakingStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
-        /// Deploy transparent upgradeable proxy
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
             address(implementation),
             address(proxyAdmin),
@@ -77,28 +62,18 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
         strategy = IStrategyWrapper(address(_proxy));
 
-        /// Alice approves vault for deposits
         IERC20(USDCE_POLYGON).approve(address(vault), type(uint256).max);
     }
 
     /*==================INITIALIZATION TESTS==================*/
 
-    ////////////////////////////////////////////////////////////////
-    ///                  TEST initialize()                       ///
-    ////////////////////////////////////////////////////////////////
-
     function testYearnMaticUSDC_Staking__Initialization() public {
-        /// *************** Yearn Strategy initialization *************** ///
-        /// Deploy MaxApyVault
-        MaxApyVault _vault = new MaxApyVault(USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
-        /// Deploy transparent upgradeable proxy admin
+        MaxApyVault _vault = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
-        /// Deploy strategy implementation
         YearnMaticUSDCStakingStrategyWrapper _implementation = new YearnMaticUSDCStakingStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
-        /// Deploy transparent upgradeable proxy
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
             address(_implementation),
             address(_proxyAdmin),
@@ -114,31 +89,17 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
-        /// *************** Tests *************** ///
-
-        /// Assert vault is set to MaxApy vault deployed in setup
         assertEq(_strategy.vault(), address(_vault));
-        /// Assert maxapy vault obtains `VAULT_ROLE`
         assertEq(_strategy.hasAnyRole(_strategy.vault(), _strategy.VAULT_ROLE()), true);
-        /// Assert underlying asset is set to USDC
         assertEq(_strategy.underlyingAsset(), USDCE_POLYGON);
-        /// Assert strategy has approved vault to transfer underlying
         assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), address(_vault)), type(uint256).max);
-        /// Assert keeper user has `KEEPER_ROLE` granted
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
-        /// Assert alice (deployer) has `ADMIN_ROLE` granted
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
-        /// Assert strategy name is correct
         assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Yearn Strategy")));
-        /// Assert underlying asset is set to YVAULT_USDCE_POLYGON
         assertEq(_strategy.yVault(), YVAULT_USDCE_POLYGON);
-        /// Assert strategy has approved yVault to transfer underlying
         assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), YVAULT_USDCE_POLYGON), type(uint256).max);
 
-        /// *************** Proxy values *************** ///
-        /// Assert proxy admin contract owner is set to deployer (alice)
         assertEq(_proxyAdmin.owner(), users.alice);
-        /// Assert proxy admin is set to the proxy admin contract
         vm.startPrank(address(_proxyAdmin));
         // assertEq(proxyInit.admin(), address(_proxyAdmin));
         vm.stopPrank();
@@ -148,22 +109,16 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
     /*==================STRATEGY CONFIGURATION TESTS==================*/
 
-    ////////////////////////////////////////////////////////////////
-    ///                   TEST setEmergencyExit()                ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__SetEmergencyExit() public {
-        /// Test unauthorized access with a user without privileges
         vm.stopPrank();
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.setEmergencyExit(2);
-        /// Test unauthorized access with a user with `VAULT_ROLE`
         vm.stopPrank();
         vm.startPrank(address(vault));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.setEmergencyExit(2);
 
-        /// Test proper emergency exit setting
         vm.stopPrank();
         vm.startPrank(users.alice);
         vm.expectEmit();
@@ -171,52 +126,39 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         strategy.setEmergencyExit(2);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                  TEST setMaxSingleTrade()                ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__SetMaxSingleTrade() public {
-        /// Test unauthorized access with a user without privileges
         vm.stopPrank();
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.setMaxSingleTrade(1 * _1_USDC);
 
-        /// Test unauthorized access with a user with `VAULT_ROLE`
         vm.stopPrank();
         vm.startPrank(address(vault));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.setMaxSingleTrade(1 * _1_USDC);
 
-        /// Test set 0 amount
         vm.stopPrank();
         vm.startPrank(users.alice);
         vm.expectRevert(abi.encodeWithSignature("InvalidZeroAmount()"));
         strategy.setMaxSingleTrade(0);
 
-        /// Test proper max single trade setting
         vm.expectEmit();
         emit MaxSingleTradeUpdated(1 * _1_USDC);
         strategy.setMaxSingleTrade(1 * _1_USDC);
         assertEq(strategy.maxSingleTrade(), 1 * _1_USDC);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                  TEST setMinSingleTrade()                ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__SetMinSingleTrade() public {
-        /// Test unauthorized access with a user without privileges
         vm.stopPrank();
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.setMinSingleTrade(1 * _1_USDC);
 
-        /// Test unauthorized access with a user with `VAULT_ROLE`
         vm.stopPrank();
         vm.startPrank(address(vault));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.setMinSingleTrade(1 * _1_USDC);
 
-        /// Test proper min single trade setting
         vm.stopPrank();
         vm.startPrank(users.alice);
         vm.expectEmit();
@@ -225,9 +167,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(strategy.minSingleTrade(), 1 * _1_USDC);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                     TEST isActive()                      ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__IsActive() public {
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
@@ -251,9 +190,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(strategy.isActive(), true);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                    TEST setStrategist()                  ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__SetStrategist() public {
         // Negatives
         vm.startPrank(users.bob);
@@ -273,13 +209,9 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
     }
 
     /*==================STRATEGY CORE LOGIC TESTS==================*/
-    ////////////////////////////////////////////////////////////////
-    ///                      TEST slippage                       ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__InvestmentSlippage() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        /// 1. Deposit into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
         vm.startPrank(users.keeper);
@@ -289,32 +221,13 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                   TEST _prepareReturn()                  ///
-    ////////////////////////////////////////////////////////////////W
     function testYearnMaticUSDC_Staking__PrepareReturn() public {
-        /// ⭕️ SCENARIO 1:
-        /// 1. Initial State:
-        ///     - `underlyingBalance` = 40 * _1_USDC
-        ///     - `totalAssets` = 40 * _1_USDC
-        ///     - `shares` = 0
-        ///     - `debt` = 40 * _1_USDC
-        /// 2. Expected outcome:
-        ///     - 2.1 Strategy has obtained profit, calculate profit.
-        ///     - 2.2 Profit is 0 (not gt `underlyingBalance`) -> skip divesting from yearn vault
-        /// 3. Expected return values:
-        ///     - `profit` -> 0
-        ///     - `loss` -> 0
-        ///     - `debtPayment` -> 1 * _1_USDC (value passed as `debtOutstanding`)
-        /// Add strategy to vault
         uint256 snapshotId = vm.snapshot();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        /// Deposit into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
-        /// Fake report to increase `strategyTotalDebt`
         strategy.mockReport(0, 0, 0, TREASURY);
 
         (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDC, 0);
@@ -325,36 +238,15 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 2:
-        /// 1. Initial State:
-        ///     - `underlyingBalance` = 40 * _1_USDC
-        ///     - `totalAssets` = around 99.999 * _1_USDC
-        ///     - `shares` = around 57.69
-        ///     - `debt` = 40 * _1_USDC
-        /// 2. Expected outcome:
-        ///     - 2.1 Strategy has obtained profit, calculate profit.
-        ///     - 2.2 Profit is around 60 USDC (it is greater than `underlyingBalance`)
-        ///            -> divest from yearn vault to obtain an extra 60 USDC
-        ///     - 2.3 `amountToWithdraw` is 60 USDC, strategy holds 40 USDC already
-        ///            -> `expectedAmountToWithdraw` is 20 USDC
-        ///     - 2.4 Divesting causes 1 wei loss
-        ///     - 2.5 `profit` >= `loss` -> profit -= loss;
-        /// 3. Expected return values:
-        ///     - `profit` -> around 60 USDC
-        ///     - `loss` -> 0
-        ///     - `debtPayment` -> 1 * _1_USDC (value passed as `debtOutstanding`)
         snapshotId = vm.snapshot();
 
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 60 * _1_USDC });
-        /// Perform initial investment in yearn from the strategy side
         strategy.invest(60 * _1_USDC, 0);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        /// Deposit into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
-        /// Fake report to increase `strategyTotalDebt`
         strategy.mockReport(0, 0, 0, TREASURY);
 
         uint256 beforeReturnSnapshotId = vm.snapshot();
@@ -382,26 +274,14 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 3:
-        /// 1. Initial State:
-        ///     - `underlyingBalance` = 30 * _1_USDC (10 USDC lost)
-        ///     - `totalAssets` = 30 * _1_USDC
-        ///     - `shares` = 0
-        ///     - `debt` = 40 * _1_USDC
-        /// 2. Expected outcome:
-        ///     - 2.1 Strategy has incurred a loss
-        ///     - 2.2 Calculate loss with `debt - totalAssets` (40 USDC - 30 USDC = 10 USDC)
         snapshotId = vm.snapshot();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        /// Deposit into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
-        /// Fake report to increase `strategyTotalDebt`
         strategy.mockReport(0, 0, 0, TREASURY);
 
-        /// Fake strategy loss of 10 USDC
         strategy.triggerLoss(10 * _1_USDC);
 
         beforeReturnSnapshotId = vm.snapshot();
@@ -422,15 +302,10 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         vm.revertTo(snapshotId);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                   TEST _adjustPosition()                 ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__AdjustPosition() public {
-        /// Test if `_underlyingBalance()` is 0, no investment is performed
         strategy.adjustPosition();
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), 0);
 
-        /// Perform 10 USDC investment
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         vm.expectEmit();
@@ -438,7 +313,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         strategy.adjustPosition();
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
-        /// Perform 100 USDC investment
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 100 * _1_USDC });
         expectedShares += strategy.sharesForAmount(100 * _1_USDC);
         vm.expectEmit();
@@ -446,7 +320,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         strategy.adjustPosition();
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
-        /// Perform 500 USDC investment
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDC });
         expectedShares += strategy.sharesForAmount(500 * _1_USDC);
         vm.expectEmit();
@@ -455,20 +328,14 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                   TEST _invest()                         ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__Invest() public {
-        /// Test if `amount` is 0, no investment is performed
         uint256 returned = strategy.invest(0, 0);
         assertEq(returned, 0);
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), 0);
 
-        /// Test if `amount` is gt `_underlyingBalance()`, NotEnoughFundsToInvest() is thrown
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFundsToInvest()"));
         returned = strategy.invest(1, 0);
 
-        /// Perform 10 USDC investment
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         vm.expectEmit();
@@ -476,7 +343,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         strategy.invest(10 * _1_USDC, 0);
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
-        /// Perform 10 USDC investment
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
         expectedShares += strategy.sharesForAmount(10 * _1_USDC);
         vm.expectEmit();
@@ -485,17 +351,12 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                   TEST _divest()                         ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__Divest() public {
-        /// Perform 10 USDC investment
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         strategy.invest(10 * _1_USDC, 0);
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
-        /// Divest
         uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         vm.expectEmit();
         emit Divested(address(strategy), expectedShares, 9_999_999);
@@ -504,82 +365,56 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///               TEST _liquidatePosition()                  ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__LiquidatePosition() public {
-        /// Liquidate position where underlying balance can cover liquidation
-        /// Scenario 1
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
         (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 * _1_USDC);
         assertEq(liquidatedAmount, 1 * _1_USDC);
         assertEq(loss, 0);
 
-        /// Scenario 2
         (liquidatedAmount, loss) = strategy.liquidatePosition(10 * _1_USDC);
         assertEq(liquidatedAmount, 10 * _1_USDC);
         assertEq(loss, 0);
 
-        /// Liquidate position where underlying balance can't cover liquidation
-        /// Scenario 1
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 5 * _1_USDC });
         strategy.invest(5 * _1_USDC, 0);
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
         (liquidatedAmount, loss) = strategy.liquidatePosition(15 * _1_USDC);
-        /// 15 * _1_USDC
         assertEq(liquidatedAmount, 14_999_999);
         assertEq(loss, 1);
 
-        /// Scenario 2
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 1000 * _1_USDC });
         strategy.invest(1000 * _1_USDC, 0);
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDC });
         (liquidatedAmount, loss) = strategy.liquidatePosition(1000 * _1_USDC);
-        /// 1000 * _1_USDC
         assertEq(liquidatedAmount, 999_999_999);
         assertEq(loss, 1);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///               TEST _liquidateAllPositions()              ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__LiquidateAllPositions() public {
-        /// Perform 10 USDC investment
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
         strategy.invest(10 * _1_USDC, 0);
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
-        /// Liquidate
         uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         uint256 amountFreed = strategy.liquidateAllPositions();
         assertEq(amountFreed, 9_999_999);
-        /// loss from divesting - 1
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + 9_999_999);
-        /// loss from divesting - 1
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), 0);
 
-        /// Perform 500 USDC investment
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDC });
         expectedShares = strategy.sharesForAmount(500 * _1_USDC);
         strategy.invest(500 * _1_USDC, 0);
         assertEq(expectedShares, IERC20(stakingRewards).balanceOf(address(strategy)));
 
-        /// Liquidate
         strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
         assertEq(amountFreed, 499_999_999);
-        /// loss from divesting - 1
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + 499_999_999);
-        /// loss from divesting - 1
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), 0);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                   TEST _unwindRewards()                  ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__UnwindRewards() public {
-        /// Perform 10 USDC investment without rewards
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 1000 * _1_USDC });
         vm.expectEmit();
         emit Invested(address(strategy), 1000 * _1_USDC);
@@ -588,7 +423,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         strategy.unwindRewards();
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
 
-        /// Expect rewards in WMATIC
         vm.warp(block.timestamp + 10 days);
 
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
@@ -597,47 +431,20 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertGt(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                     TEST harvest()                       ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__Harvest() public {
-        /// Try to harvest not being keeper
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        /// ⭕️ SCENARIO 1:
-        /// 1. Strategy performs initial harvest to request vault funds
-        /// 2. Strategy earns 10 USDC. Strategy performs second harvest to request more funds.
-        /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 USDC to vault, instead of 10 USDC
         uint256 snapshotId = vm.snapshot();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        /// Deposit into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain,
-            0,
-            0,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain
-            0,
-            /// strategy loss
-            uint128(40 * _1_USDC),
-            /// strategy total debt
-            uint128(40 * _1_USDC),
-            /// credit 40 * _1_USDC due to transferring funds from vault to strategy
-            4000
-        );
-        /// debtratio not changed
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDC), uint128(40 * _1_USDC), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
@@ -647,79 +454,33 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
-        /// 2. Strategy takes 10 USDC profit
-
-        /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
 
         vm.expectEmit();
         emit StrategyReported(
-            address(strategy),
-            10 * _1_USDC,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain - 10 USD
-            uint128(10 * _1_USDC),
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            uint128(40 * _1_USDC),
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
-            0,
-            4000
+            address(strategy), 10 * _1_USDC, 0, 0, uint128(10 * _1_USDC), 0, uint128(40 * _1_USDC), 0, 4000
         );
-        /// debtratio not changed
 
         vm.expectEmit();
         emit Harvested(10 * _1_USDC, 0, 0, 0);
-        /// dont report any profit
         strategy.harvest(0, 0, address(0), block.timestamp);
-        /// vault balance doesnt increase at all
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC);
-        /// the strategy reinvests all the profit
         uint256 shares = strategy.sharesForAmount(10 * _1_USDC);
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), expectedStrategyShareBalance + shares);
 
         vm.revertTo(snapshotId);
         snapshotId = vm.snapshot();
 
-        /// ⭕️ SCENARIO 2:
-        /// 1. Strategy performs initial harvest to request vault funds
-        /// 2. Emergency exit is activated
-        /// 2. Strategy earns 10 USDC. Strategy performs second harvest to request more funds.
-        /// Due to emergency mode, all funds are returned back to vault
         vm.startPrank(users.alice);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        /// Deposit into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
-        /// Step #1
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain,
-            0,
-            0,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain
-            0,
-            /// strategy loss
-            uint128(40 * _1_USDC),
-            /// strategy total debt
-            uint128(40 * _1_USDC),
-            /// credit 40 * _1_USDC due to transferring funds from vault to strategy
-            4000
-        );
-        /// debtratio not changed
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDC), uint128(40 * _1_USDC), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
@@ -730,37 +491,15 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
-        /// Step #2
         vm.startPrank(users.alice);
         strategy.setEmergencyExit(2);
 
-        /// Step #3
         vm.startPrank(users.keeper);
 
-        /// Fake gains in strategy (10 USDC = 40 USDC transferred previously + 10 USDC gains)
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain - all of strategy's funds (40 initial USD + 9.999999 USD gain)
-            0,
-            /// vault gain - all of strategy's funds (40 initial USD + 9.999999 USD gain)
-            0,
-            /// vault loss
-            40 * _1_USDC,
-            /// vault debtPayment
-            uint128(0),
-            /// strategy gain - 9.99999 USD
-            0,
-            /// strategy loss
-            0,
-            /// strategy total debt: not changing now
-            0,
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
-            4000
-        );
-        /// debtratio not changed
+        emit StrategyReported(address(strategy), 0, 0, 40 * _1_USDC, uint128(0), 0, 0, 0, 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 49_999_999, 0);
@@ -771,39 +510,16 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
         vm.revertTo(snapshotId);
 
-        /// ⭕️ SCENARIO 3:
-        /// 1. Strategy performs initial harvest to request vault funds
-        /// 2. Strategy loses 10 USDC. Strategy performs second harvest and its debt ratio gets reduced
-        /// Dust in `_shareBalance()` makes it compulsory to transfer 9.99 USDC to vault, instead of 10 USDC
         vm.startPrank(users.alice);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        /// Deposit into vault
         vault.deposit(100 * _1_USDC, users.alice);
 
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            /// vault gain,
-            0,
-            0,
-            /// vault loss
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain
-            0,
-            /// strategy loss
-            uint128(40 * _1_USDC),
-            /// strategy total debt
-            uint128(40 * _1_USDC),
-            /// credit 40 * _1_USDC due to transferring funds from vault to strategy
-            4000
-        );
-        /// debtratio not changed
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDC), uint128(40 * _1_USDC), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
@@ -813,11 +529,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(stakingRewards).balanceOf(address(strategy)), expectedStrategyShareBalance);
 
-        /// 2. Strategy loses 10 USDC
-        /// - Expected a 1000 reduction in debt ratio, 30% of total funds should be in the strategy
-        /// - Total funds are now 90 USDC, 30% of which must be in strategy
-        /// - 30% of 90 USDC = 27 USDC, but strategy still has 30 USDC -> there is a debt outstanding of 3 USDC
-        /// Fake loss in strategy
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC) + 1;
         strategy.divest(expectedShares);
         vm.startPrank(address(strategy));
@@ -826,30 +537,11 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
         vm.expectEmit();
         emit StrategyReported(
-            address(strategy),
-            /// vault gain,
-            0,
-            10 * _1_USDC + 1,
-            /// vault loss - 10 * _1_USDC
-            0,
-            /// vault debtPayment
-            0,
-            /// strategy gain
-            uint128(10 * _1_USDC + 1),
-            /// strategy loss - 10 USDC
-            uint128(30 * _1_USDC - 1),
-            /// strategy total debt: 10 USDC less than initial debt
-            0,
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
-            3000
+            address(strategy), 0, 10 * _1_USDC + 1, 0, 0, uint128(10 * _1_USDC + 1), uint128(30 * _1_USDC - 1), 0, 3000
         );
-        /// debtratio reduced
 
         vm.expectEmit();
         emit Harvested(0, 10 * _1_USDC + 1, 0, 3 * _1_USDC);
-        /// 10 USDC loss
-        /// if we request to harvest only 30% of profit it wont have any effect neither,
-        /// since the strategy has loses only
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         StrategyData memory data = vault.strategies(address(strategy));
@@ -862,29 +554,11 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit StrategyReported(
-            address(strategy),
-            /// vault gain,
-            0,
-            1,
-            /// vault loss - 1 wei. This is due to the fact that strategy had to withdraw 3 USDC from yearn (totalDebt
-            /// should be 27 USDC but was 30 USDC), causing 1 wei loss
-            3 * _1_USDC - 1,
-            /// vault debtPayment (3 USDC - 1 wei loss)
-            0,
-            /// strategy gain
-            uint128(10 * _1_USDC + 2),
-            /// strategy loss - 10 USDC previously lost + 1 wei loss
-            uint128(27 * _1_USDC - 1),
-            /// strategy total debt: 27 USDC, back to regular values
-            0,
-            /// credit 0 * _1_USDC due to transferring funds from strategy to vault
-            3000
+            address(strategy), 0, 1, 3 * _1_USDC - 1, 0, uint128(10 * _1_USDC + 2), uint128(27 * _1_USDC - 1), 0, 3000
         );
-        /// debtratio: 30% of funds shared with strategy
 
         vm.expectEmit();
         emit Harvested(0, 1, 3 * _1_USDC - 1, 0);
-        /// 10 USDC loss
 
         uint256 vaultBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(stakingRewards).balanceOf(address(strategy));
@@ -903,9 +577,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertLe(IERC20(stakingRewards).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease);
     }
 
-    ////////////////////////////////////////////////////////////////
-    ///                     TEST previewLiquidate()               ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
@@ -934,9 +605,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(expected, amount - loss);
     } */
 
-    ////////////////////////////////////////////////////////////////
-    ///                     TEST previewLiquidateExact()        ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
@@ -973,9 +641,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertLe(losses , requestedAmount - amount);
     } */
 
-    ////////////////////////////////////////////////////////////////
-    ///                     TEST maxLiquidateExact()                    ///
-    ////////////////////////////////////////////////////////////////
     function testYearnMaticUSDC_Staking__maxLiquidateExact() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
@@ -1014,9 +679,6 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertLe(losses, requestedAmount - maxLiquidateExact);
     }
     */
-    ////////////////////////////////////////////////////////////////
-    ///                     TEST maxWithdraw()                   ///
-    ////////////////////////////////////////////////////////////////
 
     function testYearnMaticUSDC_Staking__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);

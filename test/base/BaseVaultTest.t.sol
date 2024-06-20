@@ -30,7 +30,7 @@ contract BaseVaultTest is BaseTest, MaxApyVaultEvents {
         super._setUp(chain);
         /// Fork mode activated
         TREASURY = makeAddr("treasury");
-        MaxApyVault maxApyVault = new MaxApyVault(asset, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
+        MaxApyVault maxApyVault = new MaxApyVault(users.alice, asset, "MaxApyVaultUSDC", "maxUSDCv2", TREASURY);
         vault = IMaxApyVault(address(maxApyVault));
     }
 
