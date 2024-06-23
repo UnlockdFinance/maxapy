@@ -43,7 +43,8 @@ contract BaseSommelierStrategyInvariants is SetUp {
 
         BaseSommelierStrategyWrapper _strategy = BaseSommelierStrategyWrapper(address(_proxy));
         vaultHandler = new MaxApyVaultHandler(vault, token);
-        BaseSommelierStrategyHandler _strategyHandler = new BaseSommelierStrategyHandler(vault, _strategy, token, ERC4626(_underlyingCellar));
+        BaseSommelierStrategyHandler _strategyHandler =
+            new BaseSommelierStrategyHandler(vault, _strategy, token, ERC4626(_underlyingCellar));
 
         _setUpStrategy(IStrategyWrapper(address(_strategy)), IStrategyHandler(address(_strategyHandler)));
 
@@ -57,7 +58,7 @@ contract BaseSommelierStrategyInvariants is SetUp {
         vm.label(address(strategyHandler), "BSH");
     }
 
-    function invariantBaseSommelierStrategy_vaultAccounting() public {
+    function invariantBaseSommelierStrategy__VaultAccounting() public {
         vaultHandler.INVARIANT_A_SHARE_PREVIEWS();
         vaultHandler.INVARIANT_B_ASSET_PREVIEWS();
     }

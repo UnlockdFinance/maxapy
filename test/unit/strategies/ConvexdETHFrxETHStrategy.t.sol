@@ -22,6 +22,7 @@ import { ConvexdETHFrxETHStrategyWrapper } from "../../mock/ConvexdETHFrxETHStra
 import { MockConvexBooster } from "../../mock/MockConvexBooster.sol";
 import { MockCurvePool } from "../../mock/MockCurvePool.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { WETH_MAINNET } from "test/helpers/Tokens.sol";
 
 contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents, ConvexPools {
     IERC20 public constant crv = IERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);

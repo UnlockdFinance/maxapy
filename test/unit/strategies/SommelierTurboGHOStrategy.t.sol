@@ -16,6 +16,7 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { SommelierTurboGHOStrategy } from "src/strategies/mainnet/USDC/sommelier/SommelierTurboGHOStrategy.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { USDC_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
 
 contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
     address public constant CELLAR_USDC_MAINNET = 0x0C190DEd9Be5f512Bd72827bdaD4003e9Cc7975C;

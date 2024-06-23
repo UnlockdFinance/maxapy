@@ -16,6 +16,7 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { SommelierTurboEthXStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboEthXStrategy.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { WETH_MAINNET } from "test/helpers/Tokens.sol";
 
 contract SommelierTurboEthXStrategyTest is BaseTest, StrategyEvents {
     address public constant CELLAR_WETH_MAINNET = 0x19B8D8FC682fC56FbB42653F68c7d48Dd3fe597E;

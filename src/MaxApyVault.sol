@@ -1298,9 +1298,14 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                totalDebt = _sub0(totalDebt, withdrawn);
+                // If the strategy has unharvested profit we could end up withdrawing more than its debt
+                // Then we will only decrease his debt by the strategy's debt
+                uint256 debtReduction = Math.min(strategies[strategy].strategyTotalDebt, withdrawn);
+                unchecked {
+                    totalDebt = totalDebt - debtReduction;
+                }
 
-                uint128 strategyTotalDebt = uint128(_sub0(strategies[strategy].strategyTotalDebt, withdrawn));
+                uint128 strategyTotalDebt = uint128(strategies[strategy].strategyTotalDebt - debtReduction);
 
                 strategies[strategy].strategyTotalDebt = strategyTotalDebt;
 
@@ -1451,9 +1456,14 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                totalDebt = _sub0(totalDebt, withdrawn);
+                // If the strategy has unharvested profit we could end up withdrawing more than its debt
+                // Then we will only decrease his debt by the strategy's debt
+                uint256 debtReduction = Math.min(strategies[strategy].strategyTotalDebt, withdrawn);
+                unchecked {
+                    totalDebt = totalDebt - debtReduction;
+                }
 
-                uint128 strategyTotalDebt = uint128(_sub0(strategies[strategy].strategyTotalDebt, withdrawn));
+                uint128 strategyTotalDebt = uint128(strategies[strategy].strategyTotalDebt - debtReduction);
 
                 strategies[strategy].strategyTotalDebt = strategyTotalDebt;
 

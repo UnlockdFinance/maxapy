@@ -12,10 +12,11 @@ import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { StrategyEvents } from "../helpers/StrategyEvents.sol";
+import { StrategyEvents } from "test/helpers/StrategyEvents.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
-import { ConvexPools } from "../helpers/ConvexPools.sol";
+import { ConvexPools } from "test/helpers/ConvexPools.sol";
+import { WETH_MAINNET, ST_ETH_MAINNET } from "test/helpers/Tokens.sol";
 
 // Convex
 import { ConvexdETHFrxETHStrategyWrapper } from "../mock/ConvexdETHFrxETHStrategyWrapper.sol";

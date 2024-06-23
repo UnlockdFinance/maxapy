@@ -24,9 +24,9 @@ abstract contract BaseStrategyHandler is BaseHandler {
     ////////////////////////////////////////////////////////////////
     function getEntryPoints() public pure override returns (bytes4[] memory) {
         bytes4[] memory _entryPoints = new bytes4[](2);
-        _entryPoints[0] = this.gain.selector;
-        _entryPoints[1] = this.harvest.selector;
-        // _entryPoints[2] = this.triggerLoss.selector;
+        _entryPoints[0] = this.harvest.selector;
+        _entryPoints[1] = this.gain.selector;
+        //_entryPoints[2] = this.triggerLoss.selector;
         return _entryPoints;
     }
 

@@ -14,6 +14,7 @@ import { YearnV3WETHStrategyWrapper } from "../../mock/YearnV3WETHStrategyWrappe
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { WETH_MAINNET } from "test/helpers/Tokens.sol";
 
 contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
     address public constant YVAULT_WETH_MAINNET = 0xc56413869c6CDf96496f2b1eF801fEDBdFA7dDB0;

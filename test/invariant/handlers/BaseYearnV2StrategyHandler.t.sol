@@ -7,6 +7,7 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { BaseStrategyHandler } from "./base/BaseStrategyHandler.t.sol";
+import "forge-std/console2.sol";
 
 contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
     MaxApyVault vault;
@@ -29,7 +30,7 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
         if (currentActor == address(0)) return; // for some reason this caused bugs
         amount = bound(amount, 0, 1000 ether);
         deal(address(token), address(strategy), amount);
-        strategy.harvest(0, 0, address(0), block.timestamp);
+        // strategy.harvest(0, 0, address(0), block.timestamp);
     }
 
     function triggerLoss(uint256 amount, bool useLiquidateExact) public override countCall("triggerLoss") {
@@ -55,21 +56,18 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
     }
 
     function harvest() public override countCall("harvest") {
+        uint256 creditAvailable = vault.creditAvailable(address(strategy));
+        uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
-            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets();
+            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
-        if (unharvestedAmount > 0) {
-            expectedEstimatedTotalAssets = _sub0(
-                _sub0(
-                    strategy.estimatedTotalAssets() + uint256(strategy.unharvestedAmount()),
-                    vault.debtOutstanding(address(strategy))
-                ),
-                vault.debtOutstanding(address(strategy))
-            );
+        if (unharvestedAmount >= 0) {
+            expectedEstimatedTotalAssets =
+                strategy.estimatedTotalAssets() + uint256(unharvestedAmount) - debtOutstanding + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }

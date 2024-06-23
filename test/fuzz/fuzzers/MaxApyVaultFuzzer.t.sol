@@ -13,9 +13,15 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
     IMaxApyVault vault;
     address token;
 
+    bytes4[] funcs;
+
     constructor(IMaxApyVault _vault, address _token) {
         vault = _vault;
         token = _token;
+        funcs.push(this.deposit.selector);
+        funcs.push(this.mint.selector);
+        funcs.push(this.redeem.selector);
+        funcs.push(this.withdraw.selector);
     }
 
     function deposit(uint256 assets) public createActor {
@@ -42,7 +48,7 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
         vm.stopPrank();
     }
 
-    function redeem(LibPRNG.PRNG memory actorSeedRng, uint256 shares) public useActor(actorSeedRng.next()) {
+    function redeem(LibPRNG.PRNG memory actorSeedRNG, uint256 shares) public useActor(actorSeedRNG.next()) {
         shares = bound(shares, 0, vault.maxRedeem(currentActor));
         uint256 expectedAssets = vault.previewRedeem(shares);
         vm.startPrank(currentActor);
@@ -52,7 +58,7 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
         vm.stopPrank();
     }
 
-    function withdraw(LibPRNG.PRNG memory actorSeedRng, uint256 assets) public useActor(actorSeedRng.next()) {
+    function withdraw(LibPRNG.PRNG memory actorSeedRNG, uint256 assets) public useActor(actorSeedRNG.next()) {
         assets = bound(assets, 0, vault.maxWithdraw(currentActor));
         uint256 expectedShares = vault.previewWithdraw(assets);
         vm.startPrank(currentActor);
@@ -62,5 +68,25 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
         vm.stopPrank();
     }
 
-    function rand(uint256 functionSeed) public { }
+    function rand(
+        LibPRNG.PRNG memory actorSeedRNG,
+        LibPRNG.PRNG memory functionSeedRNG,
+        LibPRNG.PRNG memory argumentsSeedRNG
+    )
+        public
+    {
+        bytes4 selector = funcs[functionSeedRNG.next() % funcs.length];
+        if (selector == this.deposit.selector) {
+            this.deposit(argumentsSeedRNG.next());
+        }
+        if (selector == this.mint.selector) {
+            this.mint(argumentsSeedRNG.next());
+        }
+        if (selector == this.redeem.selector) {
+            this.redeem(actorSeedRNG, argumentsSeedRNG.next());
+        }
+        if (selector == this.withdraw.selector) {
+            this.withdraw(actorSeedRNG, argumentsSeedRNG.next());
+        }
+    }
 }

@@ -5,9 +5,9 @@ import { Test, console2, Vm } from "forge-std/Test.sol";
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { Utilities } from "../utils/Utilities.sol";
-import { Tokens } from "../helpers/Tokens.sol";
+import { getTokensList } from "../helpers/Tokens.sol";
 
-contract BaseTest is Tokens, Test {
+contract BaseTest is Test {
     /*//////////////////////////////////////////////////////////////////////////
                                     STRUCTS
     //////////////////////////////////////////////////////////////////////////*/

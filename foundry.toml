@@ -17,7 +17,7 @@ include_push_bytes = true
 extra_output = ["storageLayout", "metadata"]
 
 [invariant]
-runs = 128
+runs = 256
 depth = 16
 fail_on_revert = true
 

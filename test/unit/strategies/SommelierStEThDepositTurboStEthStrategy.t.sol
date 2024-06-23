@@ -19,6 +19,7 @@ import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { SommelierTurboStEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { WETH_MAINNET, ST_ETH_MAINNET } from "test/helpers/Tokens.sol";
 
 contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents {
     address public constant CELLAR_STETH_MAINNET = 0xc7372Ab5dd315606dB799246E8aA112405abAeFf;

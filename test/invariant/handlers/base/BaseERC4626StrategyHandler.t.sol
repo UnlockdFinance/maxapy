@@ -7,7 +7,6 @@ import { IStrategyWrapper } from "../../../interfaces/IStrategyWrapper.sol";
 import { MaxApyVault, ERC4626 } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../../mock/MockERC20.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import "forge-std/console2.sol";
 
 contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     MaxApyVault vault;
@@ -29,12 +28,10 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     ///                      ENTRY POINTS                        ///
     ////////////////////////////////////////////////////////////////
     function gain(uint256 amount) public override countCall("gain") {
+        uint256 creditAvailable = vault.creditAvailable(address(strategy));
         int256 unharvestedAmount = strategy.unharvestedAmount();
         amount = bound(amount, 0, 1_000_000 ether);
-        deal(address(token), address(strategy), amount);
-        expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + (unharvestedAmount > 0 ? uint256(strategy.unharvestedAmount()): 0) + amount;
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
+        token.mint(address(strategy), amount);
     }
 
     function triggerLoss(uint256 amount, bool useLiquidateExact) public override countCall("triggerLoss") {
@@ -63,19 +60,17 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
         uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
-            console2.log("losses");
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
+            actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
         if (unharvestedAmount >= 0) {
-            console2.log("gains");
-            console2.log("Profit : ", uint256(unharvestedAmount));
             expectedEstimatedTotalAssets =
-                actualEstimatedTotalAssets + uint256(unharvestedAmount) - debtOutstanding + creditAvailable;
+                strategy.estimatedTotalAssets() + uint256(unharvestedAmount) - debtOutstanding + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
+            actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
-        actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
     }
 
     ////////////////////////////////////////////////////////////////

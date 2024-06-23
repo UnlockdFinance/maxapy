@@ -34,6 +34,7 @@ contract MockRevertingStrategy {
         uint256 deadline
     )
         external
+        pure
     {
         revert HarvestFailed();
     }

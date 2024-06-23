@@ -14,6 +14,7 @@ import { YearnUSDCStrategyWrapper } from "../../mock/YearnUSDCStrategyWrapper.so
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { USDC_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
 
 contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
     address public constant YVAULT_USDC_MAINNET = 0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE;

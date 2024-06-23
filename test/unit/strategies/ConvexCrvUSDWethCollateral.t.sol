@@ -21,6 +21,7 @@ import { ConvexCrvUSDWethCollateralStrategyWrapper } from "../../mock/ConvexCrvU
 import { MockConvexBooster } from "../../mock/MockConvexBooster.sol";
 import { MockCurvePool } from "../../mock/MockCurvePool.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { USDC_MAINNET, CRV_MAINNET, CVX_MAINNET, WETH_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
 
 contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents, ConvexPools {
     address public TREASURY;
