@@ -7,7 +7,6 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { BaseStrategyHandler } from "./base/BaseStrategyHandler.t.sol";
-import "forge-std/console2.sol";
 
 contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
     MaxApyVault vault;
@@ -34,13 +33,15 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
 
     function triggerLoss(uint256 amount) public override countCall("triggerLoss") {
         int256 unharvestedAmount = strategy.unharvestedAmount();
-        amount = bound(amount, 0, strategy.estimatedTotalAssets());
+        amount = bound(amount, 0, strategy.estimatedTotalAssets() * 99 / 100);
         if (amount == 0) return;
 
-        if (amount < uint256(unharvestedAmount)) {
+        if (unharvestedAmount >= 0 && amount < uint256(unharvestedAmount)) {
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets();
-        } else {
+        } else if (unharvestedAmount >= 0 && amount >= uint256(unharvestedAmount)) {
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + uint256(unharvestedAmount) - amount;
+        } else if (unharvestedAmount < 0) {
+            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() - amount;
         }
 
         strategy.triggerLoss(amount);
@@ -48,18 +49,19 @@ contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
     }
 
     function harvest() public override countCall("harvest") {
-        uint256 creditAvailable = vault.creditAvailable(address(strategy));
         uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
+            uint256 creditAvailable = _creditAvailableAfterLoss(vault, address(strategy), uint256(-unharvestedAmount));
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
         if (unharvestedAmount >= 0) {
-            expectedEstimatedTotalAssets =
-                strategy.estimatedTotalAssets() + uint256(unharvestedAmount) - debtOutstanding + creditAvailable;
+            uint256 creditAvailable = vault.creditAvailable(address(strategy));
+            expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + uint256(unharvestedAmount)
+                + creditAvailable - Math.min(debtOutstanding, strategy.estimatedTotalAssets() + uint256(unharvestedAmount));
             strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }

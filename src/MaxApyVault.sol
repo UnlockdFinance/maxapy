@@ -9,6 +9,7 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
 import { ERC4626, ERC20 } from "solady/tokens/ERC4626.sol";
+import "forge-std/console2.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
@@ -438,7 +439,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             slot2Content :=
                 or(
                     shl(128, strategyTotalLoss),
-                    shr(128, shl(128, sub(strategyTotalDebt, loss))) // Compute strategies[strategy].strategyTotalDebt -=
+                    shr(128, shl(128, sub(strategyTotalDebt, loss))) // Compute strategies[strategy].strategyTotalDebt
+                        // -=
                         // loss;
                 )
 

@@ -7,7 +7,6 @@ import { IStrategyWrapper } from "../../../interfaces/IStrategyWrapper.sol";
 import { MaxApyVault, ERC4626 } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../../mock/MockERC20.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import "forge-std/console2.sol";
 
 contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     MaxApyVault vault;
@@ -52,18 +51,17 @@ contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     }
 
     function harvest() public override countCall("harvest") {
-        uint256 creditAvailable = vault.creditAvailable(address(strategy));
         uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) {
-            console2.log("harvest with losses");
+            uint256 creditAvailable = _creditAvailableAfterLoss(vault, address(strategy), uint256(-unharvestedAmount));
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + creditAvailable;
             strategy.harvest(0, 0, address(0), block.timestamp);
             actualEstimatedTotalAssets = strategy.estimatedTotalAssets();
         }
 
         if (unharvestedAmount >= 0) {
-            console2.log("harvest with gains");
+            uint256 creditAvailable = vault.creditAvailable(address(strategy));
             expectedEstimatedTotalAssets = strategy.estimatedTotalAssets() + uint256(unharvestedAmount)
                 + creditAvailable - Math.min(debtOutstanding, strategy.estimatedTotalAssets() + uint256(unharvestedAmount));
             strategy.harvest(0, 0, address(0), block.timestamp);
