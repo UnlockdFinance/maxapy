@@ -386,8 +386,11 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             totalDebt_ := sload(totalDebt.slot)
         }
 
-        // Reduce trust in this strategy by the amount of loss, lowering the corresponding strategy debt ratio
-        uint256 ratioChange = Math.min((loss * debtRatio_) / totalDebt_, strategyDebtRatio);
+        uint256 ratioChange;
+        if (totalDebt_ > 0) {
+            // Reduce trust in this strategy by the amount of loss, lowering the corresponding strategy debt ratio
+            ratioChange = Math.min((loss * debtRatio_) / totalDebt_, strategyDebtRatio);
+        }
 
         assembly {
             // Overflow checks
