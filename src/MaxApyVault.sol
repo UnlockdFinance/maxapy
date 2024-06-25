@@ -882,9 +882,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 totalSupply = totalSupply();
         // prevent division by zero
         if (totalSupply == 0) return 0;
-        maxAssets = Math.min(
-            super.maxWithdraw(owner), _sub0(Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply), 1)
-        );
+        maxAssets =
+            Math.min(super.maxWithdraw(owner), Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply));
     }
 
     /// @notice Returns the estimate price of 1 vault share
@@ -1221,7 +1220,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         address underlying = asset();
 
         uint256 vaultBalance = totalIdle;
-
         // Check if value to withdraw exceeds vault balance
         if (assets > vaultBalance) {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
@@ -1256,7 +1254,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     // amountRequested = assets - vaultBalance;
                     amountRequested := sub(assets, vaultBalance)
                 }
-
                 // ask for the min between the needed amount and max withdraw of the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
 
@@ -1350,7 +1347,21 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         _burn(owner, shares);
 
         // Reduce value withdrawn from vault total idle
-        totalIdle -= assets;
+        if (assets > totalIdle) {
+            assets = totalIdle;
+        }
+
+        assembly ("memory-safe") {
+            if iszero(assets) {
+                // throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
+            }
+        }
+
+        unchecked {
+            totalIdle -= assets;
+        }
 
         // Transfer underlying to `recipient`
         SafeTransferLib.safeTransfer(underlying, to, assets);
@@ -1506,7 +1517,13 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         _burn(owner, shares);
 
         // Reduce value withdrawn from vault total idle
-        totalIdle -= assets;
+        if (assets > totalIdle) {
+            revert();
+        }
+        unchecked {
+            totalIdle -= assets;
+        }
+
         // Transfer underlying to `recipient`
         SafeTransferLib.safeTransfer(underlying, to, assets);
 

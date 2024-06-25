@@ -264,7 +264,9 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             }
             uint256 value = _lpForAmount(amountToWithdraw);
             uint256 withdrawn = curveLpPool.calc_withdraw_one_coin(value, 1);
-            withdrawn = curveEthFrxEthPool.get_dy(1, 0, withdrawn);
+            if (withdrawn != 0) {
+                withdrawn = curveEthFrxEthPool.get_dy(1, 0, withdrawn);
+            }
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;

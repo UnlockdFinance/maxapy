@@ -8,7 +8,6 @@ import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
 import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { ICurveLpPool, ICurveLendingPool } from "src/interfaces/ICurve.sol";
-
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title ConvexCrvUSDWethCollateralStrategy

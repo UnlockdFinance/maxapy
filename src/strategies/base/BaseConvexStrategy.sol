@@ -398,6 +398,8 @@ abstract contract BaseConvexStrategy is BaseStrategy {
                 if gt(lp, staked) { lp := staked }
             }
 
+            if (lp == 0) return (0, amountNeeded);
+
             uint256 withdrawn = _divest(lp);
 
             assembly {
