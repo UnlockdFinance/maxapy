@@ -52,11 +52,16 @@ contract StrategyFuzzer is BaseFuzzer {
 
     function gain(LibPRNG.PRNG memory strategySeedRNG, uint256 amount) public returnIfNoStrats {
         address strat = strats.rand(strategySeedRNG.next());
+        amount = bound(amount, 0, 1_000_000 ether);
+        if (amount == 0) return;
         deal(token, strat, amount);
     }
 
     function loss(LibPRNG.PRNG memory strategySeedRNG, uint256 amount) public returnIfNoStrats {
-        amount = bound(amount, 0, 1);
+        address strat = strats.rand(strategySeedRNG.next());
+        amount = bound(amount, 0, IStrategyWrapper(strat).underlyingAsset().balanceOf(strat));
+        if (amount == 0) return;
+        IStrategyWrapper(strat).triggerLoss(amount);
     }
 
     function rand(

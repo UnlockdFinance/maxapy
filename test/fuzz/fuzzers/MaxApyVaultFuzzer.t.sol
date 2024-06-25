@@ -5,6 +5,7 @@ import { BaseFuzzer, console2 } from "./base/BaseFuzzer.t.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { LibPRNG } from "solady/utils/LibPRNG.sol";
+import "forge-std/console2.sol";
 
 contract MaxApyVaultFuzzer is BaseFuzzer {
     using SafeTransferLib for address;

@@ -298,6 +298,96 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
+    function testFuzzMaxApyVault__DepositAndRedeemAfterExitStrategy(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 assets,
+        uint256 shares
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        actorSeedRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.exitStrategy(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.exitStrategy(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        strategyFuzzer.exitStrategy(strategyRNG);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+    }
+
+    function testFuzzMaxApyVault__DepositAndRedeemWithGainsAndLossesWithoutHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 gainsAndLossesSeed,
+        uint256 assets,
+        uint256 shares
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory gainAndLossesRNG;
+
+        actorSeedRNG.seed(actorSeed);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyRNG.seed(strategySeed);
+        gainAndLossesRNG.seed(gainsAndLossesSeed);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+    }
+
+    function testFuzzMaxApyVault__DepositAndRedeemWithGainsAndLossesWithHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 gainsAndLossesSeed,
+        uint256 assets,
+        uint256 shares
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory gainAndLossesRNG;
+
+        actorSeedRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+        gainAndLossesRNG.seed(gainsAndLossesSeed);
+
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.deposit(assets);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+    }
+
     function testFuzzMaxApyVault__MintAndWithdrawWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
@@ -337,5 +427,67 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategyFuzzer.harvest(strategySeedRNG);
         vaultFuzzer.withdraw(actorSeedRNG, assets);
         vaultFuzzer.withdraw(actorSeedRNG, assets);
+    }
+
+    function testFuzzMaxApyVault__MintAndWithdrawGainsAndLossesWithoutHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 gainsAndLossesSeed,
+        uint256 shares,
+        uint256 assets
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory gainAndLossesRNG;
+
+        actorSeedRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+        gainAndLossesRNG.seed(gainsAndLossesSeed);
+
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.mint(shares);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+    }
+
+    function testFuzzMaxApyVault__MintAndWithdrawGainsAndLossesWithHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 gainsAndLossesSeed,
+        uint256 shares,
+        uint256 assets
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory gainAndLossesRNG;
+
+        actorSeedRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+        gainAndLossesRNG.seed(gainsAndLossesSeed);
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.mint(shares);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        strategyFuzzer.harvest(strategyRNG);
     }
 }

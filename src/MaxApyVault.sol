@@ -9,7 +9,6 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
 import { ERC4626, ERC20 } from "solady/tokens/ERC4626.sol";
-import "forge-std/console2.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
@@ -883,8 +882,9 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         uint256 totalSupply = totalSupply();
         // prevent division by zero
         if (totalSupply == 0) return 0;
-        maxAssets =
-            Math.min(super.maxWithdraw(owner), Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply));
+        maxAssets = Math.min(
+            super.maxWithdraw(owner), _sub0(Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply), 1)
+        );
     }
 
     /// @notice Returns the estimate price of 1 vault share
