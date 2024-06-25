@@ -12,10 +12,11 @@ import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { StrategyEvents } from "../helpers/StrategyEvents.sol";
+import { StrategyEvents } from "test/helpers/StrategyEvents.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
-import { ConvexPools } from "../helpers/ConvexPools.sol";
+import { ConvexPools } from "test/helpers/ConvexPools.sol";
+import { WETH_MAINNET, ST_ETH_MAINNET } from "test/helpers/Tokens.sol";
 
 // Convex
 import { ConvexdETHFrxETHStrategyWrapper } from "../mock/ConvexdETHFrxETHStrategyWrapper.sol";
@@ -36,9 +37,6 @@ import { YearnAjnaWETHStakingStrategyWrapper } from "../mock/YearnAjnaWETHStakin
 import { YearnV3WETHStrategyWrapper } from "../mock/YearnV3WETHStrategyWrapper.sol";
 import { YearnV3WETH2StrategyWrapper } from "../mock/YearnV3WETH2StrategyWrapper.sol";
 import { YearnCompoundV3WETHLenderStrategyWrapper } from "../mock/YearnCompoundV3WETHLenderStrategyWrapper.sol";
-
-// Reverting strategy
-import { MockRevertingStrategy } from "../mock/MockRevertingStrategy.sol";
 
 // Vault fuzzer
 import { MaxApyVaultFuzzer } from "./fuzzers/MaxApyVaultFuzzer.t.sol";
@@ -78,7 +76,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     // YearnV3 WETH2
     address public constant YVAULT_WETHV3_2_MAINNET = 0xAc37729B76db6438CE62042AE1270ee574CA7571;
     // YearnV3 CompoundV3Lender
-    address public constant YVAULT_WETH_COMPOUND_LENDER = 0xb1403908F772E4374BB151F7C67E88761a0Eb4f1;
+    address public constant YVAULT_WETH_COMPOUND_LENDER = 0x23eE3D14F09946A084350CC6A7153fc6eb918817;
 
     // Vault Fuzzer
     MaxApyVaultFuzzer public vaultFuzzer;
@@ -106,15 +104,17 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
     ///                      STORAGE                             ///
     ////////////////////////////////////////////////////////////////
 
-    IStrategyWrapper public strategy1; // yearn
+    IStrategyWrapper public strategy1; // yearn weth
     IStrategyWrapper public strategy2; // sommelier turbo steth
     IStrategyWrapper public strategy3; // sommelier steth deposit
     IStrategyWrapper public strategy4; // convex
-    IStrategyWrapper public strategy5; // convex
-    IStrategyWrapper public strategy6; // convex
-    IStrategyWrapper public strategy7; // convex
-    IStrategyWrapper public strategy8; // convex
-    IStrategyWrapper public strategy9; // convex
+    IStrategyWrapper public strategy5; // sommelier morpho eth
+    IStrategyWrapper public strategy6; // sommelier turbo div eth
+    IStrategyWrapper public strategy7; // sommelier sweth
+    IStrategyWrapper public strategy8; // yearn ajna weth staking
+    IStrategyWrapper public strategy9; // yearn v3 weth
+    IStrategyWrapper public strategy10; // yearn v3 weth2
+    IStrategyWrapper public strategy11; // yearn compound v3 weth lender
 
     IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
@@ -126,7 +126,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
     function setUp() public {
         super._setUp("MAINNET");
-        vm.rollFork(19_267_583);
+        vm.rollFork(19_425_883);
 
         TREASURY = makeAddr("treasury");
 
@@ -222,18 +222,160 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         strategy4 = IStrategyWrapper(address(_proxy));
 
-        address[] memory strategyList = new address[](4);
+        // Deploy strategy5
+        SommelierMorphoEthMaximizerStrategyWrapper implementation5 = new SommelierMorphoEthMaximizerStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation5),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("MaxApy Morpho ETH Strategy")),
+                users.alice,
+                CELLAR_WETH_MAINNET_MORPHO
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "SommelierMorphoEthMaximizerStrategy");
+
+        strategy5 = IStrategyWrapper(address(_proxy));
+
+        // Deploy strategy6
+        SommelierTurboDivEthStrategyWrapper implementation6 = new SommelierTurboDivEthStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation6),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("Sommelier Turbo Div ETH Strategy")),
+                users.alice,
+                CELLAR_BAL_MAINNET
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "SommelierTurboDivEthStrategy");
+
+        strategy6 = IStrategyWrapper(address(_proxy));
+
+        // Deploy strategy7
+        SommelierTurboSwEthStrategyWrapper implementation7 = new SommelierTurboSwEthStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation7),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("Sommelier SwETH Strategy")),
+                users.alice,
+                CELLAR_WETH_MAINNET_SWETH
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "SommelierSwEthStrategy");
+
+        strategy7 = IStrategyWrapper(address(_proxy));
+
+        // Deploy strategy8
+        YearnAjnaWETHStakingStrategyWrapper implementation8 = new YearnAjnaWETHStakingStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation8),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("Yearn Ajna WETH Stakingtrategy")),
+                users.alice,
+                YVAULT_AJNA_WETH_MAINNET
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "YearnAjnaWETHStakingStrategy");
+
+        strategy8 = IStrategyWrapper(address(_proxy));
+
+        // Deploy strategy9
+        YearnV3WETHStrategyWrapper implementation9 = new YearnV3WETHStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation9),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("Yearn v3 WETH Strategy")),
+                users.alice,
+                YVAULT_WETHV3_MAINNET
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "YearnV3WETHStrategy");
+
+        strategy9 = IStrategyWrapper(address(_proxy));
+
+        // Deploy strategy10
+        YearnV3WETH2StrategyWrapper implementation10 = new YearnV3WETH2StrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation10),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("Yearn v3 WETH2 Strategy")),
+                users.alice,
+                YVAULT_WETHV3_2_MAINNET
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "YearnV3WETH2Strategy");
+
+        strategy10 = IStrategyWrapper(address(_proxy));
+
+        // Deploy strategy11
+        YearnCompoundV3WETHLenderStrategyWrapper implementation11 = new YearnCompoundV3WETHLenderStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation11),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("Yearn Compound V3 WETH Lender")),
+                users.alice,
+                YVAULT_WETH_COMPOUND_LENDER
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "YearnCompoundV3WETHLenderStrategy");
+
+        strategy11 = IStrategyWrapper(address(_proxy));
+
+        address[] memory strategyList = new address[](10);
 
         strategyList[0] = address(strategy1);
         strategyList[1] = address(strategy2);
         strategyList[2] = address(strategy3);
         strategyList[3] = address(strategy4);
+        strategyList[4] = address(strategy5);
+        strategyList[5] = address(strategy6);
+        strategyList[6] = address(strategy7);
+        strategyList[7] = address(strategy8);
+        strategyList[8] = address(strategy9);
+        // strategyList[9] = address(strategy10);
+        strategyList[9] = address(strategy11);
 
         // Add all the strategies
-        vault.addStrategy(address(strategy1), 2250, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy2), 2250, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy3), 2250, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy4), 2250, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy1), 1000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy2), 1000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy3), 1000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy4), 1000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy5), 1000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy6), 1000, type(uint72).max, 0, 0);
 
         vm.label(address(WETH_MAINNET), "WETH");
         /// Alice approves vault for deposits
@@ -254,6 +396,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategy2.grantRoles(address(strategyFuzzer), _keeperRole);
         strategy3.grantRoles(address(strategyFuzzer), _keeperRole);
         strategy4.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy5.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
     function testFuzzMaxApyVault__DepositAndRedeemWithoutHarvests(
@@ -297,6 +440,96 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
+    function testFuzzMaxApyVault__DepositAndRedeemAfterExitStrategy(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 assets,
+        uint256 shares
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        actorSeedRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.exitStrategy(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.exitStrategy(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        strategyFuzzer.exitStrategy(strategyRNG);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+    }
+
+    function testFuzzMaxApyVault__DepositAndRedeemWithGainsAndLossesWithoutHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 gainsAndLossesSeed,
+        uint256 assets,
+        uint256 shares
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory gainAndLossesRNG;
+
+        actorSeedRNG.seed(actorSeed);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyRNG.seed(strategySeed);
+        gainAndLossesRNG.seed(gainsAndLossesSeed);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+    }
+
+    function testFuzzMaxApyVault__DepositAndRedeemWithGainsAndLossesWithHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 gainsAndLossesSeed,
+        uint256 assets,
+        uint256 shares
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory gainAndLossesRNG;
+
+        actorSeedRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+        gainAndLossesRNG.seed(gainsAndLossesSeed);
+
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.deposit(assets);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+    }
+
     function testFuzzMaxApyVault__MintAndWithdrawWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
@@ -336,5 +569,88 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategyFuzzer.harvest(strategySeedRNG);
         vaultFuzzer.withdraw(actorSeedRNG, assets);
         vaultFuzzer.withdraw(actorSeedRNG, assets);
+    }
+
+    function testFuzzMaxApyVault__MintAndWithdrawGainsAndLossesWithoutHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 gainsAndLossesSeed,
+        uint256 shares,
+        uint256 assets
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory gainAndLossesRNG;
+
+        actorSeedRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+        gainAndLossesRNG.seed(gainsAndLossesSeed);
+
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.mint(shares);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+        vaultFuzzer.withdraw(actorSeedRNG, assets);
+    }
+
+    function testFuzzMaxApyVault__MintAndWithdrawGainsAndLossesWithHarvests(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 gainsAndLossesSeed,
+        uint256 shares,
+        uint256 assets
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory gainAndLossesRNG;
+
+        actorRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+        gainAndLossesRNG.seed(gainsAndLossesSeed);
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.mint(shares);
+        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.mint(shares);
+        vaultFuzzer.withdraw(actorRNG, assets);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        vaultFuzzer.withdraw(actorRNG, assets);
+        vaultFuzzer.withdraw(actorRNG, assets);
+        strategyFuzzer.harvest(strategyRNG);
+    }
+
+    function testFuzzMaxApyVault__RandomSequence(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 functionSeed,
+        uint256 argumentsSeed
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        LibPRNG.PRNG memory functionRNG;
+        LibPRNG.PRNG memory argumentsRNG;
+
+        vaultFuzzer.rand(actorRNG, functionRNG, argumentsRNG);
+        strategyFuzzer.rand(functionRNG, strategyRNG, argumentsRNG);
+        vaultFuzzer.rand(actorRNG, functionRNG, argumentsRNG);
+        strategyFuzzer.rand(functionRNG, strategyRNG, argumentsRNG);
+        vaultFuzzer.rand(actorRNG, functionRNG, argumentsRNG);
+        strategyFuzzer.rand(functionRNG, strategyRNG, argumentsRNG);
     }
 }

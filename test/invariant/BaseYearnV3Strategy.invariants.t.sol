@@ -7,7 +7,7 @@ import {
 } from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { BaseYearnV3StrategyHandler, BaseYearnV3StrategyWrapper } from "./handlers/BaseYearnV3StrategyHandler.t.sol";
 
-import { MaxApyVaultHandler, MaxApyVault } from "./handlers/MaxApyVaultHandler.t.sol";
+import { MaxApyVaultHandler, MaxApyVault, ERC4626 } from "./handlers/MaxApyVaultHandler.t.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { Test } from "forge-std/Test.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
@@ -44,7 +44,8 @@ contract BaseYearnV3StrategyInvariants is SetUp {
 
         BaseYearnV3StrategyWrapper _strategy = BaseYearnV3StrategyWrapper(address(_proxy));
         vaultHandler = new MaxApyVaultHandler(vault, token);
-        BaseYearnV3StrategyHandler _strategyHandler = new BaseYearnV3StrategyHandler(vault, _strategy, token);
+        BaseYearnV3StrategyHandler _strategyHandler =
+            new BaseYearnV3StrategyHandler(vault, _strategy, token, ERC4626(_underlyingYvault));
 
         _setUpStrategy(IStrategyWrapper(address(_strategy)), IStrategyHandler(address(_strategyHandler)));
 
@@ -58,7 +59,7 @@ contract BaseYearnV3StrategyInvariants is SetUp {
         vm.label(address(_strategy), "BaseYearnV3Strategy");
     }
 
-    function invariantBaseYearnV3Strategy_vaultAccounting() public {
+    function invariantBaseYearnV3Strategy__VaultAccounting() public {
         vaultHandler.INVARIANT_A_SHARE_PREVIEWS();
         vaultHandler.INVARIANT_B_ASSET_PREVIEWS();
     }

@@ -8,7 +8,7 @@ gas_reports = ['*']
 evm_version = "shanghai"
 
 [fuzz]
-runs = 100
+runs = 1000
 max_test_rejects = 65536
 seed = '0x1'
 dictionary_weight = 40
@@ -17,7 +17,7 @@ include_push_bytes = true
 extra_output = ["storageLayout", "metadata"]
 
 [invariant]
-runs = 128
+runs = 256
 depth = 16
 fail_on_revert = true
 

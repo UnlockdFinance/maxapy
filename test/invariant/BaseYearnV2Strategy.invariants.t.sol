@@ -64,7 +64,7 @@ contract BaseYearnV2StrategyInvariants is SetUp {
         vm.label(address(_strategyHandler), "BYH");
     }
 
-    function invariantBaseYearnV2Strategy_vaultAccounting() public {
+    function invariantBaseYearnV2Strategy__VaultAccounting() public {
         vaultHandler.INVARIANT_A_SHARE_PREVIEWS();
         vaultHandler.INVARIANT_B_ASSET_PREVIEWS();
     }

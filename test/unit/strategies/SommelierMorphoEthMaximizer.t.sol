@@ -17,6 +17,7 @@ import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { SommelierMorphoEthMaximizerStrategy } from
     "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { WETH_MAINNET } from "test/helpers/Tokens.sol";
 
 contract SommelierMorphoEthMaximizerStrategyTest is BaseTest, StrategyEvents {
     address public constant CELLAR_WETH_MAINNET = 0xcf4B531b4Cde95BD35d71926e09B2b54c564F5b6;

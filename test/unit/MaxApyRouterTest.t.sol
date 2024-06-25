@@ -17,6 +17,7 @@ import { ReentrantERC777AttackerWithdraw } from "../mock/ReentrantERC777Attacker
 import { SigUtils } from "../utils/SigUtils.sol";
 import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import { WETH_MAINNET, USDC_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
 
 contract MaxApyRouterTest is BaseVaultTest {
     IMaxApyRouter public router;

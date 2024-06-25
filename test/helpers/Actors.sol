@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.19;
 
-import { CommonBase } from "forge-std/Base.sol";
-import { StdAssertions } from "forge-std/StdAssertions.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
-import { StdUtils } from "forge-std/StdUtils.sol";
-import { console2 } from "forge-std/console2.sol";
-import { AddressSet, LibAddressSet } from "../../../helpers/AddressSet.sol";
+import { AddressSet, LibAddressSet } from "./AddressSet.sol";
 
-abstract contract BaseFuzzer is CommonBase, StdUtils, StdCheats, StdAssertions {
+abstract contract Actors {
     using LibAddressSet for AddressSet;
 
     ////////////////////////////////////////////////////////////////
@@ -35,9 +30,17 @@ abstract contract BaseFuzzer is CommonBase, StdUtils, StdCheats, StdAssertions {
         return _actors.forEach(func);
     }
 
-    function _sub0(uint256 a, uint256 b) internal pure virtual returns (uint256) {
-        unchecked {
-            return a - b > a ? 0 : a - b;
-        }
+    function reduceActors(
+        uint256 acc,
+        function(uint256,address) external returns (uint256) func
+    )
+        public
+        returns (uint256)
+    {
+        return _actors.reduce(acc, func);
+    }
+
+    function actors() public view returns (address[] memory) {
+        return _actors.addrs;
     }
 }

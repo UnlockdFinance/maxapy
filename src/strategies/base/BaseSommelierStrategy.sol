@@ -290,7 +290,8 @@ contract BaseSommelierStrategy is BaseStrategy {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 
-            uint256 amountToWithdraw = debtOutstanding;
+            // Cannot repay all debt if it does not have enough assets
+            uint256 amountToWithdraw = Math.min(debtOutstanding, _estimatedTotalAssets_);
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Cellar
@@ -339,7 +340,7 @@ contract BaseSommelierStrategy is BaseStrategy {
                     // Extract debt payment from divested amount
                     debtPayment := underlyingBalance
                 }
-                case false { debtPayment := debtOutstanding }
+                case false { debtPayment := amountToWithdraw }
             }
         }
     }
@@ -439,6 +440,7 @@ contract BaseSommelierStrategy is BaseStrategy {
                 amountToWithdraw = amountNeeded - underlyingBalance;
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
+            if (shares == 0) return (0, amountNeeded);
             uint256 withdrawn = _divest(shares);
             assembly {
                 // if withdrawn < amountToWithdraw

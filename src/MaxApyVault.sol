@@ -386,8 +386,11 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             totalDebt_ := sload(totalDebt.slot)
         }
 
-        // Reduce trust in this strategy by the amount of loss, lowering the corresponding strategy debt ratio
-        uint256 ratioChange = Math.min((loss * debtRatio_) / totalDebt_, strategyDebtRatio);
+        uint256 ratioChange;
+        if (totalDebt_ > 0) {
+            // Reduce trust in this strategy by the amount of loss, lowering the corresponding strategy debt ratio
+            ratioChange = Math.min((loss * debtRatio_) / totalDebt_, strategyDebtRatio);
+        }
 
         assembly {
             // Overflow checks
@@ -435,7 +438,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             slot2Content :=
                 or(
                     shl(128, strategyTotalLoss),
-                    shr(128, shl(128, sub(strategyTotalDebt, loss))) // Compute strategies[strategy].strategyTotalDebt -=
+                    shr(128, shl(128, sub(strategyTotalDebt, loss))) // Compute strategies[strategy].strategyTotalDebt
+                        // -=
                         // loss;
                 )
 
@@ -1216,7 +1220,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         address underlying = asset();
 
         uint256 vaultBalance = totalIdle;
-
         // Check if value to withdraw exceeds vault balance
         if (assets > vaultBalance) {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
@@ -1251,7 +1254,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     // amountRequested = assets - vaultBalance;
                     amountRequested := sub(assets, vaultBalance)
                 }
-
                 // ask for the min between the needed amount and max withdraw of the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
 
@@ -1298,9 +1300,14 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                totalDebt = _sub0(totalDebt, withdrawn);
+                // If the strategy has unharvested profit we could end up withdrawing more than its debt
+                // Then we will only decrease his debt by the strategy's debt
+                uint256 debtReduction = Math.min(strategies[strategy].strategyTotalDebt, withdrawn);
+                unchecked {
+                    totalDebt = totalDebt - debtReduction;
+                }
 
-                uint128 strategyTotalDebt = uint128(_sub0(strategies[strategy].strategyTotalDebt, withdrawn));
+                uint128 strategyTotalDebt = uint128(strategies[strategy].strategyTotalDebt - debtReduction);
 
                 strategies[strategy].strategyTotalDebt = strategyTotalDebt;
 
@@ -1340,7 +1347,21 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         _burn(owner, shares);
 
         // Reduce value withdrawn from vault total idle
-        totalIdle -= assets;
+        if (assets > totalIdle) {
+            assets = totalIdle;
+        }
+
+        assembly ("memory-safe") {
+            if iszero(assets) {
+                // throw the `InvalidZeroAmount` error
+                mstore(0x00, 0xdd484e70)
+                revert(0x1c, 0x04)
+            }
+        }
+
+        unchecked {
+            totalIdle -= assets;
+        }
 
         // Transfer underlying to `recipient`
         SafeTransferLib.safeTransfer(underlying, to, assets);
@@ -1451,9 +1472,14 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     _reportLoss(strategy, loss);
                 }
 
-                totalDebt = _sub0(totalDebt, withdrawn);
+                // If the strategy has unharvested profit we could end up withdrawing more than its debt
+                // Then we will only decrease his debt by the strategy's debt
+                uint256 debtReduction = Math.min(strategies[strategy].strategyTotalDebt, withdrawn);
+                unchecked {
+                    totalDebt = totalDebt - debtReduction;
+                }
 
-                uint128 strategyTotalDebt = uint128(_sub0(strategies[strategy].strategyTotalDebt, withdrawn));
+                uint128 strategyTotalDebt = uint128(strategies[strategy].strategyTotalDebt - debtReduction);
 
                 strategies[strategy].strategyTotalDebt = strategyTotalDebt;
 
@@ -1491,7 +1517,13 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         _burn(owner, shares);
 
         // Reduce value withdrawn from vault total idle
-        totalIdle -= assets;
+        if (assets > totalIdle) {
+            revert();
+        }
+        unchecked {
+            totalIdle -= assets;
+        }
+
         // Transfer underlying to `recipient`
         SafeTransferLib.safeTransfer(underlying, to, assets);
 

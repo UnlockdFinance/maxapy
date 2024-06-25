@@ -14,6 +14,7 @@ import { YearnCompoundUSDCeLenderStrategyWrapper } from "../../mock/YearnCompoun
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { USDCE_POLYGON, _1_USDC } from "test/helpers/Tokens.sol";
 
 contract YearnCompoundUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
     address public constant YVAULT_USDCE_POLYGON = 0xb1403908F772E4374BB151F7C67E88761a0Eb4f1;

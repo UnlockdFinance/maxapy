@@ -15,6 +15,7 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { USDT_POLYGON, _1_USDT } from "test/helpers/Tokens.sol";
 
 contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;

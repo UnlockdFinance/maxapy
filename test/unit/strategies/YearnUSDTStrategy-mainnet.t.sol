@@ -15,6 +15,7 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { USDT_MAINNET, _1_USDT } from "test/helpers/Tokens.sol";
 
 contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;
@@ -418,11 +419,11 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit StrategyReported(
-            address(strategy), 10 * _1_USDT, 0, 0, uint128(10 * _1_USDC), 0, uint128(40 * _1_USDT), 0, 4000
+            address(strategy), 10 * _1_USDT, 0, 0, uint128(10 * _1_USDT), 0, uint128(40 * _1_USDT), 0, 4000
         );
 
         vm.expectEmit();
-        emit Harvested(10 * _1_USDC, 0, 0, 0);
+        emit Harvested(10 * _1_USDT, 0, 0, 0);
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(USDT_MAINNET).balanceOf(address(vault)), 60 * _1_USDT);
         uint256 shares = strategy.sharesForAmount(10 * _1_USDT);
@@ -459,7 +460,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         deal({ token: USDT_MAINNET, to: address(strategy), give: 10 * _1_USDT });
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 0, 40 * _1_USDC, uint128(0), 0, 0, 0, 4000);
+        emit StrategyReported(address(strategy), 0, 0, 40 * _1_USDT, uint128(0), 0, 0, 0, 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 49_999_999, 0);

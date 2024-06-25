@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { BaseHandler, console2 } from "./base/BaseHandler.t.sol";
-import { MaxApyVault } from "src/MaxApyVault.sol";
+import { MaxApyVault, ERC4626 } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
 
 contract MaxApyVaultHandler is BaseHandler {

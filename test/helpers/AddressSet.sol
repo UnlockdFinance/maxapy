@@ -19,11 +19,18 @@ library LibAddressSet {
 
     function remove(AddressSet storage s, address addr) internal {
         if (!contains(s, addr)) revert();
-        uint256 lastIndex = count(s) - 1;
+        uint256 _count = count(s);
+
+        uint256 lastIndex = _count - 1;
         uint256 index = s.index[addr];
-        s.addrs[index] = s.addrs[lastIndex];
+        address temp = s.addrs[lastIndex];
+
+        s.addrs[index] = temp;
+        s.addrs[lastIndex] = addr;
         s.addrs.pop();
+
         s.saved[addr] = false;
+        s.index[temp] = index;
     }
 
     function contains(AddressSet storage s, address addr) internal view returns (bool) {

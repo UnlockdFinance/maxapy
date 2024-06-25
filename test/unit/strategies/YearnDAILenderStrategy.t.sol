@@ -14,6 +14,7 @@ import { YearnDAILenderStrategyWrapper } from "../../mock/YearnDAILenderStrategy
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { DAI_POLYGON } from "test/helpers/Tokens.sol";
 
 contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
     address public constant YVAULT_DAI_POLYGON = 0xf4F9d5697341B4C9B0Cc8151413e05A90f7dc24F;

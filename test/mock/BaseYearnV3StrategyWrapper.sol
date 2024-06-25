@@ -11,6 +11,11 @@ contract BaseYearnV3StrategyWrapper is BaseYearnV3Strategy {
     }
 
     function triggerLoss(uint256 amount) external {
+        uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
+        if (amountToWithdraw > 0) {
+            uint256 shares = yVault.previewRedeem(amountToWithdraw);
+            yVault.redeem(shares, address(this), address(this));
+        }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }
 

@@ -5,7 +5,6 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-
 import { IStrategy } from "../../interfaces/IStrategy.sol";
 import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
 import { Initializable } from "../../lib/Initializable.sol";

@@ -16,6 +16,7 @@ import { StrategyEvents } from "../helpers/StrategyEvents.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 import { ConvexPools } from "../helpers/ConvexPools.sol";
+import { WETH_MAINNET, ST_ETH_MAINNET } from "test/helpers/Tokens.sol";
 
 import { ConvexdETHFrxETHStrategyWrapper } from "../mock/ConvexdETHFrxETHStrategyWrapper.sol";
 import { ConvexdETHFrxETHStrategyEvents } from "../helpers/ConvexdETHFrxETHStrategyEvents.sol";

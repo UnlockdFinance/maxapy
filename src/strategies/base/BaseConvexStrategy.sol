@@ -269,7 +269,8 @@ abstract contract BaseConvexStrategy is BaseStrategy {
             // Strategy has obtained profit or holds more funds than it should
             // considering the current debt
 
-            uint256 amountToWithdraw = debtOutstanding;
+            // Cannot repay all debt if it does not have enough assets
+            uint256 amountToWithdraw = Math.min(debtOutstanding, _estimatedTotalAssets_);
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Convex
@@ -320,7 +321,7 @@ abstract contract BaseConvexStrategy is BaseStrategy {
                     // Extract debt payment from divested amount
                     debtPayment := underlyingBalance
                 }
-                case false { debtPayment := debtOutstanding }
+                case false { debtPayment := amountToWithdraw }
             }
         }
     }
@@ -396,6 +397,8 @@ abstract contract BaseConvexStrategy is BaseStrategy {
                 // Adjust computed lp amount by current lp balance
                 if gt(lp, staked) { lp := staked }
             }
+
+            if (lp == 0) return (0, amountNeeded);
 
             uint256 withdrawn = _divest(lp);
 

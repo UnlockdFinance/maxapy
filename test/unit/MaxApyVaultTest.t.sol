@@ -5,6 +5,7 @@ import { BaseTest, IERC20, Vm, console2 } from "../base/BaseTest.t.sol";
 import { BaseVaultTest } from "../base/BaseVaultTest.t.sol";
 import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { USDC_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
 
 import { MockStrategy } from "../mock/MockStrategy.sol";
 import { MockLossyUSDCStrategy } from "../mock/MockLossyUSDCStrategy.sol";

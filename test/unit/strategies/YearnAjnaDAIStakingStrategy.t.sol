@@ -14,6 +14,7 @@ import { YearnAjnaDAIStakingStrategyWrapper } from "../../mock/YearnAjnaDAIStaki
 import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { DAI_MAINNET } from "test/helpers/Tokens.sol";
 
 contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
     address public constant YVAULT_DAI_MAINNET = 0xe24BA27551aBE96Ca401D39761cA2319Ea14e3CB;
