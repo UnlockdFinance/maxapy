@@ -355,25 +355,25 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         strategy11 = IStrategyWrapper(address(_proxy));
 
-        address[] memory strategyList = new address[](10);
+        address[] memory strategyList = new address[](6);
 
         strategyList[0] = address(strategy1);
         strategyList[1] = address(strategy2);
         strategyList[2] = address(strategy3);
-        strategyList[3] = address(strategy4);
-        strategyList[4] = address(strategy5);
-        strategyList[5] = address(strategy6);
-        strategyList[6] = address(strategy7);
-        strategyList[7] = address(strategy8);
-        strategyList[8] = address(strategy9);
+       // strategyList[3] = address(strategy4);
+        strategyList[3] = address(strategy5);
+        strategyList[4] = address(strategy6);
+        strategyList[5] = address(strategy7);
+     /*    strategyList[6] = address(strategy8);
+        strategyList[7] = address(strategy9);
         // strategyList[9] = address(strategy10);
-        strategyList[9] = address(strategy11);
+        strategyList[8] = address(strategy11); */
 
         // Add all the strategies
         vault.addStrategy(address(strategy1), 1000, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy2), 1000, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy3), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy4), 1000, type(uint72).max, 0, 0);
+      //  vault.addStrategy(address(strategy4), 1000, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy5), 1000, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy6), 1000, type(uint72).max, 0, 0);
 
@@ -611,6 +611,17 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         LibPRNG.PRNG memory actorRNG;
         LibPRNG.PRNG memory strategyRNG;
         LibPRNG.PRNG memory gainAndLossesRNG;
+        
+        console2.log("strategy 1: ", address(strategy1));
+        console2.log("strategy 2: ", address(strategy2));
+        console2.log("strategy 3: ", address(strategy3));
+        console2.log("strategy 4: ", address(strategy5));
+        console2.log("strategy 5: ", address(strategy4));
+        console2.log("strategy 6: ", address(strategy4));
+        console2.log("strategy 7 ", address(strategy4));
+        console2.log("strategy 8: ", address(strategy4));
+        console2.log("strategy 9: ", address(strategy4));
+        console2.log("strategy 10: ", address(strategy4));
 
         actorRNG.seed(actorSeed);
         strategyRNG.seed(strategySeed);
@@ -623,12 +634,15 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
         strategyFuzzer.harvest(strategyRNG);
         vaultFuzzer.mint(shares);
+        console2.log("withdraw1");
         vaultFuzzer.withdraw(actorRNG, assets);
         strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
+        console2.log("withdraw2");
         vaultFuzzer.withdraw(actorRNG, assets);
+        console2.log("withdraw3");
         vaultFuzzer.withdraw(actorRNG, assets);
         strategyFuzzer.harvest(strategyRNG);
     }

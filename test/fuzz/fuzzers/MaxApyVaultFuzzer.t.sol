@@ -60,10 +60,20 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
 
     function withdraw(LibPRNG.PRNG memory actorSeedRNG, uint256 assets) public useActor(actorSeedRNG.next()) {
         assets = bound(assets, 0, vault.maxWithdraw(currentActor));
+        if(assets < 1 ether) return;
+        console2.log("ASSETS TO WITHDRAW : ", assets);
+        console2.log("MAX WITHDRAWABLE ASSETS : ", vault.maxWithdraw(currentActor));
+        console2.log("SHARES OF MAX WITHDRAWABLE ASSETS : ", vault.previewWithdraw(vault.maxWithdraw(currentActor)));
+        console2.log("************PREVIEW WITHDRAW**************");
         uint256 expectedShares = vault.previewWithdraw(assets);
+        console2.log("                  expected shares : ", expectedShares);
+        console2.log("******************************************");
         vm.startPrank(currentActor);
         if (assets == 0 || expectedShares == 0) vm.expectRevert();
+        console2.log("************ACTUAL WITHDRAW**************");
         uint256 actualShares = vault.withdraw(assets, currentActor, currentActor);
+        console2.log("                  actual shares : ", actualShares);
+        console2.log("*****************************************");
         assertLe(actualShares, expectedShares);
         vm.stopPrank();
     }

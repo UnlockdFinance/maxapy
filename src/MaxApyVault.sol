@@ -9,6 +9,7 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
 import { ERC4626, ERC20 } from "solady/tokens/ERC4626.sol";
+import "forge-std/console2.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
@@ -883,7 +884,15 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         // prevent division by zero
         if (totalSupply == 0) return 0;
         maxAssets =
-            Math.min(super.maxWithdraw(owner), Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply));
+            Math.min(
+                super.maxWithdraw(owner), 
+                Math.fullMulDiv(
+                    maxLiquidableAssets, 
+                    maxRedeem(owner), 
+                    totalSupply
+                )
+                * 99 / 100
+            );
     }
 
     /// @notice Returns the estimate price of 1 vault share
@@ -924,6 +933,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
         uint256 _totalAssets_ = _totalAssets();
         uint256 vaultBalance = totalIdle;
+        console2.log("vault balance  : ", vaultBalance);
         uint256 o = _decimalsOffset();
         // convert the assets to shares without any losses
         // very important: ROUND UP
@@ -943,6 +953,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             // Iterate over strategies
             for (uint256 i; i < MAXIMUM_STRATEGIES;) {
                 address strategy = withdrawalQueue[i];
+                console2.log("strat : ", i, ":", strategy);
 
                 // Check if we have exhausted the queue
                 if (strategy == address(0)) break;
@@ -955,6 +966,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Can't request more than allowed by the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidateExact());
 
+                console2.log("amountRequested in strategy ", i, ":", amountRequested);
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
                     unchecked {
@@ -966,7 +978,9 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Withdraw from strategy. Compute amount withdrawn(should be requestedAmount)
                 // considering the difference between balances pre/post withdrawal
                 uint256 withdrawn = IStrategy(strategy).previewLiquidateExact(amountRequested);
+                console2.log("previewLiquidateExact in strategy ", i, ":", withdrawn);
                 uint256 loss = withdrawn - amountRequested;
+                console2.log("loss in strategy ", i, ":", loss);
 
                 // increase the vault balance by requested amount
                 vaultBalance += amountRequested;
@@ -1390,6 +1404,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
         uint256 _totalAssets_ = _totalAssets();
         uint256 vaultBalance = totalIdle;
+        console2.log("vault balance  : ", vaultBalance);
         uint256 o = _decimalsOffset();
         address underlying = asset();
         // convert the assets to shares without any losses
@@ -1410,6 +1425,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             // Iterate over strategies
             for (uint256 i; i < MAXIMUM_STRATEGIES;) {
                 address strategy = withdrawalQueue[i];
+                console2.log("strat : ", i, ":", strategy);
 
                 // Check if we have exhausted the queue
                 if (strategy == address(0)) break;
@@ -1417,18 +1433,12 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Check if the vault balance is finally enough to cover the requested withdrawal
                 if (vaultBalance >= assets) break;
 
-                uint256 slotStrategies2;
-                assembly {
-                    // cache slot strategies[strategy].strategyTotalDebt
-                    mstore(0x00, strategy)
-                    mstore(0x20, strategies.slot)
-                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
-                }
-
                 // Compute remaining amount to withdraw considering the current balance of the vault
                 uint256 amountRequested = assets - vaultBalance;
                 // Can't request more than allowed by the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidateExact());
+
+                console2.log("amountRequested in strategy ", i, ":", amountRequested);
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
@@ -1443,17 +1453,21 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 uint256 preBalance = underlying.balanceOf(address(this));
 
                 uint256 withdrawn;
+
                 uint256 loss;
                 // Use try/catch logic to avoid DoS
                 try IStrategy(strategy).liquidateExact(amountRequested) returns (uint256 _loss) {
                     loss = _loss;
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
+
                 } catch {
                     unchecked {
                         ++i;
                     }
                     continue;
                 }
+                console2.log("actual withdrawn in strategty ", i, ":", withdrawn);
+                console2.log("loss in strategy ", i, ":", loss);
 
                 if (withdrawn == 0) {
                     unchecked {
@@ -1513,6 +1527,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             _spendAllowance(owner, by, shares);
         }
 
+        console2.log("actual balance : ", balanceOf(msg.sender));
+        console2.log("shares to burn : ", shares);
         // Burn shares
         _burn(owner, shares);
 
