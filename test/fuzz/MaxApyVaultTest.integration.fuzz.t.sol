@@ -355,27 +355,31 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
 
         strategy11 = IStrategyWrapper(address(_proxy));
 
-        address[] memory strategyList = new address[](6);
+        address[] memory strategyList = new address[](9);
 
         strategyList[0] = address(strategy1);
         strategyList[1] = address(strategy2);
         strategyList[2] = address(strategy3);
-       // strategyList[3] = address(strategy4);
+     //   strategyList[3] = address(strategy4);
         strategyList[3] = address(strategy5);
         strategyList[4] = address(strategy6);
         strategyList[5] = address(strategy7);
-     /*    strategyList[6] = address(strategy8);
+        strategyList[6] = address(strategy8);
         strategyList[7] = address(strategy9);
         // strategyList[9] = address(strategy10);
-        strategyList[8] = address(strategy11); */
+        strategyList[8] = address(strategy11);
 
         // Add all the strategies
-        vault.addStrategy(address(strategy1), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy2), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy3), 1000, type(uint72).max, 0, 0);
-      //  vault.addStrategy(address(strategy4), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy5), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy6), 1000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy1), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy2), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy3), 700, type(uint72).max, 0, 0);
+       // vault.addStrategy(address(strategy4), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy5), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy6), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy7), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy8), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy9), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy11), 700, type(uint72).max, 0, 0);
 
         vm.label(address(WETH_MAINNET), "WETH");
         /// Alice approves vault for deposits

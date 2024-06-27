@@ -884,7 +884,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         // prevent division by zero
         if (totalSupply == 0) return 0;
         maxAssets =
-            Math.min(
+            _sub0(Math.min(
                 super.maxWithdraw(owner), 
                 Math.fullMulDiv(
                     maxLiquidableAssets, 
@@ -892,7 +892,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     totalSupply
                 )
                 * 99 / 100
-            );
+            ),1);
     }
 
     /// @notice Returns the estimate price of 1 vault share
