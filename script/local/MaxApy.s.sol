@@ -365,7 +365,7 @@ contract DeploymentScript is Script, ConvexPools, OwnableRoles {
         console2.log("[SOMMELIER] (StEth deposit) Turbo StETh Strategy:", address(strategy4));
         console2.log("[SOMMELIER] Turbo StEth Strategy :", address(strategy10));
         // Simulate setup
-        // setUpProtocol();
+        setUpProtocol();
     }
 
 

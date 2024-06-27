@@ -2,6 +2,18 @@
 
 MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault implemented in Solidity, designed to **optimize yield** through various strategies, and earn interest in ERC20 tokens. It relies on the safety of the battle-tested [Yearn's yVault](https://github.com/yearn/yearn-vaults/blob/efb47d8a84fcb13ceebd3ceb11b126b323bcc05d/contracts/Vault.vy) and the innovation of MaxAPY.
 
+## Deployment (Mainnet) - 15/07
+### Protocol:
+- [ ] Deploy the contracts
+- [ ] Subgraph deployed
+- [ ] Front deployed
+---
+### Backend:
+- [ ] Setup Relayers & RPC
+- [ ] Setup Addresses on Database
+  - [ ] Check underlying strategies exist on API's
+  - [ ] Mark strategies as `Active`
+
 ## Contracts
 
 ```ml
