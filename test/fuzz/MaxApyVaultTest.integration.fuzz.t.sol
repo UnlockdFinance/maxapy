@@ -370,12 +370,17 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategyList[9] = address(strategy11);
 
         // Add all the strategies
-        vault.addStrategy(address(strategy1), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy2), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy3), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy4), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy5), 1000, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy6), 1000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy1), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy2), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy3), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy4), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy5), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy6), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy7), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy8), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy9), 700, type(uint72).max, 0, 0);
+        // vault.addStrategy(address(strategy10), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy11), 700, type(uint72).max, 0, 0);
 
         vm.label(address(WETH_MAINNET), "WETH");
         /// Alice approves vault for deposits
@@ -623,12 +628,13 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents, ConvexPools {
         strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
         strategyFuzzer.harvest(strategyRNG);
         vaultFuzzer.mint(shares);
-        vaultFuzzer.withdraw(actorRNG, assets);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
         vaultFuzzer.withdraw(actorRNG, assets);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.withdraw(actorRNG, assets);
+        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
         vaultFuzzer.withdraw(actorRNG, assets);
         strategyFuzzer.harvest(strategyRNG);
     }

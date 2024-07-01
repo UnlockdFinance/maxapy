@@ -873,17 +873,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Returns the maximum amount of the underlying asset that can be withdrawn
     /// from the `owner`'s balance in the Vault, via a withdraw call.
     function maxWithdraw(address owner) public view override returns (uint256 maxAssets) {
-        uint256 maxLiquidableAssets = totalIdle;
-        for (uint256 i; i < MAXIMUM_STRATEGIES; i++) {
-            address strategy = withdrawalQueue[i];
-            if (strategy == address(0)) break;
-            maxLiquidableAssets += IStrategy(strategy).maxLiquidateExact();
-        }
-        uint256 totalSupply = totalSupply();
-        // prevent division by zero
-        if (totalSupply == 0) return 0;
-        maxAssets =
-            Math.min(super.maxWithdraw(owner), Math.fullMulDiv(maxLiquidableAssets, maxRedeem(owner), totalSupply));
+        return previewRedeem(maxRedeem(owner) * 99 / 100);
     }
 
     /// @notice Returns the estimate price of 1 vault share
@@ -1417,14 +1407,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Check if the vault balance is finally enough to cover the requested withdrawal
                 if (vaultBalance >= assets) break;
 
-                uint256 slotStrategies2;
-                assembly {
-                    // cache slot strategies[strategy].strategyTotalDebt
-                    mstore(0x00, strategy)
-                    mstore(0x20, strategies.slot)
-                    slotStrategies2 := add(keccak256(0x00, 0x40), 2)
-                }
-
                 // Compute remaining amount to withdraw considering the current balance of the vault
                 uint256 amountRequested = assets - vaultBalance;
                 // Can't request more than allowed by the strategy
@@ -1443,6 +1425,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 uint256 preBalance = underlying.balanceOf(address(this));
 
                 uint256 withdrawn;
+
                 uint256 loss;
                 // Use try/catch logic to avoid DoS
                 try IStrategy(strategy).liquidateExact(amountRequested) returns (uint256 _loss) {

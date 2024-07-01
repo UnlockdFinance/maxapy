@@ -9,7 +9,6 @@ import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
-
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title ConvexdETHFrxETHStrategy
@@ -208,13 +207,13 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             0
         );
 
-        // Swap frxETH for ETH
-        uint256 ethReceived = curveEthFrxEthPool.exchange(1, 0, amountWithdrawn, 0);
-
-        // Wrap ETH into WETH
-        IWETH(address(underlyingAsset)).deposit{ value: ethReceived }();
-
-        return ethReceived;
+        if (amountWithdrawn != 0) {
+            // Swap frxETH for ETH
+            uint256 ethReceived = curveEthFrxEthPool.exchange(1, 0, amountWithdrawn, 0);
+            // Wrap ETH into WETH
+            IWETH(address(underlyingAsset)).deposit{ value: ethReceived }();
+            return ethReceived;
+        }
     }
 
     /// @notice Claims rewards, converting them to `underlyingAsset`.
@@ -262,8 +261,16 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
-            uint256 value = _lpForAmount(amountToWithdraw);
-            uint256 withdrawn = curveLpPool.calc_withdraw_one_coin(value, 1);
+            uint256 lp = _lpForAmount(amountToWithdraw);
+            uint256 staked = _stakedBalance(convexRewardPool);
+
+            assembly {
+                // Adjust computed lp amount by current lp balance
+                if gt(lp, staked) { lp := staked }
+            }
+
+            uint256 withdrawn = curveLpPool.calc_withdraw_one_coin(lp, 1);
+
             if (withdrawn != 0) {
                 withdrawn = curveEthFrxEthPool.get_dy(1, 0, withdrawn);
             }
@@ -282,7 +289,7 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             (
                 curveLpPool.get_virtual_price()
                     * Math.min(curveLpPool.get_dy(1, 0, 1 ether), curveLpPool.get_dy(0, 1, 1 ether))
-            ) / 1e18
+            ) / 1 ether
         );
     }
 

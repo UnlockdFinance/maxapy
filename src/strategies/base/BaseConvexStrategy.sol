@@ -172,10 +172,10 @@ abstract contract BaseConvexStrategy is BaseStrategy {
         returns (uint256 requestedAmount)
     {
         uint256 underlyingBalance = _underlyingBalance();
-        requestedAmount = liquidatedAmount;
         if (underlyingBalance < liquidatedAmount) {
+            requestedAmount = liquidatedAmount - underlyingBalance;
             // increase 1% to be pessimistic
-            requestedAmount = previewLiquidate(liquidatedAmount) * 101 / 100;
+            requestedAmount = previewLiquidate(requestedAmount) * 101 / 100;
         }
         return requestedAmount + underlyingBalance;
     }
@@ -189,9 +189,9 @@ abstract contract BaseConvexStrategy is BaseStrategy {
     function maxLiquidateExact() public view virtual override returns (uint256) {
         return previewLiquidate(_estimatedTotalAssets()) * 99 / 100;
     }
+
     /// @notice Returns the amount of Curve LP tokens staked in Convex
     /// @return the amount of staked LP tokens
-
     function stakedBalance() external view virtual returns (uint256) {
         return _stakedBalance(convexRewardPool);
     }
@@ -398,7 +398,7 @@ abstract contract BaseConvexStrategy is BaseStrategy {
                 if gt(lp, staked) { lp := staked }
             }
 
-            if (lp == 0) return (0, amountNeeded);
+            if (lp == 0) return (0, 0);
 
             uint256 withdrawn = _divest(lp);
 

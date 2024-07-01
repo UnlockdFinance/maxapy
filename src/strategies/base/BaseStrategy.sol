@@ -10,8 +10,6 @@ import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
 import { Initializable } from "../../lib/Initializable.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-// TODO: add tests for harvest deadline
-
 /// @title BaseStrategy
 /// @author Forked and adapted from https://github.com/yearn/yearn-vaults/blob/master/contracts/BaseStrategy.sol
 /// @notice `BaseStrategy` sets the base functionality to be implemented by MaxApy strategies.
@@ -175,6 +173,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         uint256 amountFreed;
         // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountRequested);
+
         // Send it directly back to vault
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // something didn't work as expected
