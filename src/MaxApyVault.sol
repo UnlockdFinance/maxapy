@@ -9,7 +9,6 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
 import { ERC4626, ERC20 } from "solady/tokens/ERC4626.sol";
-import "forge-std/console2.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
@@ -874,25 +873,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Returns the maximum amount of the underlying asset that can be withdrawn
     /// from the `owner`'s balance in the Vault, via a withdraw call.
     function maxWithdraw(address owner) public view override returns (uint256 maxAssets) {
-        uint256 maxLiquidableAssets = totalIdle;
-        for (uint256 i; i < MAXIMUM_STRATEGIES; i++) {
-            address strategy = withdrawalQueue[i];
-            if (strategy == address(0)) break;
-            maxLiquidableAssets += IStrategy(strategy).maxLiquidateExact();
-        }
-        uint256 totalSupply = totalSupply();
-        // prevent division by zero
-        if (totalSupply == 0) return 0;
-        maxAssets =
-            _sub0(Math.min(
-                super.maxWithdraw(owner), 
-                Math.fullMulDiv(
-                    maxLiquidableAssets, 
-                    maxRedeem(owner), 
-                    totalSupply
-                )
-                * 99 / 100
-            ),1);
+        return previewRedeem(maxRedeem(owner) * 99 / 100);
     }
 
     /// @notice Returns the estimate price of 1 vault share
@@ -933,7 +914,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
         uint256 _totalAssets_ = _totalAssets();
         uint256 vaultBalance = totalIdle;
-        console2.log("vault balance  : ", vaultBalance);
         uint256 o = _decimalsOffset();
         // convert the assets to shares without any losses
         // very important: ROUND UP
@@ -953,7 +933,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             // Iterate over strategies
             for (uint256 i; i < MAXIMUM_STRATEGIES;) {
                 address strategy = withdrawalQueue[i];
-                console2.log("strat : ", i, ":", strategy);
 
                 // Check if we have exhausted the queue
                 if (strategy == address(0)) break;
@@ -966,7 +945,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Can't request more than allowed by the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidateExact());
 
-                console2.log("amountRequested in strategy ", i, ":", amountRequested);
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
                     unchecked {
@@ -978,9 +956,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Withdraw from strategy. Compute amount withdrawn(should be requestedAmount)
                 // considering the difference between balances pre/post withdrawal
                 uint256 withdrawn = IStrategy(strategy).previewLiquidateExact(amountRequested);
-                console2.log("previewLiquidateExact in strategy ", i, ":", withdrawn);
                 uint256 loss = withdrawn - amountRequested;
-                console2.log("loss in strategy ", i, ":", loss);
 
                 // increase the vault balance by requested amount
                 vaultBalance += amountRequested;
@@ -1404,7 +1380,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
         uint256 _totalAssets_ = _totalAssets();
         uint256 vaultBalance = totalIdle;
-        console2.log("vault balance  : ", vaultBalance);
         uint256 o = _decimalsOffset();
         address underlying = asset();
         // convert the assets to shares without any losses
@@ -1425,7 +1400,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             // Iterate over strategies
             for (uint256 i; i < MAXIMUM_STRATEGIES;) {
                 address strategy = withdrawalQueue[i];
-                console2.log("strat : ", i, ":", strategy);
 
                 // Check if we have exhausted the queue
                 if (strategy == address(0)) break;
@@ -1437,8 +1411,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 uint256 amountRequested = assets - vaultBalance;
                 // Can't request more than allowed by the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidateExact());
-
-                console2.log("amountRequested in strategy ", i, ":", amountRequested);
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
@@ -1459,15 +1431,12 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 try IStrategy(strategy).liquidateExact(amountRequested) returns (uint256 _loss) {
                     loss = _loss;
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
-
                 } catch {
                     unchecked {
                         ++i;
                     }
                     continue;
                 }
-                console2.log("actual withdrawn in strategty ", i, ":", withdrawn);
-                console2.log("loss in strategy ", i, ":", loss);
 
                 if (withdrawn == 0) {
                     unchecked {
@@ -1527,8 +1496,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             _spendAllowance(owner, by, shares);
         }
 
-        console2.log("actual balance : ", balanceOf(msg.sender));
-        console2.log("shares to burn : ", shares);
         // Burn shares
         _burn(owner, shares);
 

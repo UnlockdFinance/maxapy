@@ -433,7 +433,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
                 amountToWithdraw = amountNeeded - underlyingBalance;
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
-            if (shares == 0) return (0, amountNeeded);
+            if (shares == 0) return (0, 0);
             uint256 withdrawn = _divest(shares);
             assembly {
                 // if withdrawn < amountToWithdraw
