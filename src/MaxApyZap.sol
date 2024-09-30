@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import {IMaxApyZap} from "src/interfaces/IMaxApyZap.sol";
 import {IWrappedToken} from "src/interfaces/IWrappedToken.sol";
 import {IMaxApyVault} from "src/interfaces/IMaxApyVault.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
@@ -9,7 +10,7 @@ import {IERC20Permit} from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol
 /// @title MaxApy Vault Universal Router
 /// @notice A helper contract to safely and easily interact with MaxApy universal vaults
 /// @author Adapted from: https://github.com/ERC4626-Alliance/ERC4626-Contracts/blob/main/src/ERC4626Router.sol
-contract MaxApyZap {
+contract MaxApyZap is IMaxApyZap { 
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
@@ -30,30 +31,6 @@ contract MaxApyZap {
     error AmountShouldBeZero();
     error AssetNotWETH();
 
-    ////////////////////////////////////////////////////////////////
-    ///                         STRUCT                           ///
-    ////////////////////////////////////////////////////////////////
-
-    struct MaxInData {
-        IMaxApyVault vault;
-        uint256 amount;
-        address recipient;
-        uint256 minSharesOut;
-        address router;
-        address assetIn;
-        bytes swapData;
-    }
-
-    struct MaxOutData {
-        IMaxApyVault vault;
-        uint256 shares;
-        address recipient;
-        uint256 minAmountOut;
-        address router;
-        address assetOut;
-        bytes swapData;
-    }
-
     /////////////////////////////////////////////////////////////////
     ///                 INITIALIZATION                            ///
     /////////////////////////////////////////////////////////////////
@@ -71,17 +48,18 @@ contract MaxApyZap {
     /// @notice Allows the caller to deposit `amount` tokens in the vault, issuing shares to `recipient`
     /// @param maxInData A struct with the variables needed to if needed swap then deposit.
     function maxIn(
-        MaxInData memory maxInData
+        MaxInData calldata maxInData
     ) external returns (uint256 sharesOut) {
         address _recipient = maxInData.recipient;
         if (_recipient == address(0)) revert InvalidRecipient();
         address vaultAsset = maxInData.vault.asset();
         address cachedVault = address(maxInData.vault);
         uint256 _amount = maxInData.amount;
-        maxInData.assetIn.safeTransferFrom(msg.sender, address(this), _amount);
+        address _assetIn = maxInData.assetIn;
+        _assetIn.safeTransferFrom(msg.sender, address(this), _amount);
 
-        if (maxInData.assetIn != vaultAsset) {
-            _swap(maxInData.router, maxInData.assetIn, maxInData.swapData);
+        if (_assetIn != vaultAsset) {
+            _swap(maxInData.router, _assetIn, maxInData.swapData);
             _amount = _thisBalance(vaultAsset);
         }
 
@@ -134,7 +112,7 @@ contract MaxApyZap {
     /// @param s `s` component of the digital signature
     /// @return sharesOut The actual amount of minted shares
     function maxInWithPermit(
-        MaxInData memory maxInData,
+        MaxInData calldata maxInData,
         uint256 deadline,
         uint8 v,
         bytes32 r,
@@ -145,7 +123,8 @@ contract MaxApyZap {
         address vaultAsset = maxInData.vault.asset();
         address cachedVault = address(maxInData.vault);
         uint256 _amount = maxInData.amount;
-        IERC20Permit(maxInData.assetIn).permit(
+        address _assetIn = maxInData.assetIn;
+        IERC20Permit(_assetIn).permit(
             msg.sender,
             address(this),
             _amount,
@@ -155,9 +134,9 @@ contract MaxApyZap {
             s
         );
 
-        maxInData.assetIn.safeTransferFrom(msg.sender, address(this), _amount);
+        _assetIn.safeTransferFrom(msg.sender, address(this), _amount);
 
-        if (maxInData.assetIn != vaultAsset) {
+        if (_assetIn != vaultAsset) {
             _swap(maxInData.router, maxInData.assetIn, maxInData.swapData);
             _amount = _thisBalance(maxInData.assetIn);
         }
@@ -207,7 +186,7 @@ contract MaxApyZap {
     /// @param maxInData The MaxApy vault to interact with
     /// @return sharesOut The actual amount of minted shares
     function maxInNative(
-        MaxInData memory maxInData
+        MaxInData calldata maxInData
     ) external payable returns (uint256 sharesOut) {
         if (maxInData.amount != 0) revert AmountShouldBeZero();
         address _recipient = maxInData.recipient;
@@ -307,7 +286,7 @@ contract MaxApyZap {
     /// @param maxOutData The struct containing the necessary data to if needed swap and then deposit
     /// @return amountOut The actual amount of redeemed assets
     function maxOut(
-        MaxOutData memory maxOutData
+        MaxOutData calldata maxOutData
     ) external returns (uint256 amountOut) {
         address _recipient = maxOutData.recipient;
         if (_recipient == address(0)) revert InvalidRecipient();
@@ -371,7 +350,7 @@ contract MaxApyZap {
     /// @param maxOutData The MaxApy vault to interact with
     /// @return amountOut The actual amount of redeemed assets
     function maxOutNative(
-        MaxOutData memory maxOutData
+        MaxOutData calldata maxOutData
     ) external returns (uint256 amountOut) {
         address _recipient = maxOutData.recipient;
         if (_recipient == address(0)) revert InvalidRecipient();
@@ -455,7 +434,7 @@ contract MaxApyZap {
     ////////////////////////////////////////////////////////////////
     ///                 Router functions                         ///
     ////////////////////////////////////////////////////////////////
-    /// @dev calls the oneInchRouter with the API route in order to swap the _token
+    /// @dev calls the router with the API route in order to swap the _token
     function _swap(
         address router,
         address _asset,

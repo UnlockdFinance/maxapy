@@ -1,0 +1,4 @@
+No files changed, compilation skipped
+
+Ran 1 test for test/unit/MaxApyZapTest.t.sol:MaxApyZapTest
+[31m[FAIL. Reason: TransferFromFailed()][0m testMaxApyZap__MaxIn_Permit() (gas: 4272146)
