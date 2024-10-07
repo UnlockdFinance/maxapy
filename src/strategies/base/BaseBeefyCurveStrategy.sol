@@ -6,6 +6,8 @@ import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 /// @title BaseBeefyCurveStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `BaseBeefyCurveStrategy` supplies an underlying token into a generic Beefy Vault,
