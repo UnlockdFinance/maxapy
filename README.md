@@ -6,37 +6,13 @@ MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault impl
 
 ```ml
 ├── src
-│   ├── helpers
-│   │   ├── AddressBook.sol
-│   │   └── VaultTypes.sol
-│   ├── interfaces
-│   │   ├── IBalancer.sol
-│   │   ├── ICellar.sol
-│   │   ├── IConvexBooster.sol
-│   │   ├── IConvexRewards.sol
-│   │   ├── ICurve.sol
-│   │   ├── IMaxApyRouter.sol
-│   │   ├── IMaxApyVault.sol
-│   │   ├── IStakingRewardsMulti.sol
-│   │   ├── IStrategy.sol
-│   │   ├── IUniswap.sol
-│   │   ├── IWETH.sol
-│   │   ├── IWrappedTokenGateway.sol
-│   │   ├── IWrappedToken.sol
-│   │   ├── IYVault.sol
-│   │   └── IYVaultV3.sol
-│   ├── lib
-│   │   ├── ERC20.sol
-│   │   ├── Initializable.sol
-│   │   ├── OracleLibrary.sol
-│   │   └── ReentrancyGuard.sol
 │   ├── MaxApyRouter.sol
 │   ├── MaxApyVaultFactory.sol
 │   ├── MaxApyVault.sol
-│   ├── periphery
-│   │   └── MaxApyHarvester.sol
 │   └── strategies
 │       ├── base
+│       │   ├── BaseBeefyCurveStrategy.sol
+│       │   ├── BaseBeefyStrategy.sol
 │       │   ├── BaseConvexStrategyPolygon.sol
 │       │   ├── BaseConvexStrategy.sol
 │       │   ├── BaseSommelierStrategy.sol
@@ -81,10 +57,15 @@ MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault impl
 │       │           └── YearnWETHStrategy.sol
 │       └── polygon
 │           └── USDCe
+│               ├── beefy
+│               │   ├── BeefyCrvUSDUSDCeStrategy.sol
+│               │   ├── BeefyMaiUSDCeStrategy.sol
+│               │   └── BeefyUSDCeDAIStrategy.sol
 │               ├── convex
 │               │   ├── ConvexUSDCCrvUSDStrategy.sol
 │               │   └── ConvexUSDTCrvUSDStrategy.sol
 │               └── yearn
+│                   ├── YearnAaveV3USDTLenderStrategy.sol
 │                   ├── YearnAjnaUSDCStrategy.sol
 │                   ├── YearnCompoundUSDCeLenderStrategy.sol
 │                   ├── YearnDAILenderStrategy.sol
@@ -93,6 +74,7 @@ MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault impl
 │                   ├── YearnUSDCeLenderStrategy.sol
 │                   ├── YearnUSDCeStrategy.sol
 │                   └── YearnUSDTStrategy.sol
+
 ```
 
 ## Installation

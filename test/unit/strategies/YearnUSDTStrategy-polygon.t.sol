@@ -23,7 +23,7 @@ import "forge-std/console.sol";
 contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;
 
-    address public constant YVAULT_USDT_POLYGON = YEARN_USDT_MAINNET_YVAULT_POLYGON;
+    address public constant YVAULT_USDT_POLYGON = YEARN_USDT_YVAULT_POLYGON;
     address public TREASURY;
 
     IStrategyWrapper public strategy;
@@ -597,5 +597,15 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
+    }
+
+    function testYearnUSDT__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDCE, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

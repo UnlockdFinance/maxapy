@@ -17,7 +17,7 @@ import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import "src/helpers/AddressBook.sol";
 
 contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
-    address public constant YVAULT_DAI_MAINNET = YEARN_DAI_MAINNET_YVAULT_MAINNET;
+    address public constant YVAULT_DAI_MAINNET = YEARN_DAI_YVAULT_MAINNET;
     address public TREASURY;
 
     IStrategyWrapper public strategy;
@@ -592,5 +592,15 @@ contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
         strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(DAI_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
+    }
+
+    function testYearnDAI__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

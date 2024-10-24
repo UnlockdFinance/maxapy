@@ -32,6 +32,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
 
     function setUp() public {
         super._setUp("MAINNET");
+        vm.rollFork(21_019_709);
 
         TREASURY = makeAddr("treasury");
 
@@ -558,5 +559,15 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
+    }
+
+    function testSommelierTurboGHO___SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

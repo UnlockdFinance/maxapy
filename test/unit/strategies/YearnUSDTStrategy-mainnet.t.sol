@@ -21,7 +21,7 @@ import "src/helpers/AddressBook.sol";
 contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;
 
-    address public constant YVAULT_USDT_MAINNET = YEARN_USDT_POLYGON_YVAULT_MAINNET;
+    address public constant YVAULT_USDT_MAINNET = YEARN_USDT_YVAULT_MAINNET;
     address public TREASURY;
 
     IStrategyWrapper public strategy;
@@ -601,5 +601,15 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(USDT_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
+    }
+
+    function testYearnUSDT__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDT, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }
